@@ -1,12 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { z } from 'zod';
 import { getSdks } from '@/firebase/server-init';
 import { APP_ID, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/app/lib/constants';
 import { suggestTransactionCategories } from '@/ai/flows/suggest-transaction-categories';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -40,11 +39,21 @@ export async function addTransaction(formData: FormData) {
   const dataWithTimestamp = {
     ...transactionData,
     dateMs: Date.now(),
-    // The serverTimestamp will be added on the client-side by Firestore
+    // Firestore serverTimestamp is ideally set on the client,
+    // but for server actions, a server-generated timestamp is a common pattern.
+    // Let's use dateMs for now as it's already there.
   };
   
-  // No try-catch block here to allow permission errors to propagate
-  addDocumentNonBlocking(collection(firestore, collectionPath), dataWithTimestamp);
+  try {
+    await addDoc(collection(firestore, collectionPath), dataWithTimestamp);
+  } catch (error) {
+    console.error("Error adding document: ", error);
+    // In a real app, you might want to return a more user-friendly error.
+    // For now, we'll log it and return a generic failure.
+    return {
+      errors: { _form: ['Falha ao registrar a transação.'] },
+    };
+  }
 
   revalidatePath('/');
   revalidatePath('/reports');
