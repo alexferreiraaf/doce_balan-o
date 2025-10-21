@@ -1,11 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { z } from 'zod';
-import { db } from '@/app/lib/firebase';
+import { getSdks } from '@/firebase';
 import { APP_ID, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/app/lib/constants';
 import { suggestTransactionCategories } from '@/ai/flows/suggest-transaction-categories';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -34,13 +35,16 @@ export async function addTransaction(formData: FormData) {
 
   try {
     const { userId, ...transactionData } = validatedFields.data;
+    const { firestore } = getSdks();
     const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
-
-    await addDoc(collection(db, collectionPath), {
+    
+    const dataWithTimestamp = {
       ...transactionData,
-      timestamp: serverTimestamp(),
       dateMs: Date.now(),
-    });
+      // The serverTimestamp will be added on the client-side by Firestore
+    };
+    
+    addDocumentNonBlocking(collection(firestore, collectionPath), dataWithTimestamp);
 
     revalidatePath('/');
     revalidatePath('/reports');

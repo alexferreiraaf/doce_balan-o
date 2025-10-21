@@ -7,8 +7,8 @@ import { Home, TrendingUp } from 'lucide-react';
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/app/lib/hooks/use-auth';
 import { AddTransactionSheet } from '@/components/dashboard/add-transaction-sheet';
+import { useAuth } from '@/firebase';
 
 const navLinks = [
   { href: '/', label: 'Início', icon: Home },
@@ -17,7 +17,7 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { isAuthReady } = useAuth();
+  const { isUserLoading } = useAuth();
 
   return (
     <header className="bg-primary shadow-lg sticky top-0 z-40">
@@ -48,7 +48,7 @@ export function Navbar() {
           ))}
         </div>
 
-        {isAuthReady && <div className="hidden sm:block"><AddTransactionSheet /></div>}
+        {!isUserLoading && <div className="hidden sm:block"><AddTransactionSheet /></div>}
       </nav>
       {/* Mobile Nav & Action Button */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-primary/95 backdrop-blur-sm border-t border-primary-foreground/10 z-50 flex justify-around items-center p-2">
@@ -69,7 +69,7 @@ export function Navbar() {
               </Button>
             </Link>
           ))}
-          {isAuthReady && <div className="absolute -top-16 right-4"><AddTransactionSheet /></div>}
+          {!isUserLoading && <div className="absolute -top-16 right-4"><AddTransactionSheet /></div>}
       </div>
     </header>
   );

@@ -22,11 +22,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAuth } from '@/app/lib/hooks/use-auth';
 import { addTransaction, getCategorySuggestions } from '@/app/actions/transactions';
 import { useToast } from '@/hooks/use-toast';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/app/lib/constants';
 import { Badge } from '../ui/badge';
+import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -38,7 +38,8 @@ const formSchema = z.object({
 type TransactionFormValues = z.infer<typeof formSchema>;
 
 export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean) => void }) {
-  const { userId } = useAuth();
+  const { user } = useAuth();
+  const userId = user?.uid;
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<'income' | 'expense'>('expense');

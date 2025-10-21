@@ -7,11 +7,11 @@ import { StatCard } from './stat-card';
 import { TransactionList } from './transaction-list';
 import { SimpleReport } from '../reports/simple-report';
 import Loading from '@/app/(main)/loading';
-import { useAuth } from '@/app/lib/hooks/use-auth';
+import { useAuth } from '@/firebase';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
-  const { userId } = useAuth();
+  const { user } = useAuth();
 
   const { totalIncome, totalExpense, balance } = useMemo(() => {
     const income = transactions
@@ -58,9 +58,9 @@ export function DashboardClient() {
 
       <TransactionList transactions={transactions} />
       
-      {userId && (
+      {user && (
         <p className="text-xs text-center text-muted-foreground pt-4">
-          ID da Confeiteira (Para Debug): {userId}
+          ID da Confeiteira (Para Debug): {user.uid}
         </p>
       )}
     </div>
