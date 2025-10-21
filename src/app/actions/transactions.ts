@@ -43,14 +43,7 @@ export async function addTransaction(formData: FormData) {
         timestamp: serverTimestamp(),
     };
     
-    try {
-        await addDoc(collection(firestore, collectionPath), dataWithTimestamp);
-    } catch (error) {
-        console.error("Error adding document: ", error);
-        return {
-        errors: { _form: ['Falha ao registrar a transação.'] },
-        };
-    }
+    await addDoc(collection(firestore, collectionPath), dataWithTimestamp);
 
     revalidatePath('/');
     revalidatePath('/reports');
