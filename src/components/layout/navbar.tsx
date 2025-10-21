@@ -29,7 +29,7 @@ export function Navbar() {
         
         <div className="hidden sm:flex items-center space-x-2 bg-primary/80 p-1 rounded-full">
           {navLinks.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} passHref legacyBehavior>
+            <Link key={href} href={href} passHref>
               <Button
                 variant="ghost"
                 size="sm"
@@ -39,10 +39,10 @@ export function Navbar() {
                 )}
                 asChild
               >
-                <a>
+                <div>
                   <Icon className="w-4 h-4 mr-2" />
                   {label}
-                </a>
+                </div>
               </Button>
             </Link>
           ))}
@@ -53,7 +53,7 @@ export function Navbar() {
       {/* Mobile Nav & Action Button */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-primary/95 backdrop-blur-sm border-t border-primary-foreground/10 z-50 flex justify-around items-center p-2">
           {navLinks.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} passHref legacyBehavior>
+            <Link key={href} href={href} passHref>
               <Button
                 variant="ghost"
                 className={cn(
@@ -62,10 +62,10 @@ export function Navbar() {
                 )}
                 asChild
               >
-                <a>
+                <div>
                   <Icon className="w-6 h-6 mb-1" />
                   <span className="text-xs">{label}</span>
-                </a>
+                </div>
               </Button>
             </Link>
           ))}
