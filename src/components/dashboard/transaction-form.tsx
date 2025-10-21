@@ -38,7 +38,7 @@ const formSchema = z.object({
 type TransactionFormValues = z.infer<typeof formSchema>;
 
 export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean) => void }) {
-  const { userId, isAuthLoading } = useAuth();
+  const { isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<'income' | 'expense'>('expense');
@@ -76,18 +76,12 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   
 
   const onSubmit = (data: TransactionFormValues) => {
-    if (!userId) {
-      toast({ variant: 'destructive', title: 'Erro de autenticação.' });
-      return;
-    }
-
     startTransition(async () => {
       const formData = new FormData();
       formData.append('type', data.type);
       formData.append('description', data.description);
       formData.append('category', data.category);
       formData.append('amount', String(data.amount));
-      formData.append('userId', userId);
 
       const result = await addTransaction(formData);
 
