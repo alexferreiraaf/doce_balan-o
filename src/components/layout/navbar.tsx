@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, TrendingUp } from 'lucide-react';
+import { Home, TrendingUp, Plus } from 'lucide-react';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 import { Button } from '@/components/ui/button';
@@ -53,26 +53,45 @@ export function Navbar() {
       
       {/* Mobile Nav */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 flex justify-around items-center p-1.5">
-          {navLinks.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} passHref>
-              <Button
-                variant="ghost"
-                className={cn(
-                  'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-20',
-                   pathname === href && 'text-primary font-semibold'
-                )}
-                asChild
-              >
-                <div>
-                  <Icon className="w-6 h-6 mb-0.5" />
-                  <span className="text-xs">{label}</span>
-                </div>
-              </Button>
-            </Link>
-          ))}
+          {/* Início Link */}
+          <Link href="/" passHref>
+            <Button
+              variant="ghost"
+              className={cn(
+                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-24',
+                 pathname === '/' && 'text-primary font-semibold'
+              )}
+              asChild
+            >
+              <div>
+                <Home className="w-6 h-6 mb-0.5" />
+                <span className="text-xs">Início</span>
+              </div>
+            </Button>
+          </Link>
+
+          {/* Novo Lançamento Button */}
+          <div className="flex-shrink-0">
+             <AddTransactionSheet />
+          </div>
+
+          {/* Relatórios Link */}
+          <Link href="/reports" passHref>
+            <Button
+              variant="ghost"
+              className={cn(
+                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-24',
+                 pathname === '/reports' && 'text-primary font-semibold'
+              )}
+              asChild
+            >
+              <div>
+                <TrendingUp className="w-6 h-6 mb-0.5" />
+                <span className="text-xs">Relatórios</span>
+              </div>
+            </Button>
+          </Link>
       </div>
-       {/* Mobile Floating Action Button */}
-      {!isUserLoading && <div className="sm:hidden fixed bottom-20 right-5 z-50"><AddTransactionSheet /></div>}
 
     </header>
   );
