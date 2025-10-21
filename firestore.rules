@@ -1,0 +1,62 @@
+/**
+ * @file Firebase Security Rules for SweetBalance Application
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for transaction data within the SweetBalance application. Users can only access their own transaction records.
+ *
+ * Data Structure:
+ * All transaction data is nested under /artifacts/{appId}/users/{userId}/transactions/{transactionId}, ensuring data isolation and efficient querying.
+ *
+ * Key Security Decisions:
+ * - User listing is implicitly denied as there are no rules defined for listing users at the root collection level.
+ * - Transactions are secured via path-based rules, where the userId in the path must match the authenticated user's UID.
+ * - No global admin roles are defined, simplifying the security model and focusing on user-specific access control.
+ *
+ * Denormalization for Authorization:
+ * The 'userId' is present within the Transaction document, matching the path. This is a redundant denormalization and does not add extra value.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Enforces user-ownership for transaction data. Only the authenticated user can create, read, update, or delete their own transactions.
+     * @path /artifacts/{appId}/users/{userId}/transactions/{transactionId}
+     * @allow (create) - Authenticated user with UID 'user_abc' creates a transaction with userId: 'user_abc'.
+     * @allow (get, list) - Authenticated user with UID 'user_abc' reads their own transaction.
+     * @allow (update, delete) - Authenticated user with UID 'user_abc' updates/deletes their own existing transaction.
+     * @deny (create) - Authenticated user with UID 'user_xyz' attempts to create a transaction with userId: 'user_abc'.
+     * @deny (get, list) - Authenticated user with UID 'user_xyz' attempts to read transaction data for user 'user_abc'.
+     * @deny (update, delete) - Authenticated user with UID 'user_xyz' attempts to update/delete transaction data for user 'user_abc'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
+      // Allow authenticated users to read their own transactions.
+      allow get: if isSignedIn() && isOwner(userId);
+      // Allow authenticated users to list their own transactions.
+      allow list: if isSignedIn() && isOwner(userId);
+
+      // Allow authenticated users to create transactions for themselves, enforcing userId consistency.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+
+      // Allow authenticated users to update their own existing transactions, enforcing userId immutability.
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+
+      // Allow authenticated users to delete their own existing transactions.
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+
+    // Define helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return isSignedIn() && isOwner(userId) && resource != null;
+    }
+  }
+}

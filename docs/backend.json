@@ -1,0 +1,106 @@
+{
+  "entities": {
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a financial transaction, either an income or an expense.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the transaction."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of transaction: 'expense' or 'income'.",
+          "format": "string"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the transaction."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the transaction (e.g., 'Mercado/Insumos', 'Venda de Bolo')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the transaction."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Transaction)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the transaction occurred.",
+          "format": "date-time"
+        },
+        "dateMs": {
+          "type": "number",
+          "description": "Timestamp in milliseconds for easier filtering and sorting."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "description",
+        "category",
+        "amount",
+        "userId",
+        "timestamp",
+        "dateMs"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the SweetBalance application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "artifacts/{appId}/users/{userId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores individual transaction data for each user. The userId parameter ensures that each user's transactions are kept separate and secure.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the SweetBalance application."
+            },
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique identifier of the transaction."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying for the SweetBalance application. Each user's transactions are stored in a dedicated subcollection under their user ID, enhancing data privacy and security.  The root `artifacts/{appId}` allows logical separation of app data. Transactions are secured via path-based rules, ensuring only the authenticated user can access their own transaction data.  Authorization Independence is achieved as there is no dependency on any parent document and ownership is determined by the path `/artifacts/{appId}/users/{userId}/transactions/{transactionId}`. This provides security and allows atomic batch operations.\n\nThis structure supports the required QAPs (Rules are not Filters) because the listing operation only returns the transactions under the user's path and is secured by the user id."
+  }
+}
