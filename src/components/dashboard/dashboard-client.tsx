@@ -5,7 +5,6 @@ import { Wallet, TrendingUp, Clipboard } from 'lucide-react';
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
 import { TransactionList } from './transaction-list';
-import { SimpleReport } from '../reports/simple-report';
 import Loading from '@/app/(main)/loading';
 import { useAuth } from '@/firebase';
 
@@ -53,8 +52,6 @@ export function DashboardClient() {
           icon={Clipboard}
         />
       </div>
-
-      <SimpleReport transactions={transactions} />
 
       <TransactionList transactions={transactions} />
       
