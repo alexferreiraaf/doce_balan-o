@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { collection } from 'firebase/firestore';
 import { z } from 'zod';
-import { getSdks } from '@/firebase';
+import { getSdks } from '@/firebase/server-init';
 import { APP_ID, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/app/lib/constants';
 import { suggestTransactionCategories } from '@/ai/flows/suggest-transaction-categories';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
