@@ -33,28 +33,22 @@ export async function addTransaction(formData: FormData) {
     };
   }
 
-  try {
-    const { userId, ...transactionData } = validatedFields.data;
-    const { firestore } = getSdks();
-    const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
-    
-    const dataWithTimestamp = {
-      ...transactionData,
-      dateMs: Date.now(),
-      // The serverTimestamp will be added on the client-side by Firestore
-    };
-    
-    addDocumentNonBlocking(collection(firestore, collectionPath), dataWithTimestamp);
+  const { userId, ...transactionData } = validatedFields.data;
+  const { firestore } = getSdks();
+  const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
+  
+  const dataWithTimestamp = {
+    ...transactionData,
+    dateMs: Date.now(),
+    // The serverTimestamp will be added on the client-side by Firestore
+  };
+  
+  // No try-catch block here to allow permission errors to propagate
+  addDocumentNonBlocking(collection(firestore, collectionPath), dataWithTimestamp);
 
-    revalidatePath('/');
-    revalidatePath('/reports');
-    return { success: true };
-  } catch (error) {
-    console.error('Error adding transaction:', error);
-    return {
-      errors: { _form: ['Falha ao registrar a transação. Tente novamente.'] },
-    };
-  }
+  revalidatePath('/');
+  revalidatePath('/reports');
+  return { success: true };
 }
 
 export async function getCategorySuggestions(description: string, type: 'income' | 'expense') {
