@@ -32,18 +32,26 @@ export async function addTransaction(formData: FormData) {
         };
     }
 
-    const { userId, ...transactionData } = validatedFields.data;
+    const { userId, type, description, category, amount } = validatedFields.data;
     const { firestore } = getSdks();
     const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
     
-    const dataWithTimestamp = {
-        ...transactionData,
-        userId: userId,
-        dateMs: Date.now(),
-        timestamp: serverTimestamp(),
-    };
-    
-    await addDoc(collection(firestore, collectionPath), dataWithTimestamp);
+    try {
+        await addDoc(collection(firestore, collectionPath), {
+            userId,
+            type,
+            description,
+            category,
+            amount,
+            dateMs: Date.now(),
+            timestamp: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error adding document: ", error);
+        return {
+            errors: { _form: ['Falha ao registrar a transação.'] },
+        }
+    }
 
     revalidatePath('/');
     revalidatePath('/reports');
