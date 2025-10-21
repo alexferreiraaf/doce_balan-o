@@ -6,6 +6,7 @@ export const useAuth = () => {
     return {
         user,
         userId: user?.uid,
+        isAuthLoading: isUserLoading,
         isAuthReady: !isUserLoading,
     };
 }

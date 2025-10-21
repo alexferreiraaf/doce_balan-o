@@ -26,7 +26,7 @@ import { addTransaction, getCategorySuggestions } from '@/app/actions/transactio
 import { useToast } from '@/hooks/use-toast';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/app/lib/constants';
 import { Badge } from '../ui/badge';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/app/lib/hooks/use-auth';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -38,8 +38,7 @@ const formSchema = z.object({
 type TransactionFormValues = z.infer<typeof formSchema>;
 
 export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean) => void }) {
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { userId, isAuthLoading } = useAuth();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<'income' | 'expense'>('expense');
@@ -205,8 +204,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
             <Button type="button" variant="outline" onClick={() => setSheetOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isPending || isAuthLoading}>
+              {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Adicionar Lançamento
             </Button>
         </div>
