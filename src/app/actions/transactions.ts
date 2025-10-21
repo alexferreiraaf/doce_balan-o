@@ -36,22 +36,15 @@ export async function addTransaction(formData: FormData) {
     const { firestore } = getSdks();
     const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
     
-    try {
-        await addDoc(collection(firestore, collectionPath), {
-            userId,
-            type,
-            description,
-            category,
-            amount,
-            dateMs: Date.now(),
-            timestamp: serverTimestamp(),
-        });
-    } catch (error) {
-        console.error("Error adding document: ", error);
-        return {
-            errors: { _form: ['Falha ao registrar a transação.'] },
-        }
-    }
+    await addDoc(collection(firestore, collectionPath), {
+        userId,
+        type,
+        description,
+        category,
+        amount,
+        dateMs: Date.now(),
+        timestamp: serverTimestamp(),
+    });
 
     revalidatePath('/');
     revalidatePath('/reports');
