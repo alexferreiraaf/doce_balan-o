@@ -12,17 +12,17 @@ interface ReportCardProps {
 
 const ReportCard = ({ title, summary }: ReportCardProps) => (
   <Card className="border-t-4 border-primary">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold text-primary">{title}</CardTitle>
+    <CardHeader className="p-4">
+      <CardTitle className="text-base font-semibold text-primary">{title}</CardTitle>
     </CardHeader>
-    <CardContent className="space-y-2">
+    <CardContent className="space-y-1 p-4 pt-0">
       <p className="text-sm text-muted-foreground flex justify-between">
         Receitas: <span className="font-bold text-green-600">{formatCurrency(summary.income)}</span>
       </p>
       <p className="text-sm text-muted-foreground flex justify-between">
         Despesas: <span className="font-bold text-red-600">{formatCurrency(summary.expense)}</span>
       </p>
-      <p className={`text-lg font-bold pt-2 border-t mt-2 flex justify-between ${summary.balance >= 0 ? 'text-foreground' : 'text-red-700'}`}>
+      <p className={`text-md font-bold pt-2 border-t mt-2 flex justify-between ${summary.balance >= 0 ? 'text-foreground' : 'text-red-700'}`}>
         Balanço: <span>{formatCurrency(summary.balance)}</span>
       </p>
     </CardContent>
@@ -55,10 +55,10 @@ export function SimpleReport({ transactions }: SimpleReportProps) {
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ReportCard title="Últimos 7 Dias (Semanal)" summary={summaries.weekly} />
-        <ReportCard title="Últimos 30 Dias (Mensal)" summary={summaries.monthly} />
-        <ReportCard title="Últimos 365 Dias (Anual)" summary={summaries.annual} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <ReportCard title="Últimos 7 Dias" summary={summaries.weekly} />
+        <ReportCard title="Últimos 30 Dias" summary={summaries.monthly} />
+        <ReportCard title="Últimos 365 Dias" summary={summaries.annual} />
       </div>
     </div>
   );

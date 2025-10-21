@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import type { Transaction } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardContent } from '../ui/card';
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -51,7 +50,7 @@ export function CategoryChart({ transactions }: CategoryChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-80 text-muted-foreground">
+      <div className="flex items-center justify-center h-60 md:h-80 text-muted-foreground">
         <p>Sem dados de despesas para exibir.</p>
       </div>
     );
@@ -76,7 +75,7 @@ export function CategoryChart({ transactions }: CategoryChartProps) {
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
+          <Legend wrapperStyle={{fontSize: "0.8rem"}} />
         </PieChart>
       </ResponsiveContainer>
     </div>

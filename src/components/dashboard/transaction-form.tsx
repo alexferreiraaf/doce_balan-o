@@ -51,7 +51,6 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     defaultValues: {
       type: 'expense',
       description: '',
-      category: EXPENSE_CATEGORIES[0],
       amount: 0,
     },
   });
@@ -106,7 +105,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   const handleTypeChange = (newType: 'income' | 'expense') => {
     setType(newType);
     form.setValue('type', newType);
-    form.setValue('category', newType === 'expense' ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]);
+    form.setValue('category', '');
     form.clearErrors('category');
     setSuggestions([]);
   };
@@ -114,7 +113,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Button
             type="button"
             onClick={() => handleTypeChange('expense')}

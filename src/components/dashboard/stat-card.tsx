@@ -17,7 +17,7 @@ export const StatCard = ({ title, value, icon: Icon, colorClass }: StatCardProps
       <Icon className="h-5 w-5 text-muted-foreground" />
     </CardHeader>
     <CardContent>
-      <div className="text-3xl font-bold">
+      <div className="text-2xl md:text-3xl font-bold">
         {formatCurrency(value)}
       </div>
     </CardContent>
