@@ -31,12 +31,19 @@ import { useFirestore } from '@/firebase';
 import { getCategorySuggestions } from '@/app/actions/transactions';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { useProducts } from '@/app/lib/hooks/use-products';
+import { AddProductDialog } from './add-product-dialog';
+import { formatCurrency } from '@/lib/utils';
+import type { Product } from '@/app/lib/types';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
-  description: z.string().min(2, 'A descrição deve ter pelo menos 2 caracteres.'),
+  description: z.string().optional(),
   category: z.string({ required_error: 'Por favor, selecione uma categoria.' }),
   amount: z.coerce.number().positive('O valor deve ser maior que zero.'),
+  // Fields for income type
+  productId: z.string().optional(),
+  quantity: z.coerce.number().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof formSchema>;
@@ -51,88 +58,117 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, startSuggestionTransition] = useTransition();
 
+  const { products, loading: productsLoading } = useProducts();
+
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: 'expense',
       description: '',
       amount: 0,
+      quantity: 1,
     },
   });
-  
+
   const descriptionValue = form.watch('description');
+  const typeValue = form.watch('type');
+  const productIdValue = form.watch('productId');
+  const quantityValue = form.watch('quantity');
 
+  // Effect for category suggestion (for expenses)
   useEffect(() => {
-    const handler = setTimeout(() => {
-      if (descriptionValue.length > 3) {
-        startSuggestionTransition(async () => {
-          const result = await getCategorySuggestions(descriptionValue, type);
-          setSuggestions(result);
-        });
-      } else {
-        setSuggestions([]);
-      }
-    }, 500); // 500ms debounce
+    if (typeValue === 'expense') {
+      const handler = setTimeout(() => {
+        if (descriptionValue && descriptionValue.length > 3) {
+          startSuggestionTransition(async () => {
+            const result = await getCategorySuggestions(descriptionValue, 'expense');
+            setSuggestions(result);
+          });
+        } else {
+          setSuggestions([]);
+        }
+      }, 500); // 500ms debounce
+      return () => clearTimeout(handler);
+    }
+  }, [descriptionValue, typeValue]);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [descriptionValue, type]);
-  
+  // Effect to calculate total amount for income
+  useEffect(() => {
+    if (typeValue === 'income' && productIdValue && quantityValue && products.length > 0) {
+      const product = products.find((p) => p.id === productIdValue);
+      if (product) {
+        const totalAmount = product.price * quantityValue;
+        form.setValue('amount', totalAmount);
+      }
+    }
+  }, [productIdValue, quantityValue, typeValue, products, form]);
 
   const onSubmit = (data: TransactionFormValues) => {
     if (!userId || !firestore) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado ou falha na conexão.' });
-        return;
+      toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
+      return;
     }
+
     startTransition(async () => {
-        const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
-        const transactionData = {
-            userId,
-            type: data.type,
-            description: data.description,
-            category: data.category,
-            amount: data.amount,
-            dateMs: Date.now(),
-            timestamp: serverTimestamp(),
-        };
-
-        try {
-            await addDoc(collection(firestore, collectionPath), transactionData)
-            .catch(error => {
-                 errorEmitter.emit(
-                    'permission-error',
-                    new FirestorePermissionError({
-                        path: collectionPath,
-                        operation: 'create',
-                        requestResourceData: transactionData,
-                    })
-                 )
-                 throw error; // Re-throw to be caught by the outer catch
-            });
-
-            toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
-            form.reset();
-            setSheetOpen(false);
-            // We can't revalidate from the client, but Firestore's real-time updates will handle UI changes.
-        } catch (error) {
-            console.error("Error adding transaction: ", error);
-            toast({ 
-                variant: 'destructive', 
-                title: 'Erro ao Adicionar Lançamento', 
-                description: 'Verifique suas permissões ou tente novamente.' 
-            });
+      const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
+      
+      let transactionDescription = data.description || '';
+      if (data.type === 'income') {
+        const product = products.find(p => p.id === data.productId);
+        if (!product || !data.quantity) {
+             toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um produto e quantidade.' });
+             return;
         }
+        transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
+      }
+
+
+      const transactionData = {
+        userId,
+        type: data.type,
+        description: transactionDescription,
+        category: data.category,
+        amount: data.amount,
+        dateMs: Date.now(),
+        timestamp: serverTimestamp(),
+      };
+
+      try {
+        await addDoc(collection(firestore, collectionPath), transactionData).catch((error) => {
+          errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+              path: collectionPath,
+              operation: 'create',
+              requestResourceData: transactionData,
+            })
+          );
+          throw error;
+        });
+
+        toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
+        form.reset({type: data.type, description: '', amount: 0, quantity: 1});
+        setSheetOpen(false);
+      } catch (error) {
+        console.error('Error adding transaction: ', error);
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao Adicionar Lançamento',
+          description: 'Verifique suas permissões ou tente novamente.',
+        });
+      }
     });
   };
 
   const handleTypeChange = (newType: 'income' | 'expense') => {
     setType(newType);
+    form.reset();
     form.setValue('type', newType);
-    form.setValue('category', '');
-    form.clearErrors('category');
+    form.setValue('quantity', 1);
     setSuggestions([]);
   };
+
+  const selectedProduct = products.find(p => p.id === productIdValue);
 
   return (
     <Form {...form}>
@@ -162,19 +198,92 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
           </Button>
         </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descrição</FormLabel>
-              <FormControl>
-                <Input placeholder={type === 'expense' ? 'Ex: Açúcar, Forma de bolo' : 'Ex: Venda Bolo de Cenoura'} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {type === 'expense' ? (
+          <>
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Açúcar, Forma de bolo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor (R$)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        ) : (
+          <>
+            <FormField
+              control={form.control}
+              name="productId"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Produto</FormLabel>
+                    <AddProductDialog />
+                  </div>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger disabled={productsLoading}>
+                        <SelectValue placeholder={productsLoading ? "Carregando produtos..." : "Selecione um produto"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} ({formatCurrency(p.price)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantidade</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="1" step="1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor Total</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} readOnly className="bg-muted" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
 
         <FormField
           control={form.control}
@@ -196,8 +305,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                   ))}
                 </SelectContent>
               </Select>
-              {isSuggesting && <p className="text-xs text-muted-foreground mt-1">Sugerindo categorias...</p>}
-              {suggestions.length > 0 && (
+              {isSuggesting && type === 'expense' && <p className="text-xs text-muted-foreground mt-1">Sugerindo categorias...</p>}
+              {suggestions.length > 0 && type === 'expense' && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   <span className='text-sm text-muted-foreground'>Sugestões:</span>
                   {suggestions.map(s => (
@@ -205,20 +314,6 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                   ))}
                 </div>
               )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Valor (R$)</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" placeholder="0,00" {...field} />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}

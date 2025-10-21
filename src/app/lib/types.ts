@@ -12,3 +12,10 @@ export interface Transaction {
   timestamp: Timestamp;
   dateMs: number;
 }
+
+export interface Product {
+  id: string;
+  userId: string;
+  name: string;
+  price: number;
+}

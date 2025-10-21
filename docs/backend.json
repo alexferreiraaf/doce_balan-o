@@ -66,6 +66,36 @@
       "required": [
         "id"
       ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product that can be sold.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the product."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the product."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this product."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "price",
+        "userId"
+      ]
     }
   },
   "auth": {
@@ -99,8 +129,32 @@
             }
           ]
         }
+      },
+      {
+        "path": "artifacts/{appId}/users/{userId}/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product data for each user.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the SweetBalance application."
+            },
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "productId",
+              "description": "The unique identifier of the product."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying for the SweetBalance application. Each user's transactions are stored in a dedicated subcollection under their user ID, enhancing data privacy and security.  The root `artifacts/{appId}` allows logical separation of app data. Transactions are secured via path-based rules, ensuring only the authenticated user can access their own transaction data.  Authorization Independence is achieved as there is no dependency on any parent document and ownership is determined by the path `/artifacts/{appId}/users/{userId}/transactions/{transactionId}`. This provides security and allows atomic batch operations.\n\nThis structure supports the required QAPs (Rules are not Filters) because the listing operation only returns the transactions under the user's path and is secured by the user id."
+    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying for the SweetBalance application. Each user's transactions and products are stored in a dedicated subcollection under their user ID, enhancing data privacy and security.  The root `artifacts/{appId}` allows logical separation of app data. Transactions and products are secured via path-based rules, ensuring only the authenticated user can access their own data.  Authorization Independence is achieved as there is no dependency on any parent document and ownership is determined by the path. This provides security and allows atomic batch operations.\n\nThis structure supports the required QAPs (Rules are not Filters) because the listing operation only returns the items under the user's path and is secured by the user id."
   }
 }
