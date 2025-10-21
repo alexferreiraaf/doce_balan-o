@@ -28,27 +28,38 @@ export async function addTransaction(formData: FormData) {
 
     if (!validatedFields.success) {
         return {
-        errors: validatedFields.error.flatten().fieldErrors,
+            errors: validatedFields.error.flatten().fieldErrors,
         };
     }
 
-    const { userId, type, description, category, amount } = validatedFields.data;
-    const { firestore } = getSdks();
-    const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
-    
-    await addDoc(collection(firestore, collectionPath), {
-        userId,
-        type,
-        description,
-        category,
-        amount,
-        dateMs: Date.now(),
-        timestamp: serverTimestamp(),
-    });
+    try {
+        const { userId, type, description, category, amount } = validatedFields.data;
+        const { firestore } = getSdks();
+        const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
+        
+        await addDoc(collection(firestore, collectionPath), {
+            userId,
+            type,
+            description,
+            category,
+            amount,
+            dateMs: Date.now(),
+            timestamp: serverTimestamp(),
+        });
 
-    revalidatePath('/');
-    revalidatePath('/reports');
-    return { success: true };
+        revalidatePath('/');
+        revalidatePath('/reports');
+        return { success: true };
+    } catch (error) {
+        console.error("Error adding transaction: ", error);
+        // This is a generic error message.
+        // In a real app, you might want to log the error and return a more user-friendly message.
+        return {
+            errors: {
+                _form: ["Falha ao registrar a transação. Por favor, tente novamente."],
+            }
+        }
+    }
 }
 
 export async function getCategorySuggestions(description: string, type: 'income' | 'expense') {
