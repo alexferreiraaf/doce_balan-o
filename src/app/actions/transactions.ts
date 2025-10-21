@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { z } from 'zod';
 import { getSdks } from '@/firebase/server-init';
 import { APP_ID, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/app/lib/constants';
@@ -39,9 +39,7 @@ export async function addTransaction(formData: FormData) {
   const dataWithTimestamp = {
     ...transactionData,
     dateMs: Date.now(),
-    // Firestore serverTimestamp is ideally set on the client,
-    // but for server actions, a server-generated timestamp is a common pattern.
-    // Let's use dateMs for now as it's already there.
+    timestamp: serverTimestamp(),
   };
   
   try {
