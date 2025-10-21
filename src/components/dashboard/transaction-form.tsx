@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2 } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -22,11 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { addTransaction, getCategorySuggestions } from '@/app/actions/transactions';
 import { useToast } from '@/hooks/use-toast';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/app/lib/constants';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, APP_ID } from '@/app/lib/constants';
 import { Badge } from '../ui/badge';
 import { useAuth } from '@/app/lib/hooks/use-auth';
+import { useFirestore } from '@/firebase';
+import { getCategorySuggestions } from '@/app/actions/transactions';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -39,6 +43,7 @@ type TransactionFormValues = z.infer<typeof formSchema>;
 
 export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean) => void }) {
   const { userId, isAuthLoading } = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [type, setType] = useState<'income' | 'expense'>('expense');
@@ -76,28 +81,48 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   
 
   const onSubmit = (data: TransactionFormValues) => {
-    if (!userId) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
+    if (!userId || !firestore) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado ou falha na conexão.' });
         return;
     }
     startTransition(async () => {
-      const formData = new FormData();
-      formData.append('userId', userId);
-      formData.append('type', data.type);
-      formData.append('description', data.description);
-      formData.append('category', data.category);
-      formData.append('amount', String(data.amount));
+        const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
+        const transactionData = {
+            userId,
+            type: data.type,
+            description: data.description,
+            category: data.category,
+            amount: data.amount,
+            dateMs: Date.now(),
+            timestamp: serverTimestamp(),
+        };
 
-      const result = await addTransaction(formData);
+        try {
+            await addDoc(collection(firestore, collectionPath), transactionData)
+            .catch(error => {
+                 errorEmitter.emit(
+                    'permission-error',
+                    new FirestorePermissionError({
+                        path: collectionPath,
+                        operation: 'create',
+                        requestResourceData: transactionData,
+                    })
+                 )
+                 throw error; // Re-throw to be caught by the outer catch
+            });
 
-      if (result?.success) {
-        toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
-        form.reset();
-        setSheetOpen(false);
-      } else {
-        const errorMessage = result?.errors?._form?.[0] || 'Ocorreu um erro.';
-        toast({ variant: 'destructive', title: 'Erro', description: errorMessage });
-      }
+            toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
+            form.reset();
+            setSheetOpen(false);
+            // We can't revalidate from the client, but Firestore's real-time updates will handle UI changes.
+        } catch (error) {
+            console.error("Error adding transaction: ", error);
+            toast({ 
+                variant: 'destructive', 
+                title: 'Erro ao Adicionar Lançamento', 
+                description: 'Verifique suas permissões ou tente novamente.' 
+            });
+        }
     });
   };
 
