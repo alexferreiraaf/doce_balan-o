@@ -50,27 +50,30 @@ export function Navbar() {
 
         {!isUserLoading && <div className="hidden sm:block"><AddTransactionSheet /></div>}
       </nav>
-      {/* Mobile Nav & Action Button */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-primary/95 backdrop-blur-sm border-t border-primary-foreground/10 z-50 flex justify-around items-center p-2">
+      
+      {/* Mobile Nav */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 flex justify-around items-center p-1.5">
           {navLinks.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} passHref>
               <Button
                 variant="ghost"
                 className={cn(
-                  'flex flex-col h-auto items-center justify-center text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-md p-2',
-                  pathname === href && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
+                  'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-20',
+                   pathname === href && 'text-primary font-semibold'
                 )}
                 asChild
               >
                 <div>
-                  <Icon className="w-6 h-6 mb-1" />
+                  <Icon className="w-6 h-6 mb-0.5" />
                   <span className="text-xs">{label}</span>
                 </div>
               </Button>
             </Link>
           ))}
-          {!isUserLoading && <div className="absolute -top-16 right-4"><AddTransactionSheet /></div>}
       </div>
+       {/* Mobile Floating Action Button */}
+      {!isUserLoading && <div className="sm:hidden fixed bottom-20 right-5 z-50"><AddTransactionSheet /></div>}
+
     </header>
   );
 }

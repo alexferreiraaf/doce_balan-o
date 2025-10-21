@@ -61,7 +61,7 @@ export function AddProductDialog() {
       return;
     }
 
-    startTransition(async () => {
+    startTransition(() => {
       const collectionPath = `artifacts/${APP_ID}/users/${userId}/products`;
       const productData = {
         userId,
@@ -69,8 +69,17 @@ export function AddProductDialog() {
         price: data.price,
       };
 
-      try {
-        await addDoc(collection(firestore, collectionPath), productData).catch((error) => {
+      const productCollection = collection(firestore, collectionPath);
+
+      addDoc(productCollection, productData)
+        .then(() => {
+          toast({ title: 'Sucesso!', description: 'Produto adicionado.' });
+          form.reset();
+          setOpen(false);
+        })
+        .catch((error) => {
+          console.error('Error adding product: ', error);
+          // Emit a detailed, contextual error for better debugging
           errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
@@ -79,20 +88,13 @@ export function AddProductDialog() {
               requestResourceData: productData,
             })
           );
-          throw error;
+          // Show a user-friendly error message
+          toast({
+            variant: 'destructive',
+            title: 'Erro ao Adicionar Produto',
+            description: 'Não foi possível salvar o produto. Verifique suas permissões ou tente novamente.',
+          });
         });
-
-        toast({ title: 'Sucesso!', description: 'Produto adicionado.' });
-        form.reset();
-        setOpen(false);
-      } catch (error) {
-        console.error('Error adding product: ', error);
-        toast({
-          variant: 'destructive',
-          title: 'Erro ao Adicionar Produto',
-          description: 'Verifique suas permissões ou tente novamente.',
-        });
-      }
     });
   };
 
