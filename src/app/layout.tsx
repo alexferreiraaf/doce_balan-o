@@ -6,6 +6,7 @@ import { FirebaseClientProvider } from '@/firebase';
 export const metadata: Metadata = {
   title: 'SweetBalance',
   description: 'Seu assistente financeiro para confeitarias.',
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
