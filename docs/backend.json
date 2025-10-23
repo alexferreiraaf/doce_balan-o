@@ -27,6 +27,14 @@
           "type": "number",
           "description": "Amount of the transaction."
         },
+        "discount": {
+          "type": "number",
+          "description": "Discount amount applied to the transaction."
+        },
+        "deliveryFee": {
+          "type": "number",
+          "description": "Delivery fee applied to the transaction."
+        },
         "userId": {
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Transaction)"

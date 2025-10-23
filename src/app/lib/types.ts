@@ -9,6 +9,8 @@ export interface Transaction {
   description: string;
   category: string;
   amount: number;
+  discount?: number;
+  deliveryFee?: number;
   timestamp: Timestamp;
   dateMs: number;
 }

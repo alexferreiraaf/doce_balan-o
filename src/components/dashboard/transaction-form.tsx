@@ -44,6 +44,8 @@ const formSchema = z.object({
   // Fields for income type
   productId: z.string().optional(),
   quantity: z.coerce.number().optional(),
+  discount: z.coerce.number().optional(),
+  deliveryFee: z.coerce.number().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof formSchema>;
@@ -67,6 +69,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       description: '',
       amount: 0,
       quantity: 1,
+      discount: 0,
+      deliveryFee: 0,
     },
   });
 
@@ -74,6 +78,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   const typeValue = form.watch('type');
   const productIdValue = form.watch('productId');
   const quantityValue = form.watch('quantity');
+  const discountValue = form.watch('discount');
+  const deliveryFeeValue = form.watch('deliveryFee');
 
   // Effect for category suggestion (for expenses)
   useEffect(() => {
@@ -97,11 +103,14 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     if (typeValue === 'income' && productIdValue && quantityValue && products.length > 0) {
       const product = products.find((p) => p.id === productIdValue);
       if (product) {
-        const totalAmount = product.price * quantityValue;
+        const productTotal = product.price * quantityValue;
+        const discount = discountValue || 0;
+        const deliveryFee = deliveryFeeValue || 0;
+        const totalAmount = productTotal - discount + deliveryFee;
         form.setValue('amount', totalAmount);
       }
     }
-  }, [productIdValue, quantityValue, typeValue, products, form]);
+  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, typeValue, products, form]);
 
   const onSubmit = (data: TransactionFormValues) => {
     if (!userId || !firestore) {
@@ -129,6 +138,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         description: transactionDescription,
         category: data.category,
         amount: data.amount,
+        discount: data.discount || 0,
+        deliveryFee: data.deliveryFee || 0,
         dateMs: Date.now(),
         timestamp: serverTimestamp(),
       };
@@ -147,7 +158,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         });
 
         toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
-        form.reset({type: data.type, description: '', amount: 0, quantity: 1});
+        form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0});
         setSheetOpen(false);
       } catch (error) {
         console.error('Error adding transaction: ', error);
@@ -165,10 +176,10 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     form.reset();
     form.setValue('type', newType);
     form.setValue('quantity', 1);
+    form.setValue('discount', 0);
+    form.setValue('deliveryFee', 0);
     setSuggestions([]);
   };
-
-  const selectedProduct = products.find(p => p.id === productIdValue);
 
   return (
     <Form {...form}>
@@ -228,7 +239,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
             />
           </>
         ) : (
-          <>
+          <div className="space-y-4">
             <FormField
               control={form.control}
               name="productId"
@@ -269,6 +280,34 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                 </FormItem>
               )}
             />
+             <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="discount"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Desconto (R$)</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                <FormField
+                    control={form.control}
+                    name="deliveryFee"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Taxa de Entrega (R$)</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
              <FormField
               control={form.control}
               name="amount"
@@ -276,13 +315,13 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                 <FormItem>
                   <FormLabel>Valor Total</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} readOnly className="bg-muted" />
+                    <Input type="number" {...field} readOnly className="bg-muted font-bold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </>
+          </div>
         )}
 
         <FormField
