@@ -103,9 +103,9 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     if (typeValue === 'income' && productIdValue && quantityValue && products.length > 0) {
       const product = products.find((p) => p.id === productIdValue);
       if (product) {
-        const productTotal = product.price * quantityValue;
-        const discount = discountValue || 0;
-        const deliveryFee = deliveryFeeValue || 0;
+        const productTotal = product.price * Number(quantityValue);
+        const discount = Number(discountValue || 0);
+        const deliveryFee = Number(deliveryFeeValue || 0);
         const totalAmount = productTotal - discount + deliveryFee;
         form.setValue('amount', totalAmount);
       }
