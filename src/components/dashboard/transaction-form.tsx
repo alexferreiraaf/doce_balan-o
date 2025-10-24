@@ -156,6 +156,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
         paymentMethod: data.paymentMethod,
+        status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
         customerId: data.customerId,
         dateMs: Date.now(),
         timestamp: serverTimestamp(),
@@ -458,5 +459,3 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     </Form>
   );
 }
-
-    

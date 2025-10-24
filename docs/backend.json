@@ -45,6 +45,11 @@
             "fiado"
           ]
         },
+        "status": {
+            "type": "string",
+            "description": "Status of the transaction, mainly for 'fiado' sales.",
+            "enum": ["paid", "pending"]
+        },
         "userId": {
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Transaction)"
@@ -71,7 +76,8 @@
         "amount",
         "userId",
         "timestamp",
-        "dateMs"
+        "dateMs",
+        "status"
       ]
     },
     "User": {
