@@ -15,6 +15,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { Badge } from '../ui/badge';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
