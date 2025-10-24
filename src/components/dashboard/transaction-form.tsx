@@ -36,6 +36,8 @@ import { AddProductDialog } from './add-product-dialog';
 import { formatCurrency } from '@/lib/utils';
 import type { Product } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { AddCustomerDialog } from './add-customer-dialog';
+import { useCustomers } from '@/app/lib/hooks/use-customers';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -48,6 +50,7 @@ const formSchema = z.object({
   discount: z.coerce.number().optional(),
   deliveryFee: z.coerce.number().optional(),
   paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
+  customerId: z.string().optional(),
 }).refine(data => {
     if (data.type === 'income') {
         return !!data.paymentMethod;
@@ -72,6 +75,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   const [isSuggesting, startSuggestionTransition] = useTransition();
 
   const { products, loading: productsLoading } = useProducts();
+  const { customers, loading: customersLoading } = useCustomers();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -152,6 +156,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
         paymentMethod: data.paymentMethod,
+        customerId: data.customerId,
         dateMs: Date.now(),
         timestamp: serverTimestamp(),
       };
@@ -292,6 +297,33 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                 </FormItem>
               )}
             />
+            <FormField
+                control={form.control}
+                name="customerId"
+                render={({ field }) => (
+                    <FormItem>
+                    <div className="flex justify-between items-center">
+                        <FormLabel>Cliente (Opcional)</FormLabel>
+                        <AddCustomerDialog />
+                    </div>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                        <SelectTrigger disabled={customersLoading}>
+                            <SelectValue placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"} />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {customers.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
              <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -426,3 +458,5 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     </Form>
   );
 }
+
+    

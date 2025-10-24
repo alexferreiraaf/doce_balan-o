@@ -13,6 +13,7 @@ export interface Transaction {
   discount?: number;
   deliveryFee?: number;
   paymentMethod?: PaymentMethod;
+  customerId?: string;
   timestamp: Timestamp;
   dateMs: number;
 }
@@ -23,3 +24,11 @@ export interface Product {
   name: string;
   price: number;
 }
+
+export interface Customer {
+  id: string;
+  userId: string;
+  name: string;
+}
+
+    

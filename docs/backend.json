@@ -49,6 +49,10 @@
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Transaction)"
         },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to Customer. (Relationship: Customer 1:N Transaction)"
+        },
         "timestamp": {
           "type": "string",
           "description": "Timestamp of when the transaction occurred.",
@@ -114,6 +118,31 @@
         "price",
         "userId"
       ]
+    },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Represents a customer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the customer."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the customer."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this customer record."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "userId"
+      ]
     }
   },
   "auth": {
@@ -171,8 +200,34 @@
             }
           ]
         }
+      },
+      {
+        "path": "artifacts/{appId}/users/{userId}/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores customer data for each user.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the SweetBalance application."
+            },
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "customerId",
+              "description": "The unique identifier of the customer."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying for the SweetBalance application. Each user's transactions and products are stored in a dedicated subcollection under their user ID, enhancing data privacy and security.  The root `artifacts/{appId}` allows logical separation of app data. Transactions and products are secured via path-based rules, ensuring only the authenticated user can access their own data.  Authorization Independence is achieved as there is no dependency on any parent document and ownership is determined by the path. This provides security and allows atomic batch operations.\n\nThis structure supports the required QAPs (Rules are not Filters) because the listing operation only returns the items under the user's path and is secured by the user id."
+    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying for the SweetBalance application. Each user's data (transactions, products, customers) are stored in dedicated subcollections under their user ID, enhancing data privacy and security.  The root `artifacts/{appId}` allows logical separation of app data. All collections are secured via path-based rules, ensuring only the authenticated user can access their own data.  Authorization Independence is achieved as there is no dependency on any parent document and ownership is determined by the path. This provides security and allows atomic batch operations.\n\nThis structure supports the required QAPs (Rules are not Filters) because the listing operation only returns the items under the user's path and is secured by the user id."
   }
 }
+
+    
