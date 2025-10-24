@@ -36,26 +36,36 @@
           "description": "Delivery fee applied to the transaction."
         },
         "paymentMethod": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Payment method for an income transaction.",
           "enum": [
             "pix",
             "dinheiro",
             "cartao",
-            "fiado"
+            "fiado",
+            null
           ]
         },
         "status": {
-            "type": "string",
-            "description": "Status of the transaction, mainly for 'fiado' sales.",
-            "enum": ["paid", "pending"]
+          "type": "string",
+          "description": "Status of the transaction, mainly for 'fiado' sales.",
+          "enum": [
+            "paid",
+            "pending"
+          ]
         },
         "userId": {
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Transaction)"
         },
         "customerId": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Reference to Customer. (Relationship: Customer 1:N Transaction)"
         },
         "timestamp": {
