@@ -16,6 +16,13 @@ import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Badge } from '../ui/badge';
+import type { PaymentMethod } from '@/app/lib/types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
@@ -44,18 +51,18 @@ export function DashboardClient() {
     };
   }, [transactions]);
 
-  const handleMarkAsPaid = async (transactionId: string) => {
+  const handleMarkAsPaid = async (transactionId: string, paymentMethod: PaymentMethod) => {
     if (!user || !firestore) return;
 
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
     try {
-      await updateDoc(transactionRef, { status: 'paid' });
+      await updateDoc(transactionRef, { status: 'paid', paymentMethod: paymentMethod });
       toast({ title: "Sucesso!", description: "Venda marcada como paga." });
     } catch (error) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: transactionRef.path,
             operation: 'update',
-            requestResourceData: { status: 'paid' },
+            requestResourceData: { status: 'paid', paymentMethod },
         }));
       console.error("Error updating transaction: ", error);
       toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a venda." });
@@ -120,14 +127,22 @@ export function DashboardClient() {
                             </span>
                         </div>
                     </div>
-                    <Button 
-                        size="sm" 
-                        onClick={() => handleMarkAsPaid(t.id)}
-                        className="bg-green-500 hover:bg-green-600 text-white self-end sm:self-center"
-                    >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Marcar como Pago
-                    </Button>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                size="sm" 
+                                className="bg-green-500 hover:bg-green-600 text-white self-end sm:self-center"
+                            >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Marcar como Pago
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     </li>
                 ))}
                 </ul>
