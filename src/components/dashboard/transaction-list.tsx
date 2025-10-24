@@ -1,13 +1,21 @@
 'use client';
 
-import { ClipboardIcon } from 'lucide-react';
+import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Transaction } from '@/app/lib/types';
+import type { Transaction, PaymentMethod } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { Badge } from '../ui/badge';
 
 interface TransactionListProps {
   transactions: Transaction[];
 }
+
+const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
+    pix: { text: 'PIX', icon: Landmark },
+    dinheiro: { text: 'Dinheiro', icon: Coins },
+    cartao: { text: 'Cartão', icon: CreditCard },
+    fiado: { text: 'Fiado', icon: Receipt },
+};
 
 export function TransactionList({ transactions }: TransactionListProps) {
   if (transactions.length === 0) {
@@ -29,23 +37,34 @@ export function TransactionList({ transactions }: TransactionListProps) {
       </CardHeader>
       <CardContent>
         <ul className="space-y-3">
-          {transactions.slice(0, 10).map((t) => (
-            <li
-              key={t.id}
-              className={`flex justify-between items-center p-3 rounded-lg transition duration-150 ease-in-out ${
-                t.type === 'income' ? 'bg-green-100/50 hover:bg-green-100' : 'bg-red-100/50 hover:bg-red-100'
-              }`}
-            >
-              <div className="flex flex-col">
-                <span className="font-semibold text-card-foreground">{t.description}</span>
-                <span className="text-xs text-muted-foreground mt-0.5">{t.category}</span>
-              </div>
-              <span className={`font-bold text-lg ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                {t.type === 'expense' && '- '}
-                {formatCurrency(t.amount)}
-              </span>
-            </li>
-          ))}
+          {transactions.slice(0, 10).map((t) => {
+            const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
+            return (
+                <li
+                key={t.id}
+                className={`flex justify-between items-center p-3 rounded-lg transition duration-150 ease-in-out ${
+                    t.type === 'income' ? 'bg-green-100/50 hover:bg-green-100' : 'bg-red-100/50 hover:bg-red-100'
+                }`}
+                >
+                <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-card-foreground">{t.description}</span>
+                    <div className='flex items-center gap-2'>
+                        <Badge variant="secondary" className="text-xs">{t.category}</Badge>
+                        {t.type === 'income' && paymentInfo && (
+                            <Badge variant={t.paymentMethod === 'fiado' ? 'destructive' : 'outline'} className="text-xs">
+                                <paymentInfo.icon className="w-3 h-3 mr-1" />
+                                {paymentInfo.text}
+                            </Badge>
+                        )}
+                    </div>
+                </div>
+                <span className={`font-bold text-lg ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                    {t.type === 'expense' && '- '}
+                    {formatCurrency(t.amount)}
+                </span>
+                </li>
+            )
+          })}
         </ul>
       </CardContent>
     </Card>

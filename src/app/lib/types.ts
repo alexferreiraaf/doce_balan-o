@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 
 export type TransactionType = 'income' | 'expense';
+export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'fiado';
 
 export interface Transaction {
   id: string;
@@ -11,6 +12,7 @@ export interface Transaction {
   amount: number;
   discount?: number;
   deliveryFee?: number;
+  paymentMethod?: PaymentMethod;
   timestamp: Timestamp;
   dateMs: number;
 }

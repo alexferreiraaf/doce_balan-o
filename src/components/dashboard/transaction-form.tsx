@@ -35,6 +35,7 @@ import { useProducts } from '@/app/lib/hooks/use-products';
 import { AddProductDialog } from './add-product-dialog';
 import { formatCurrency } from '@/lib/utils';
 import type { Product } from '@/app/lib/types';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -46,7 +47,17 @@ const formSchema = z.object({
   quantity: z.coerce.number().optional(),
   discount: z.coerce.number().optional(),
   deliveryFee: z.coerce.number().optional(),
+  paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
+}).refine(data => {
+    if (data.type === 'income') {
+        return !!data.paymentMethod;
+    }
+    return true;
+}, {
+    message: 'Por favor, selecione um método de pagamento.',
+    path: ['paymentMethod'],
 });
+
 
 type TransactionFormValues = z.infer<typeof formSchema>;
 
@@ -140,6 +151,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
+        paymentMethod: data.paymentMethod,
         dateMs: Date.now(),
         timestamp: serverTimestamp(),
       };
@@ -316,6 +328,48 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                   <FormLabel>Valor Total</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} readOnly className="bg-muted font-bold" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="paymentMethod"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Forma de Pagamento</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="pix" id="pix" />
+                        </FormControl>
+                        <FormLabel htmlFor="pix" className="font-normal cursor-pointer">PIX</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="dinheiro" id="dinheiro" />
+                        </FormControl>
+                        <FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="cartao" id="cartao" />
+                        </FormControl>
+                        <FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="fiado" id="fiado" />
+                        </FormControl>
+                        <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
+                      </FormItem>
+                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

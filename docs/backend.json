@@ -35,6 +35,16 @@
           "type": "number",
           "description": "Delivery fee applied to the transaction."
         },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment method for an income transaction.",
+          "enum": [
+            "pix",
+            "dinheiro",
+            "cartao",
+            "fiado"
+          ]
+        },
         "userId": {
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Transaction)"
