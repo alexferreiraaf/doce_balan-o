@@ -1,84 +1,85 @@
 /**
- * @fileoverview Firestore Security Rules for SweetBalance application.
+ * @file Firestore Security Rules for SweetBalance application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for transactions and products.
- * Only the authenticated user can access their own data.
+ * This ruleset enforces a strict user-ownership model, ensuring that users can only access data associated with their own account.
  *
  * Data Structure:
- * All data is nested under /artifacts/{appId}/users/{userId}/... to ensure data isolation and efficient querying.
- * - /artifacts/{appId}/users/{userId}/transactions/{transactionId}: Stores transaction data for each user.
- * - /artifacts/{appId}/users/{userId}/products/{productId}: Stores product data for each user.
+ * All data is nested under /artifacts/{appId}/users/{userId}, which provides a clear hierarchical structure for user-specific data.
  *
  * Key Security Decisions:
- * - Users can only access data under their own user ID.
- * - Data validation is minimal in this prototyping phase, focusing on relational integrity (userId matching the path).
- * - `list` operations are restricted to the owner of the user path.
+ * - Users can only access their own data.
+ * - Data access is controlled at the path level, with userId being the determining factor.
+ * - Only authenticated users can access data, leveraging Firebase Authentication.
  *
- * Denormalization for Authorization:
- * The 'userId' is present in both the document and the path, allowing for secure and efficient rule validation without additional reads.
+ * Authorization Independence:
+ * Ownership is determined solely by the document path (artifacts/{appId}/users/{userId}/*). This eliminates dependencies on parent documents and enables atomic batch operations.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Enforces that the user is signed in.
-     * @return {boolean} True if the user is signed in, false otherwise.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the request is made by the owner of the document.
-     * @param {string} userId The user ID to compare against the request's authentication UID.
-     * @return {boolean} True if the user is the owner, false otherwise.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the request is made by the owner of the existing document.
-     * @param {string} userId The user ID to compare against the resource data's userId.
-     * @return {boolean} True if the user is the owner and the resource exists, false otherwise.
-     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Rules for managing user transactions.
+     * @description Secure access to transaction documents. Only the owner can read, create, update, or delete their transactions.
      * @path /artifacts/{appId}/users/{userId}/transactions/{transactionId}
-     * @allow (create) User rAhWsmNQVpU7GGmJvuAILNw4blh2 can create a transaction under /artifacts/doce-balanco-default/users/rAhWsmNQVpU7GGmJvuAILNw4blh2/transactions if the transaction's userId field matches.
-     * @deny (create) User rAhWsmNQVpU7GGmJvuAILNw4blh2 cannot create a transaction under /artifacts/doce-balanco-default/users/differentUserId/transactions because the user ID in the path does not match the authenticated user.
-     * @principle Enforces document ownership and relational integrity for write operations.
+     * @allow (create) Signed-in user with userId matching the path can create a transaction.
+     * @allow (get, list) Signed-in user with userId matching the path can read their transactions.
+     * @deny (create) User attempts to create a transaction for another user.
+     * @deny (update, delete) User attempts to update or delete a transaction they don't own.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      // Read rules: Only the owner can read a transaction.
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
 
-      // Write rules: Only the owner can create, update, or delete a transaction.
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Rules for managing user products.
+     * @description Secure access to product documents. Only the owner can read, create, update, or delete their products.
      * @path /artifacts/{appId}/users/{userId}/products/{productId}
-     * @allow (create) User rAhWsmNQVpU7GGmJvuAILNw4blh2 can create a product under /artifacts/doce-balanco-default/users/rAhWsmNQVpU7GGmJvuAILNw4blh2/products if the product's userId field matches.
-     * @deny (create) User rAhWsmNQVpU7GGmJvuAILNw4blh2 cannot create a product under /artifacts/doce-balanco-default/users/differentUserId/products because the user ID in the path does not match the authenticated user.
-     * @principle Enforces document ownership and relational integrity for write operations.
+     * @allow (create) Signed-in user with userId matching the path can create a product.
+     * @allow (get, list) Signed-in user with userId matching the path can read their products.
+     * @deny (create) User attempts to create a product for another user.
+     * @deny (update, delete) User attempts to update or delete a product they don't own.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /artifacts/{appId}/users/{userId}/products/{productId} {
-      // Read rules: Only the owner can read a product.
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
 
-      // Write rules: Only the owner can create, update, or delete a product.
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secure access to customer documents. Only the owner can read, create, update, or delete their customers.
+     * @path /artifacts/{appId}/users/{userId}/customers/{customerId}
+     * @allow (create) Signed-in user with userId matching the path can create a customer.
+     * @allow (get, list) Signed-in user with userId matching the path can read their customers.
+     * @deny (create) User attempts to create a customer for another user.
+     * @deny (update, delete) User attempts to update or delete a customer they don't own.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /artifacts/{appId}/users/{userId}/customers/{customerId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isExistingOwner(userId);
