@@ -1,7 +1,7 @@
 'use client';
 import { useMemo } from 'react';
-import { Wallet, TrendingUp, Clipboard, CheckCircle, Clock } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { Wallet, TrendingUp, Clipboard, CheckCircle, Clock, MoreVertical, Trash2 } from 'lucide-react';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
@@ -69,6 +69,28 @@ export function DashboardClient() {
     }
   };
 
+  const handleDeleteTransaction = async (transactionId: string) => {
+    if (!user || !firestore) return;
+
+    if (!confirm('Tem certeza de que deseja excluir este lançamento? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
+    try {
+        await deleteDoc(transactionRef);
+        toast({ title: "Sucesso!", description: "Lançamento excluído." });
+    } catch (error) {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: transactionRef.path,
+            operation: 'delete',
+        }));
+        console.error("Error deleting transaction: ", error);
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o lançamento." });
+    }
+  };
+
+
   if (loading) {
     return <Loading />;
   }
@@ -96,7 +118,7 @@ export function DashboardClient() {
         />
       </div>
 
-      <TransactionList transactions={transactions.filter(t => t.status !== 'pending')} />
+      <TransactionList transactions={transactions.filter(t => t.status !== 'pending')} onDelete={handleDeleteTransaction} />
 
       {pendingFiado.length > 0 && (
          <Card className="mt-8">
@@ -116,9 +138,9 @@ export function DashboardClient() {
                 {pendingFiado.map((t) => (
                     <li
                     key={t.id}
-                    className="flex flex-col sm:flex-row justify-between sm:items-center p-3 rounded-lg bg-amber-100/60"
+                    className="flex items-center p-3 rounded-lg bg-amber-100/60"
                     >
-                    <div className="flex flex-col gap-1 mb-2 sm:mb-0">
+                    <div className="flex-grow flex flex-col gap-1">
                         <span className="font-semibold text-card-foreground">{t.description}</span>
                         <div className='flex items-center gap-2'>
                             <Badge variant="secondary" className="text-xs">{t.category}</Badge>
@@ -127,22 +149,37 @@ export function DashboardClient() {
                             </span>
                         </div>
                     </div>
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                size="sm" 
-                                className="bg-green-500 hover:bg-green-600 text-white self-end sm:self-center"
-                            >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Marcar como Pago
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    size="sm" 
+                                    className="bg-green-500 hover:bg-green-600 text-white"
+                                >
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Marcar como Pago
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="w-4 h-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteTransaction(t.id)}>
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                     </li>
                 ))}
                 </ul>
