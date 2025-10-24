@@ -7,6 +7,7 @@ import { IncomeExpenseChart } from './income-expense-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMemo, useCallback } from 'react';
+import { PaymentMethodChart } from './payment-method-chart';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
@@ -66,6 +67,14 @@ export function ReportsClient() {
           </CardContent>
         </Card>
         <Card>
+          <CardHeader>
+            <CardTitle>Vendas por Método de Pagamento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PaymentMethodChart transactions={transactions} />
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Receitas vs Despesas (Últimos 6 meses)</CardTitle>
           </CardHeader>
