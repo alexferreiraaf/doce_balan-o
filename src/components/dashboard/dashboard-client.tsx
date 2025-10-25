@@ -80,23 +80,24 @@ export function DashboardClient() {
     }
   };
 
-  const handleDeleteTransaction = () => {
+  const handleDeleteTransaction = async () => {
     if (!user || !firestore || !deleteTarget) return;
     
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${deleteTarget}`);
     
-    deleteDoc(transactionRef).then(() => {
+    try {
+        await deleteDoc(transactionRef);
         toast({ title: "Sucesso!", description: "Lançamento excluído." });
-        setDeleteTarget(null);
-    }).catch((error) => {
+    } catch (error) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: transactionRef.path,
             operation: 'delete',
         }));
         console.error("Error deleting transaction: ", error);
         toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o lançamento." });
+    } finally {
         setDeleteTarget(null);
-    });
+    }
   };
 
 
