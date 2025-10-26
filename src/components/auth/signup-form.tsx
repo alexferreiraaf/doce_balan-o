@@ -21,8 +21,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
 import { FirebaseError } from 'firebase/app';
+import { useFirebase } from '@/firebase';
 
 
 const formSchema = z.object({
@@ -33,7 +33,7 @@ const formSchema = z.object({
 type SignupFormValues = z.infer<typeof formSchema>;
 
 export function SignupForm() {
-  const auth = useAuth();
+  const { auth } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -55,6 +55,7 @@ export function SignupForm() {
           description: 'Você já pode acessar o painel.',
         });
         router.push('/'); // Redirect to the main dashboard
+        router.refresh();
       } catch (error) {
          let description = 'Ocorreu um erro desconhecido. Tente novamente.';
         if (error instanceof FirebaseError) {

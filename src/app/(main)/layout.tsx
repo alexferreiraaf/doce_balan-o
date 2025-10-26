@@ -15,27 +15,23 @@ export default function MainLayout({
   const router = useRouter();
 
   useEffect(() => {
+    if (isAuthLoading) return;
     // If auth is not loading and there's no user, redirect to login
-    if (!isAuthLoading && !user) {
+    if (!user) {
       router.push('/login');
     }
   }, [user, isAuthLoading, router]);
 
   // While checking auth, show a loading screen
-  if (isAuthLoading) {
+  if (isAuthLoading || !user) {
     return <Loading />;
   }
 
   // If user is authenticated, render the main layout
-  if (user) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Navbar />
-        <main className="flex-grow">{children}</main>
-      </div>
-    );
-  }
-
-  // If no user and not loading, we're likely in the process of redirecting, so show loading.
-  return <Loading />;
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+      <main className="flex-grow">{children}</main>
+    </div>
+  );
 }
