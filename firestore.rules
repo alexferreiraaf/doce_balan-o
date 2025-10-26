@@ -1,83 +1,91 @@
 /**
- * @description This ruleset enforces a strict user-ownership model for all data within the SweetBalance application.
- *              Each user's transactions, products, and customers are stored in separate subcollections under their user ID, ensuring data privacy and security.
- *              The rules are designed to prevent unauthorized access and maintain data integrity.
- * @dataStructure All data is nested under /artifacts/{appId}/users/{userId}/..., providing a clear hierarchical structure.
- * @keySecurityDecisions
- *   - Only authenticated users can access their own data.
- *   - Data access is restricted based on path-based rules, ensuring that users can only access data within their own user ID.
- *   - The rules validate that the userId in the document matches the userId in the path to prevent unauthorized data creation.
- *   - All write operations are protected by authorization checks to prevent unauthorized modification or deletion of data.
- *   - The rules explicitly deny any unauthorized access attempts.
+ * @fileOverview Firestore Security Rules for SweetBalance application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a hybrid security model, balancing public accessibility with private user data.
+ * Products and Customers are publicly readable but not writable by end users. Transactions are strictly user-owned.
+ *
+ * Data Structure:
+ * - /artifacts/{appId}/users/{userId}/transactions/{transactionId}: Stores private transaction data, accessible only to the owning user.
+ * - /artifacts/{appId}/products/{productId}: Stores public product data, readable by all, writable by nobody except admins (simulated with `false` for now).
+ * - /artifacts/{appId}/customers/{customerId}: Stores public customer data, readable by all, writable by nobody except admins (simulated with `false` for now).
+ *
+ * Key Security Decisions:
+ * - Public read access is granted for /products and /customers.
+ * - User listing is disallowed.
+ * - Write access to /products and /customers is denied for all users.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is signed in.
+    /**
+     * @description Enforces that the user is signed in.
+     * @returns {boolean} True if the user is signed in, false otherwise.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to check if the user is the owner of the resource.
+    /**
+     * @description Enforces that the request is made by the owner of the resource.
+     * @param {string} userId - The user ID of the owner.
+     * @returns {boolean} True if the request is made by the owner, false otherwise.
+     */
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
-    // Helper function to check if the user is the owner of the resource and the resource exists.
+    /**
+     * @description Enforces that the request is made by the owner of the existing resource.
+     * @param {string} userId - The user ID of the owner.
+     * @returns {boolean} True if the request is made by the owner and the resource exists, false otherwise.
+     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Enforces access control for transaction documents. Only the owner can read, create, update, or delete their own transactions.
+     * @description Defines access rules for transaction documents.
      * @path /artifacts/{appId}/users/{userId}/transactions/{transactionId}
-     * @allow (create) - User A can create a transaction under /artifacts/sweetapp/users/A/transactions/123 if the transaction's userId field is "A".
-     * @allow (read, update, delete) - User A can read, update, or delete a transaction under /artifacts/sweetapp/users/A/transactions/123.
-     * @deny (create) - User A cannot create a transaction under /artifacts/sweetapp/users/B/transactions/123, even if the transaction's userId field is "A".
-     * @deny (read, update, delete) - User A cannot read, update, or delete a transaction under /artifacts/sweetapp/users/B/transactions/123.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) Authenticated user can create a transaction if the userId matches their auth.uid, and the transaction's userId field also matches.
+     * @allow (get, list) Authenticated user can read their own transaction.
+     * @allow (update, delete) Authenticated user can update/delete their own transaction if it exists.
+     * @deny (create) User tries to create a transaction for another user.
+     * @deny (update, delete) User tries to update/delete a transaction that doesn't exist or doesn't belong to them.
+     * @principle Enforces document ownership for writes; restricts access to a user's own data tree; validates relational integrity between documents.
      */
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow read: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Enforces access control for product documents. Only the owner can read, create, update, or delete their own products.
-     * @path /artifacts/{appId}/users/{userId}/products/{productId}
-     * @allow (create) - User A can create a product under /artifacts/sweetapp/users/A/products/123 if the product's userId field is "A".
-     * @allow (read, update, delete) - User A can read, update, or delete a product under /artifacts/sweetapp/users/A/products/123.
-     * @deny (create) - User A cannot create a product under /artifacts/sweetapp/users/B/products/123, even if the product's userId field is "A".
-     * @deny (read, update, delete) - User A cannot read, update, or delete a product under /artifacts/sweetapp/users/B/products/123.
-     * @principle Enforces document ownership for all operations.
+     * @description Defines access rules for product documents.
+     * @path /artifacts/{appId}/products/{productId}
+     * @allow (get, list) Anyone can read product information.
+     * @deny (create, update, delete) No one can create, update, or delete product information.
+     * @principle Public read access with owner-only writes (currently disabled).
      */
-    match /artifacts/{appId}/users/{userId}/products/{productId} {
-      allow read: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
+    match /artifacts/{appId}/products/{productId} {
+      allow get, list: if true;
+      allow create, update, delete: if false; // TODO: Only allow admins to write products.
     }
 
     /**
-     * @description Enforces access control for customer documents. Only the owner can read, create, update, or delete their own customers.
-     * @path /artifacts/{appId}/users/{userId}/customers/{customerId}
-     * @allow (create) - User A can create a customer under /artifacts/sweetapp/users/A/customers/123 if the customer's userId field is "A".
-     * @allow (read, update, delete) - User A can read, update, or delete a customer under /artifacts/sweetapp/users/A/customers/123.
-     * @deny (create) - User A cannot create a customer under /artifacts/sweetapp/users/B/customers/123, even if the customer's userId field is "A".
-     * @deny (read, update, delete) - User A cannot read, update, or delete a customer under /artifacts/sweetapp/users/B/customers/123.
-     * @principle Enforces document ownership for all operations.
+     * @description Defines access rules for customer documents.
+     * @path /artifacts/{appId}/customers/{customerId}
+     * @allow (get, list) Anyone can read customer information.
+     * @deny (create, update, delete) No one can create, update, or delete customer information.
+     * @principle Public read access with owner-only writes (currently disabled).
      */
-    match /artifacts/{appId}/users/{userId}/customers/{customerId} {
-      allow read: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
+    match /artifacts/{appId}/customers/{customerId} {
+      allow get, list: if true;
+      allow create, update, delete: if false; // TODO: Only allow admins to write customers.
     }
   }
 }
