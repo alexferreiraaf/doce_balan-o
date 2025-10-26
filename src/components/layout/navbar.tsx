@@ -62,7 +62,7 @@ export function Navbar() {
     <header className="bg-primary shadow-lg sticky top-0 z-40">
       <nav className="max-w-7xl mx-auto flex justify-between items-center p-4">
         <Link href="/" className="flex items-center space-x-2 text-primary-foreground">
-          <WhiskIcon className="transform -rotate-12" width={32} height={32} />
+          <WhiskIcon className="transform -rotate-12" width={40} height={40} />
           <span className="text-xl sm:text-2xl font-extrabold tracking-tight">Doçuras da Fran</span>
         </Link>
         
