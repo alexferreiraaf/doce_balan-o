@@ -1,14 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, TrendingUp, Plus } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, TrendingUp, LogOut } from 'lucide-react';
+import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AddTransactionSheet } from '@/components/dashboard/add-transaction-sheet';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirebase } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
 
 const navLinks = [
   { href: '/', label: 'Início', icon: Home },
@@ -17,7 +27,32 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { isUserLoading } = useAuth();
+  const { isUserLoading, user } = useAuth();
+  const { auth } = useFirebase();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: 'Você saiu!',
+        description: 'Até a próxima!',
+      });
+      router.push('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro!',
+        description: 'Não foi possível sair. Tente novamente.',
+      });
+    }
+  };
+
+  const getInitials = (email?: string | null) => {
+    return email ? email.charAt(0).toUpperCase() : '?';
+  };
 
   return (
     <header className="bg-primary shadow-lg sticky top-0 z-40">
@@ -48,7 +83,31 @@ export function Navbar() {
           ))}
         </div>
 
-        {!isUserLoading && <div className="hidden sm:block"><AddTransactionSheet /></div>}
+        <div className="flex items-center gap-4">
+            {!isUserLoading && (
+                <div className="hidden sm:block">
+                    <AddTransactionSheet />
+                </div>
+            )}
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                        <Avatar className="h-9 w-9">
+                            <AvatarFallback className="bg-primary-foreground text-primary font-bold">
+                                {getInitials(user?.email)}
+                            </AvatarFallback>
+                        </Avatar>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sair</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+
       </nav>
       
       {/* Mobile Nav */}
