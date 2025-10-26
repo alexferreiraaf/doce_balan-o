@@ -6,9 +6,13 @@ import type { Transaction, PaymentMethod } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { DeleteTransactionButton } from './delete-transaction-button';
+import { Button } from '../ui/button';
 
 interface TransactionListProps {
   transactions: Transaction[];
+  totalTransactions: number;
+  isShowingAll: boolean;
+  onShowAll: () => void;
 }
 
 const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
@@ -18,8 +22,8 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
     fiado: { text: 'Fiado', icon: Receipt },
 };
 
-export function TransactionList({ transactions }: TransactionListProps) {
-  if (transactions.length === 0) {
+export function TransactionList({ transactions, totalTransactions, isShowingAll, onShowAll }: TransactionListProps) {
+  if (totalTransactions === 0) {
     return (
       <Card className="mt-8">
         <CardContent className="text-center p-8 text-muted-foreground">
@@ -34,11 +38,16 @@ export function TransactionList({ transactions }: TransactionListProps) {
   return (
     <Card className="mt-8">
       <CardHeader>
-        <CardTitle className="text-xl font-bold text-gray-800">Últimos Lançamentos</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl font-bold text-gray-800">Últimos Lançamentos</CardTitle>
+          {!isShowingAll && totalTransactions > 10 && (
+             <Button variant="link" onClick={onShowAll}>Ver Todos</Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <ul className="space-y-3">
-          {transactions.slice(0, 10).map((t) => {
+          {transactions.map((t) => {
             const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
             return (
                 <li

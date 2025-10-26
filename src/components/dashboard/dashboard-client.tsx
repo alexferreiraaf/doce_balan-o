@@ -31,6 +31,8 @@ export function DashboardClient() {
   const { user } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
+
 
   const { totalIncome, totalExpense, balance, pendingFiado, totalFiadoValue } = useMemo(() => {
     const incomePaid = transactions
@@ -60,9 +62,6 @@ export function DashboardClient() {
     const updateData = { status: 'paid', paymentMethod: paymentMethod };
     
     updateDoc(transactionRef, updateData)
-      .then(() => {
-        toast({ title: "Sucesso!", description: "Venda marcada como paga." });
-      })
       .catch((error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: transactionRef.path,
@@ -73,6 +72,9 @@ export function DashboardClient() {
         toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a venda." });
       });
   };
+
+  const paidTransactions = transactions.filter(t => t.status !== 'pending');
+  const visibleTransactions = showAllTransactions ? paidTransactions : paidTransactions.slice(0, 10);
 
   if (loading) {
     return <Loading />;
@@ -102,7 +104,12 @@ export function DashboardClient() {
         />
       </div>
 
-      <TransactionList transactions={transactions.filter(t => t.status !== 'pending')} />
+      <TransactionList 
+        transactions={visibleTransactions}
+        totalTransactions={paidTransactions.length}
+        onShowAll={() => setShowAllTransactions(true)}
+        isShowingAll={showAllTransactions}
+       />
 
       {pendingFiado.length > 0 && (
          <Card className="mt-8">
