@@ -12,8 +12,34 @@ import {
 } from '@/components/ui/sheet';
 import { TransactionForm } from './transaction-form';
 
-export function AddTransactionSheet() {
+export function AddTransactionSheet({ isMobile = false }: { isMobile?: boolean }) {
   const [open, setOpen] = useState(false);
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button
+            size="lg"
+            className="rounded-full w-16 h-16 bg-primary text-primary-foreground shadow-lg flex flex-col items-center justify-center transform -translate-y-4"
+          >
+            <Plus className="w-8 h-8" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="bg-background w-full sm:max-w-lg overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="text-2xl font-bold text-primary">Nova Transação</SheetTitle>
+          <SheetDescription>
+            Registre uma nova entrada ou saída para manter suas finanças em dia.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="py-6">
+          <TransactionForm setSheetOpen={setOpen} />
+        </div>
+      </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

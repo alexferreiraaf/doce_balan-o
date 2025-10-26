@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn } from 'lucide-react';
-import { signOut, linkWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus } from 'lucide-react';
+import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 import { Button } from '@/components/ui/button';
@@ -134,7 +134,7 @@ export function Navbar() {
       </nav>
       
       {/* Mobile Nav */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 grid grid-cols-4 items-center p-1.5">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 grid grid-cols-5 items-center p-1.5 gap-1">
           {/* Início Link */}
           <Link href="/" passHref>
             <Button
@@ -168,10 +168,9 @@ export function Navbar() {
             </Button>
           </Link>
 
-
           {/* Novo Lançamento Button */}
-          <div className="flex justify-center">
-             <AddTransactionSheet />
+          <div className="flex justify-center items-center">
+             <AddTransactionSheet isMobile />
           </div>
 
           {/* Relatórios Link */}
@@ -190,6 +189,9 @@ export function Navbar() {
               </div>
             </Button>
           </Link>
+
+          {/* Placeholder for 5th item if needed, or just let it be empty */}
+           <div />
       </div>
 
     </header>
