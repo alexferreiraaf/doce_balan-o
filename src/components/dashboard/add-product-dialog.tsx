@@ -61,9 +61,8 @@ export function AddProductDialog() {
     }
 
     startTransition(() => {
-      const collectionPath = `artifacts/${APP_ID}/users/${user.uid}/products`;
+      const collectionPath = `artifacts/${APP_ID}/products`;
       const productData = {
-        userId: user.uid,
         name: data.name,
         price: data.price,
       };

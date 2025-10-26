@@ -121,6 +121,11 @@ export function LoginForm() {
             Cadastre-se
           </Link>
         </p>
+         <p className="mt-4 text-center text-sm text-muted-foreground">
+          Ou <Link href="/" className="font-semibold text-primary hover:underline">
+            continue como anônimo
+          </Link>
+        </p>
       </CardContent>
     </Card>
   );

@@ -59,9 +59,8 @@ export function AddCustomerDialog() {
     }
 
     startTransition(() => {
-      const collectionPath = `artifacts/${APP_ID}/users/${user.uid}/customers`;
+      const collectionPath = `artifacts/${APP_ID}/customers`;
       const customerData = {
-        userId: user.uid,
         name: data.name,
       };
 

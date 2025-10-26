@@ -109,7 +109,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
-      "description": "Represents a product that can be sold.",
+      "description": "Represents a product that can be sold. This is a public entity.",
       "properties": {
         "id": {
           "type": "string",
@@ -122,24 +122,19 @@
         "price": {
           "type": "number",
           "description": "Price of the product."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who owns this product."
         }
       },
       "required": [
         "id",
         "name",
-        "price",
-        "userId"
+        "price"
       ]
     },
     "Customer": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Customer",
       "type": "object",
-      "description": "Represents a customer.",
+      "description": "Represents a customer. This is a public entity.",
       "properties": {
         "id": {
           "type": "string",
@@ -148,22 +143,18 @@
         "name": {
           "type": "string",
           "description": "Name of the customer."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who owns this customer record."
         }
       },
       "required": [
         "id",
-        "name",
-        "userId"
+        "name"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password"
+      "password",
+      "anonymous"
     ]
   },
   "firestore": {
@@ -175,7 +166,7 @@
           "schema": {
             "$ref": "#/backend/entities/Transaction"
           },
-          "description": "Stores individual transaction data for each user. The userId parameter ensures that each user's transactions are kept separate and secure.",
+          "description": "Stores individual transaction data for each user. This data is private to the user.",
           "params": [
             {
               "name": "appId",
@@ -193,21 +184,17 @@
         }
       },
       {
-        "path": "artifacts/{appId}/users/{userId}/products/{productId}",
+        "path": "artifacts/{appId}/products/{productId}",
         "definition": {
           "entityName": "Product",
           "schema": {
             "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores product data for each user.",
+          "description": "Stores product data, accessible to all users.",
           "params": [
             {
               "name": "appId",
               "description": "The unique identifier of the SweetBalance application."
-            },
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
             },
             {
               "name": "productId",
@@ -217,21 +204,17 @@
         }
       },
       {
-        "path": "artifacts/{appId}/users/{userId}/customers/{customerId}",
+        "path": "artifacts/{appId}/customers/{customerId}",
         "definition": {
           "entityName": "Customer",
           "schema": {
             "$ref": "#/backend/entities/Customer"
           },
-          "description": "Stores customer data for each user.",
+          "description": "Stores customer data, accessible to all users.",
           "params": [
             {
               "name": "appId",
               "description": "The unique identifier of the SweetBalance application."
-            },
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
             },
             {
               "name": "customerId",
@@ -241,6 +224,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure data isolation and efficient querying for the SweetBalance application. Each user's data (transactions, products, customers) are stored in dedicated subcollections under their user ID, enhancing data privacy and security.  The root `artifacts/{appId}` allows logical separation of app data. All collections are secured via path-based rules, ensuring only the authenticated user can access their own data.  Authorization Independence is achieved as there is no dependency on any parent document and ownership is determined by the path. This provides security and allows atomic batch operations.\n\nThis structure supports the required QAPs (Rules are not Filters) because the listing operation only returns the items under the user's path and is secured by the user id."
+    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific."
   }
 }

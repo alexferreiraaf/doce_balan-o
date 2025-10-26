@@ -22,13 +22,11 @@ export interface Transaction {
 
 export interface Product {
   id: string;
-  userId: string;
   name: string;
   price: number;
 }
 
 export interface Customer {
   id: string;
-  userId: string;
   name: string;
 }

@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { useAuth } from './use-auth';
 import type { Product } from '@/app/lib/types';
 import { APP_ID } from '../constants';
 import { useToast } from '@/hooks/use-toast';
@@ -9,28 +8,24 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 
 export function useProducts() {
-  const { userId, isAuthReady } = useAuth();
   const firestore = useFirestore();
   const [loading, setLoading] = useState(true);
 
+  // Query the public collection
   const productsQuery = useMemoFirebase(() => {
-    if (!userId) return null;
+    if (!firestore) return null;
     return query(
-      collection(firestore, `artifacts/${APP_ID}/users/${userId}/products`),
+      collection(firestore, `artifacts/${APP_ID}/products`),
       orderBy('name', 'asc')
     );
-  }, [firestore, userId]);
+  }, [firestore]);
 
   const { data: products, isLoading: productsLoading, error } = useCollection<Product>(productsQuery);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isAuthReady) {
-      setLoading(true);
-      return;
-    }
     setLoading(productsLoading);
-  }, [isAuthReady, productsLoading]);
+  }, [productsLoading]);
   
   useEffect(() => {
     if (error) {
@@ -38,7 +33,7 @@ export function useProducts() {
       toast({
         variant: "destructive",
         title: "Erro ao carregar produtos",
-        description: "Não foi possível buscar seus produtos. Tente recarregar a página.",
+        description: "Não foi possível buscar os produtos. Tente recarregar a página.",
       });
     }
   }, [error, toast]);

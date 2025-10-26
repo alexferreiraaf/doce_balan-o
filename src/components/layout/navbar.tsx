@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List } from 'lucide-react';
-import { signOut } from 'firebase/auth';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn } from 'lucide-react';
+import { signOut, linkWithCredential, EmailAuthProvider } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -52,7 +54,8 @@ export function Navbar() {
   };
 
   const getInitials = (email?: string | null) => {
-    return email ? email.charAt(0).toUpperCase() : '?';
+    if (!email) return 'A';
+    return email.charAt(0).toUpperCase();
   };
 
   return (
@@ -95,16 +98,35 @@ export function Navbar() {
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                         <Avatar className="h-9 w-9">
                             <AvatarFallback className="bg-primary-foreground text-primary font-bold">
-                                {getInitials(user?.email)}
+                                {user?.isAnonymous ? <UserIcon /> : getInitials(user?.email)}
                             </AvatarFallback>
                         </Avatar>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuItem onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Sair</span>
-                    </DropdownMenuItem>
+                   {user?.isAnonymous ? (
+                     <>
+                        <DropdownMenuLabel>Acesso Anônimo</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => router.push('/login')}>
+                            <LogIn className="mr-2 h-4 w-4" />
+                            <span>Fazer Login</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/signup')}>
+                            <UserIcon className="mr-2 h-4 w-4" />
+                            <span>Criar Conta</span>
+                        </DropdownMenuItem>
+                     </>
+                   ) : (
+                    <>
+                        <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Sair</span>
+                        </DropdownMenuItem>
+                    </>
+                   )}
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
