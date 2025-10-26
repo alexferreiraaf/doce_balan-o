@@ -4,7 +4,7 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Controle da Doçuras',
+  title: 'Doçuras da Fran',
   description: 'Seu assistente financeiro para confeitarias.',
   manifest: "/manifest.json",
 };
