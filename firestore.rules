@@ -46,7 +46,7 @@ service cloud.firestore {
 
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
+      allow delete: if true; // Alterado para permitir que qualquer um possa deletar
     }
 
     /**
