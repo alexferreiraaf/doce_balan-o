@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Badge } from '../ui/badge';
-import type { PaymentMethod } from '@/app/lib/types';
+import type { PaymentMethod, Transaction } from '@/app/lib/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DangerZone } from './danger-zone';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
@@ -214,6 +215,8 @@ export function DashboardClient() {
             </CardContent>
          </Card>
       )}
+
+      <DangerZone transactions={transactions} />
       
       {user && (
         <p className="text-xs text-center text-muted-foreground pt-4">
