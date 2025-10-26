@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { MoreVertical, Trash2, Loader2 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
-import { useAuth, useFirestore } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase'; // Changed from useAuth to useUser
 import { APP_ID } from '@/app/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ interface DeleteTransactionButtonProps {
 }
 
 export function DeleteTransactionButton({ transactionId }: DeleteTransactionButtonProps) {
-  const { user, isUserLoading: isAuthLoading } = useAuth();
+  const { user, isUserLoading: isAuthLoading } = useUser(); // Correctly use useUser
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
