@@ -1,40 +1,22 @@
 'use client';
-import { useMemo, useState } from 'react';
-import { Wallet, TrendingUp, Clipboard, CheckCircle, Clock } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useMemo } from 'react';
+import { Wallet, TrendingUp, Clipboard, List } from 'lucide-react';
+import Link from 'next/link';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
-import { TransactionList } from './transaction-list';
 import Loading from '@/app/(main)/loading';
-import { useAuth, useFirestore } from '@/firebase';
-import { APP_ID } from '@/app/lib/constants';
+import { useAuth } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { formatCurrency } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { Badge } from '../ui/badge';
-import type { PaymentMethod } from '@/app/lib/types';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { DangerZone } from './danger-zone';
-import { DeleteTransactionButton } from './delete-transaction-button';
+import { RecentTransactionsList } from './recent-transactions-list';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
   const { user } = useAuth();
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const [showAllTransactions, setShowAllTransactions] = useState(false);
 
-
-  const { totalIncome, totalExpense, balance, pendingFiado, totalFiadoValue } = useMemo(() => {
+  const { totalIncome, totalExpense, balance, pendingFiadoValue } = useMemo(() => {
     const incomePaid = transactions
       .filter((t) => t.type === 'income' && t.status === 'paid')
       .reduce((sum, t) => sum + t.amount, 0);
@@ -50,31 +32,14 @@ export function DashboardClient() {
       totalIncome: incomePaid,
       totalExpense: expense,
       balance: incomePaid - expense,
-      pendingFiado: fiado,
       totalFiadoValue: fiadoValue
     };
   }, [transactions]);
 
-  const handleMarkAsPaid = (transactionId: string, paymentMethod: PaymentMethod) => {
-    if (!user || !firestore) return;
+  const recentTransactions = useMemo(() => {
+      return transactions.slice(0, 5);
+  }, [transactions]);
 
-    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
-    const updateData = { status: 'paid', paymentMethod: paymentMethod };
-    
-    updateDoc(transactionRef, updateData)
-      .catch((error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: transactionRef.path,
-            operation: 'update',
-            requestResourceData: updateData,
-        }));
-        console.error("Error updating transaction: ", error);
-        toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a venda." });
-      });
-  };
-
-  const paidTransactions = transactions.filter(t => t.status !== 'pending');
-  const visibleTransactions = showAllTransactions ? paidTransactions : paidTransactions.slice(0, 10);
 
   if (loading) {
     return <Loading />;
@@ -82,7 +47,7 @@ export function DashboardClient() {
 
   return (
     <>
-    <div className="space-y-6 md:space-y-8 pb-24 sm:pb-8">
+    <div className="space-y-6 md:space-y-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
         <StatCard
           title="Balanço (Pago)"
@@ -104,67 +69,23 @@ export function DashboardClient() {
         />
       </div>
 
-      <TransactionList 
-        transactions={visibleTransactions}
-        totalTransactions={paidTransactions.length}
-        onShowAll={() => setShowAllTransactions(true)}
-        isShowingAll={showAllTransactions}
-       />
+       <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+              <List className="w-5 h-5 mr-2" />
+              Lançamentos Recentes
+            </CardTitle>
+            <Button asChild variant="link">
+              <Link href="/transactions">Ver Todos</Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <RecentTransactionsList transactions={recentTransactions} />
+        </CardContent>
+      </Card>
 
-      {pendingFiado.length > 0 && (
-         <Card className="mt-8">
-            <CardHeader>
-                <div className="flex justify-between items-start">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
-                            <Clock className="w-5 h-5 mr-2 text-amber-600" />
-                            Vendas a Prazo (Pendentes)
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">Total pendente: <span className="font-bold">{formatCurrency(totalFiadoValue)}</span></p>
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <ul className="space-y-3">
-                {pendingFiado.map((t) => (
-                    <li
-                    key={t.id}
-                    className="flex items-center p-3 rounded-lg bg-amber-100/60"
-                    >
-                    <div className="flex-grow flex flex-col gap-1">
-                        <span className="font-semibold text-card-foreground">{t.description}</span>
-                        <div className='flex items-center gap-2'>
-                            <Badge variant="secondary" className="text-xs">{t.category}</Badge>
-                            <span className="text-sm font-bold text-amber-700">
-                                {formatCurrency(t.amount)}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    size="sm" 
-                                    className="bg-green-500 hover:bg-green-600 text-white"
-                                >
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Marcar como Pago
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        <DeleteTransactionButton transactionId={t.id} />
-                    </div>
-                    </li>
-                ))}
-                </ul>
-            </CardContent>
-         </Card>
-      )}
 
       <DangerZone transactions={transactions} />
       

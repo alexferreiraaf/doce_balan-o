@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navLinks = [
   { href: '/', label: 'Início', icon: Home },
+  { href: '/transactions', label: 'Lançamentos', icon: List },
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
 ];
 
@@ -111,13 +112,13 @@ export function Navbar() {
       </nav>
       
       {/* Mobile Nav */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 flex justify-around items-center p-1.5">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 grid grid-cols-4 items-center p-1.5">
           {/* Início Link */}
           <Link href="/" passHref>
             <Button
               variant="ghost"
               className={cn(
-                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-24',
+                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
                  pathname === '/' && 'text-primary font-semibold'
               )}
               asChild
@@ -128,9 +129,26 @@ export function Navbar() {
               </div>
             </Button>
           </Link>
+          
+          <Link href="/transactions" passHref>
+            <Button
+              variant="ghost"
+              className={cn(
+                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+                 pathname === '/transactions' && 'text-primary font-semibold'
+              )}
+              asChild
+            >
+              <div>
+                <List className="w-6 h-6 mb-0.5" />
+                <span className="text-xs">Lançamentos</span>
+              </div>
+            </Button>
+          </Link>
+
 
           {/* Novo Lançamento Button */}
-          <div className="flex-shrink-0">
+          <div className="flex justify-center">
              <AddTransactionSheet />
           </div>
 
@@ -139,7 +157,7 @@ export function Navbar() {
             <Button
               variant="ghost"
               className={cn(
-                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-24',
+                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
                  pathname === '/reports' && 'text-primary font-semibold'
               )}
               asChild

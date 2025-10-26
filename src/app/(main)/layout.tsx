@@ -31,7 +31,7 @@ export default function MainLayout({
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
-      <main className="flex-grow">{children}</main>
+      <main className="flex-grow pb-24 sm:pb-0">{children}</main>
     </div>
   );
 }

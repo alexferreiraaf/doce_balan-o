@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transaction, PaymentMethod } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import { DeleteTransactionButton } from './delete-transaction-button';
-import { Button } from '../ui/button';
+import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -23,18 +22,15 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
 export function TransactionList({ transactions, title }: TransactionListProps) {
   if (transactions.length === 0) {
     return (
-      <Card className="mt-8">
-        <CardContent className="text-center p-8 text-muted-foreground">
+        <div className="text-center p-8 text-muted-foreground border rounded-lg mt-8">
           <ClipboardIcon className="w-10 h-10 mx-auto text-primary/50 mb-3" />
-          <p className="text-lg font-medium">Nenhum lançamento encontrado.</p>
-          <p className="text-sm">Esta lista está vazia.</p>
-        </CardContent>
-      </Card>
+          <p className="text-lg font-medium">Nenhum lançamento nesta categoria.</p>
+        </div>
     );
   }
 
   return (
-    <Card className="mt-8">
+    <Card>
       <CardHeader>
           <CardTitle className="text-xl font-bold text-gray-800">{title}</CardTitle>
       </CardHeader>
