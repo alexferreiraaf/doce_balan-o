@@ -38,7 +38,7 @@ export function DeleteTransactionButton({ transactionId }: DeleteTransactionButt
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!user || !firestore) {
+    if (isAuthLoading || !user || !firestore) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
       return;
     }

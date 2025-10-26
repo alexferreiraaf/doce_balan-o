@@ -26,7 +26,7 @@ import { TransactionList } from './transaction-list';
 
 export function TransactionsClient() {
   const { transactions, loading } = useTransactions();
-  const { user } = useAuth();
+  const { user, isUserLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -43,7 +43,10 @@ export function TransactionsClient() {
   }, [transactions]);
 
   const handleMarkAsPaid = (transactionId: string, paymentMethod: PaymentMethod) => {
-    if (!user || !firestore) return;
+    if (isUserLoading || !user || !firestore) {
+        toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado." });
+        return;
+    }
 
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
     const updateData = { status: 'paid', paymentMethod: paymentMethod };
@@ -103,6 +106,7 @@ export function TransactionsClient() {
                                 <Button
                                     size="sm" 
                                     className="bg-green-500 hover:bg-green-600 text-white"
+                                    disabled={isUserLoading}
                                 >
                                     <CheckCircle className="w-4 h-4 mr-2" />
                                     Marcar como Pago
