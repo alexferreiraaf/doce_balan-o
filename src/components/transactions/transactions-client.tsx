@@ -5,7 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(main)/loading';
-import { useAuth, useFirestore } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -26,7 +26,7 @@ import { TransactionList } from './transaction-list';
 
 export function TransactionsClient() {
   const { transactions, loading } = useTransactions();
-  const { user, isUserLoading } = useAuth();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 

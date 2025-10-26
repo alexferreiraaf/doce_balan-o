@@ -22,7 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
-import { useAuth, useFirebase } from '@/firebase';
+import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   email: z.string().email('Por favor, insira um e-mail válido.'),
@@ -32,7 +32,7 @@ const formSchema = z.object({
 type LoginFormValues = z.infer<typeof formSchema>;
 
 export function LoginForm() {
-  const { auth } = useFirebase();
+  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();

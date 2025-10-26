@@ -28,8 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { APP_ID } from '@/app/lib/constants';
-import { useAuth } from '@/app/lib/hooks/use-auth';
-import { useFirestore } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
@@ -40,7 +39,7 @@ const formSchema = z.object({
 type CustomerFormValues = z.infer<typeof formSchema>;
 
 export function AddCustomerDialog() {
-  const { userId, isAuthLoading } = useAuth();
+  const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -54,15 +53,15 @@ export function AddCustomerDialog() {
   });
 
   const onSubmit = (data: CustomerFormValues) => {
-    if (!userId || !firestore) {
+    if (!user || !firestore) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
       return;
     }
 
     startTransition(() => {
-      const collectionPath = `artifacts/${APP_ID}/users/${userId}/customers`;
+      const collectionPath = `artifacts/${APP_ID}/users/${user.uid}/customers`;
       const customerData = {
-        userId,
+        userId: user.uid,
         name: data.name,
       };
 
@@ -138,5 +137,3 @@ export function AddCustomerDialog() {
     </Dialog>
   );
 }
-
-    

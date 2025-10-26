@@ -9,7 +9,7 @@ import { WhiskIcon } from '@/components/icons/whisk-icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AddTransactionSheet } from '@/components/dashboard/add-transaction-sheet';
-import { useAuth, useFirebase } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -28,8 +28,8 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { isUserLoading, user } = useAuth();
-  const { auth } = useFirebase();
+  const { isUserLoading, user } = useUser();
+  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 

@@ -22,7 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
-import { useFirebase } from '@/firebase';
+import { useAuth } from '@/firebase';
 
 
 const formSchema = z.object({
@@ -33,7 +33,7 @@ const formSchema = z.object({
 type SignupFormValues = z.infer<typeof formSchema>;
 
 export function SignupForm() {
-  const { auth } = useFirebase();
+  const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();

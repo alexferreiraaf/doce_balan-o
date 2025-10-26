@@ -26,8 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, APP_ID } from '@/app/lib/constants';
 import { Badge } from '../ui/badge';
-import { useAuth } from '@/app/lib/hooks/use-auth';
-import { useFirestore } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { getCategorySuggestions } from '@/app/actions/transactions';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -65,7 +64,7 @@ const formSchema = z.object({
 type TransactionFormValues = z.infer<typeof formSchema>;
 
 export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean) => void }) {
-  const { userId, isAuthLoading } = useAuth();
+  const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -128,13 +127,13 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, typeValue, products, form]);
 
   const onSubmit = (data: TransactionFormValues) => {
-    if (!userId || !firestore) {
+    if (!user || !firestore) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
       return;
     }
 
     startTransition(() => {
-      const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
+      const collectionPath = `artifacts/${APP_ID}/users/${user.uid}/transactions`;
       
       let transactionDescription = data.description || '';
       if (data.type === 'income') {
@@ -147,7 +146,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       }
 
       const transactionData = {
-        userId,
+        userId: user.uid,
         type: data.type,
         description: transactionDescription,
         category: data.category,

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
 import Loading from '@/app/(main)/loading';
-import { useAuth } from '@/firebase';
+import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { DangerZone } from './danger-zone';
@@ -14,7 +14,7 @@ import { RecentTransactionsList } from './recent-transactions-list';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const { totalIncome, totalExpense, balance, pendingFiadoValue } = useMemo(() => {
     const incomePaid = transactions

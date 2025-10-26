@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/app/lib/hooks/use-auth';
+import { useUser } from '@/firebase';
 import Loading from './loading';
 import { Navbar } from '@/components/layout/navbar';
 
@@ -11,7 +11,7 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthLoading } = useAuth();
+  const { user, isUserLoading: isAuthLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
