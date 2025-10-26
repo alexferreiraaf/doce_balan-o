@@ -441,11 +441,11 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
           )}
         />
         
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setSheetOpen(false)}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 space-y-2 space-y-reverse sm:space-y-0">
+            <Button type="button" variant="outline" onClick={() => setSheetOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending || isAuthLoading}>
+            <Button type="submit" disabled={isPending || isAuthLoading} className="w-full sm:w-auto">
               {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Adicionar Lançamento
             </Button>
