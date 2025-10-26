@@ -94,7 +94,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the SweetBalance application.",
+      "description": "Represents a user of the Controle da Doçuras application.",
       "properties": {
         "id": {
           "type": "string",
@@ -170,7 +170,7 @@
           "params": [
             {
               "name": "appId",
-              "description": "The unique identifier of the SweetBalance application."
+              "description": "The unique identifier of the Controle da Doçuras application."
             },
             {
               "name": "userId",
@@ -194,7 +194,7 @@
           "params": [
             {
               "name": "appId",
-              "description": "The unique identifier of the SweetBalance application."
+              "description": "The unique identifier of the Controle da Doçuras application."
             },
             {
               "name": "productId",
@@ -214,7 +214,7 @@
           "params": [
             {
               "name": "appId",
-              "description": "The unique identifier of the SweetBalance application."
+              "description": "The unique identifier of the Controle da Doçuras application."
             },
             {
               "name": "customerId",

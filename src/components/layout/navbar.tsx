@@ -63,7 +63,7 @@ export function Navbar() {
       <nav className="max-w-7xl mx-auto flex justify-between items-center p-4">
         <Link href="/" className="flex items-center space-x-2 text-primary-foreground">
           <WhiskIcon className="w-8 h-8 transform -rotate-12" />
-          <span className="text-xl sm:text-2xl font-extrabold tracking-tight">Doce Balanço</span>
+          <span className="text-xl sm:text-2xl font-extrabold tracking-tight">Controle da Doçuras</span>
         </Link>
         
         <div className="hidden sm:flex items-center space-x-2 bg-primary/80 p-1 rounded-full">

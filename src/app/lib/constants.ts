@@ -1,4 +1,4 @@
-export const APP_ID = 'doce-balanco-default';
+export const APP_ID = 'controle-da-docuras-default';
 
 export const EXPENSE_CATEGORIES = [
   'Mercado/Insumos',
