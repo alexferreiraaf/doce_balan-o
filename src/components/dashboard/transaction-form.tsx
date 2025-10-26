@@ -133,7 +133,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       return;
     }
 
-    startTransition(async () => {
+    startTransition(() => {
       const collectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
       
       let transactionDescription = data.description || '';
@@ -145,7 +145,6 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         }
         transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
       }
-
 
       const transactionData = {
         userId,
@@ -162,30 +161,28 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         timestamp: serverTimestamp(),
       };
 
-      try {
-        await addDoc(collection(firestore, collectionPath), transactionData).catch((error) => {
-          errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-              path: collectionPath,
-              operation: 'create',
-              requestResourceData: transactionData,
-            })
-          );
-          throw error;
+      addDoc(collection(firestore, collectionPath), transactionData)
+        .then(() => {
+            toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0});
+            setSheetOpen(false);
+        })
+        .catch((error) => {
+            console.error('Error adding transaction: ', error);
+            errorEmitter.emit(
+                'permission-error',
+                new FirestorePermissionError({
+                path: collectionPath,
+                operation: 'create',
+                requestResourceData: transactionData,
+                })
+            );
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao Adicionar Lançamento',
+                description: 'Verifique suas permissões ou tente novamente.',
+            });
         });
-
-        toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
-        form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0});
-        setSheetOpen(false);
-      } catch (error) {
-        console.error('Error adding transaction: ', error);
-        toast({
-          variant: 'destructive',
-          title: 'Erro ao Adicionar Lançamento',
-          description: 'Verifique suas permissões ou tente novamente.',
-        });
-      }
     });
   };
 
