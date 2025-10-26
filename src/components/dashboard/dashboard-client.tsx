@@ -53,22 +53,25 @@ export function DashboardClient() {
     };
   }, [transactions]);
 
-  const handleMarkAsPaid = async (transactionId: string, paymentMethod: PaymentMethod) => {
+  const handleMarkAsPaid = (transactionId: string, paymentMethod: PaymentMethod) => {
     if (!user || !firestore) return;
 
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
-    try {
-      await updateDoc(transactionRef, { status: 'paid', paymentMethod: paymentMethod });
-      toast({ title: "Sucesso!", description: "Venda marcada como paga." });
-    } catch (error) {
+    const updateData = { status: 'paid', paymentMethod: paymentMethod };
+    
+    updateDoc(transactionRef, updateData)
+      .then(() => {
+        toast({ title: "Sucesso!", description: "Venda marcada como paga." });
+      })
+      .catch((error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: transactionRef.path,
             operation: 'update',
-            requestResourceData: { status: 'paid', paymentMethod },
+            requestResourceData: updateData,
         }));
-      console.error("Error updating transaction: ", error);
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a venda." });
-    }
+        console.error("Error updating transaction: ", error);
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a venda." });
+      });
   };
 
   if (loading) {
