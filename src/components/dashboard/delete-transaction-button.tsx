@@ -31,7 +31,7 @@ interface DeleteTransactionButtonProps {
 }
 
 export function DeleteTransactionButton({ transactionId }: DeleteTransactionButtonProps) {
-  const { user } = useAuth();
+  const { user, isUserLoading: isAuthLoading } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -83,7 +83,7 @@ export function DeleteTransactionButton({ transactionId }: DeleteTransactionButt
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={isDeleting}
+              disabled={isDeleting || isAuthLoading}
               className="bg-destructive hover:bg-destructive/90"
             >
               {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -95,7 +95,7 @@ export function DeleteTransactionButton({ transactionId }: DeleteTransactionButt
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isAuthLoading}>
             <MoreVertical className="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -103,6 +103,7 @@ export function DeleteTransactionButton({ transactionId }: DeleteTransactionButt
           <DropdownMenuItem
             className="text-red-600 focus:text-red-600 focus:bg-red-50"
             onSelect={() => setIsAlertOpen(true)}
+            disabled={isAuthLoading}
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Excluir
