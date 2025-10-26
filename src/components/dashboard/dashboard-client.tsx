@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Wallet, TrendingUp, Clipboard, CheckCircle, Clock, MoreVertical, Trash2 } from 'lucide-react';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { Wallet, TrendingUp, Clipboard, CheckCircle, Clock } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
@@ -16,31 +16,21 @@ import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Badge } from '../ui/badge';
-import type { PaymentMethod, Transaction } from '@/app/lib/types';
+import type { PaymentMethod } from '@/app/lib/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { DangerZone } from './danger-zone';
+import { DeleteTransactionButton } from './delete-transaction-button';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
   const { user } = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { totalIncome, totalExpense, balance, pendingFiado, totalFiadoValue } = useMemo(() => {
     const incomePaid = transactions
@@ -81,50 +71,12 @@ export function DashboardClient() {
     }
   };
 
-  const handleDeleteTransaction = () => {
-    if (!user || !firestore || !deleteTarget) return;
-    
-    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${deleteTarget}`);
-    
-    deleteDoc(transactionRef).then(() => {
-        toast({ title: "Sucesso!", description: "Lançamento excluído." });
-    }).catch((error) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: transactionRef.path,
-            operation: 'delete',
-        }));
-        console.error("Error deleting transaction: ", error);
-        toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o lançamento." });
-    });
-
-    setDeleteTarget(null);
-  };
-
-
   if (loading) {
     return <Loading />;
   }
 
   return (
     <>
-    <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
-            <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Isso excluirá permanentemente o lançamento
-                dos nossos servidores.
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTransaction} className="bg-destructive hover:bg-destructive/90">
-                Excluir
-            </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
-
     <div className="space-y-6 md:space-y-8 pb-24 sm:pb-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
         <StatCard
@@ -147,7 +99,7 @@ export function DashboardClient() {
         />
       </div>
 
-      <TransactionList transactions={transactions.filter(t => t.status !== 'pending')} onDelete={(id) => setDeleteTarget(id)} />
+      <TransactionList transactions={transactions.filter(t => t.status !== 'pending')} />
 
       {pendingFiado.length > 0 && (
          <Card className="mt-8">
@@ -195,19 +147,7 @@ export function DashboardClient() {
                                 <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="w-4 h-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem className="text-red-600" onClick={() => setDeleteTarget(t.id)}>
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Excluir
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <DeleteTransactionButton transactionId={t.id} />
                     </div>
                     </li>
                 ))}

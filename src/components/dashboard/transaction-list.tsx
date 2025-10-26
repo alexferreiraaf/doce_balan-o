@@ -1,21 +1,14 @@
 'use client';
 
-import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, MoreVertical, Trash2 } from 'lucide-react';
+import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transaction, PaymentMethod } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from '../ui/button';
+import { DeleteTransactionButton } from './delete-transaction-button';
 
 interface TransactionListProps {
   transactions: Transaction[];
-  onDelete: (id: string) => void;
 }
 
 const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
@@ -25,7 +18,7 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
     fiado: { text: 'Fiado', icon: Receipt },
 };
 
-export function TransactionList({ transactions, onDelete }: TransactionListProps) {
+export function TransactionList({ transactions }: TransactionListProps) {
   if (transactions.length === 0) {
     return (
       <Card className="mt-8">
@@ -71,19 +64,7 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
                         {t.type === 'expense' && '- '}
                         {formatCurrency(t.amount)}
                     </span>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="w-4 h-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuItem className="text-red-600" onClick={() => onDelete(t.id)}>
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Excluir
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <DeleteTransactionButton transactionId={t.id} />
                 </div>
                 </li>
             )
