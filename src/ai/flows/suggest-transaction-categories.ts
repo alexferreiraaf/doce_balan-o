@@ -37,6 +37,23 @@ export async function suggestTransactionCategories(
   return suggestTransactionCategoriesFlow(input);
 }
 
+
+const suggestTransactionCategoriesPrompt = ai.definePrompt({
+    name: 'suggestTransactionCategoriesPrompt',
+    input: {schema: SuggestTransactionCategoriesInputSchema},
+    output: {schema: SuggestTransactionCategoriesOutputSchema},
+    prompt: `You are a helpful assistant that suggests categories for financial transactions.
+
+  Given the following transaction description and transaction type, suggest up to 3 relevant categories.
+  The categories should be appropriate for the transaction type (income or expense).
+
+  Transaction Description: {{{description}}}
+  Transaction Type: {{{transactionType}}}
+
+  Respond with a JSON array of strings. For example: ["Groceries", "Supplies"].`,
+  });
+
+
 const categorySuggestionTool = ai.defineTool({
   name: 'suggestCategory',
   description: 'Suggests categories for a given transaction description and type.',
@@ -44,23 +61,8 @@ const categorySuggestionTool = ai.defineTool({
   outputSchema: SuggestTransactionCategoriesOutputSchema,
 },
 async (input) => {
-    const suggestTransactionCategoriesPrompt = ai.definePrompt({
-        name: 'suggestTransactionCategoriesPrompt',
-        input: {schema: SuggestTransactionCategoriesInputSchema},
-        output: {schema: SuggestTransactionCategoriesOutputSchema},
-        prompt: `You are a helpful assistant that suggests categories for financial transactions.
-
-      Given the following transaction description and transaction type, suggest up to 3 relevant categories.
-      The categories should be appropriate for the transaction type (income or expense).
-
-      Transaction Description: {{{description}}}
-      Transaction Type: {{{transactionType}}}
-
-      Respond with a JSON array of strings. For example: ["Groceries", "Supplies"].`,
-      });
-
-      const {output} = await suggestTransactionCategoriesPrompt(input);
-      return output!;
+    const {output} = await suggestTransactionCategoriesPrompt(input);
+    return output!;
 });
 
 const suggestTransactionCategoriesFlow = ai.defineFlow(
@@ -70,8 +72,7 @@ const suggestTransactionCategoriesFlow = ai.defineFlow(
     outputSchema: SuggestTransactionCategoriesOutputSchema,
   },
   async (input) => {
-    const {suggestedCategories} = await categorySuggestionTool(input);
-    return suggestedCategories;
+    const output = await categorySuggestionTool(input);
+    return output;
   }
 );
-
