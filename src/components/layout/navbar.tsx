@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -26,6 +26,8 @@ const navLinks = [
   { href: '/', label: 'Início', icon: Home },
   { href: '/transactions', label: 'Lançamentos', icon: List },
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
+  { href: '/products', label: 'Produtos', icon: Package },
+  { href: '/customers', label: 'Clientes', icon: Users },
 ];
 
 export function Navbar() {
@@ -66,14 +68,14 @@ export function Navbar() {
           <span className="text-xl sm:text-2xl font-extrabold tracking-tight">Doçuras da Fran</span>
         </Link>
         
-        <div className="hidden sm:flex items-center space-x-2 bg-primary/80 p-1 rounded-full">
+        <div className="hidden sm:flex items-center space-x-1 bg-primary/80 p-1 rounded-full">
           {navLinks.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} passHref>
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full',
+                  'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3',
                   pathname === href && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
                 )}
                 asChild
@@ -135,63 +137,46 @@ export function Navbar() {
       
       {/* Mobile Nav */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 grid grid-cols-5 items-center p-1.5 gap-1">
-          {/* Início Link */}
-          <Link href="/" passHref>
-            <Button
-              variant="ghost"
-              className={cn(
-                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-                 pathname === '/' && 'text-primary font-semibold'
-              )}
-              asChild
-            >
-              <div>
-                <Home className="w-6 h-6 mb-0.5" />
-                <span className="text-xs">Início</span>
-              </div>
-            </Button>
-          </Link>
-          
-          <Link href="/transactions" passHref>
-            <Button
-              variant="ghost"
-              className={cn(
-                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-                 pathname === '/transactions' && 'text-primary font-semibold'
-              )}
-              asChild
-            >
-              <div>
-                <List className="w-6 h-6 mb-0.5" />
-                <span className="text-xs">Lançamentos</span>
-              </div>
-            </Button>
-          </Link>
+          {navLinks.slice(0, 2).map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} passHref>
+              <Button
+                variant="ghost"
+                className={cn(
+                  'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+                  pathname === href && 'text-primary font-semibold'
+                )}
+                asChild
+              >
+                <div>
+                  <Icon className="w-6 h-6 mb-0.5" />
+                  <span className="text-xs">{label}</span>
+                </div>
+              </Button>
+            </Link>
+          ))}
 
           {/* Novo Lançamento Button */}
           <div className="flex justify-center items-center">
              <AddTransactionSheet isMobile />
           </div>
 
-          {/* Relatórios Link */}
-          <Link href="/reports" passHref>
-            <Button
-              variant="ghost"
-              className={cn(
-                'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-                 pathname === '/reports' && 'text-primary font-semibold'
-              )}
-              asChild
-            >
-              <div>
-                <TrendingUp className="w-6 h-6 mb-0.5" />
-                <span className="text-xs">Relatórios</span>
-              </div>
-            </Button>
-          </Link>
-
-          {/* Placeholder for 5th item if needed, or just let it be empty */}
-           <div />
+          {navLinks.slice(2, 4).map(({ href, label, icon: Icon }) => (
+            <Link key={href} href={href} passHref>
+              <Button
+                variant="ghost"
+                className={cn(
+                  'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+                  pathname === href && 'text-primary font-semibold'
+                )}
+                asChild
+              >
+                <div>
+                  <Icon className="w-6 h-6 mb-0.5" />
+                  <span className="text-xs">{label}</span>
+                </div>
+              </Button>
+            </Link>
+          ))}
       </div>
 
     </header>
