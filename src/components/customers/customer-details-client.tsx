@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { User, Home, Phone } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { EditCustomerDialog } from './edit-customer-dialog';
 
 interface CustomerDetailsClientProps {
   customerId: string;
@@ -28,6 +29,8 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
       </div>
     );
   }
+  
+  const hasAdditionalInfo = customer.whatsapp || customer.address;
 
   return (
     <div className="space-y-8">
@@ -36,14 +39,18 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
             <User className="w-8 h-8 mr-3" />
             Detalhes do Cliente
         </h1>
-        <Button asChild variant="outline">
-            <Link href="/customers">Voltar</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+            {!hasAdditionalInfo && <EditCustomerDialog customer={customer} />}
+            <Button asChild variant="outline">
+                <Link href="/customers">Voltar</Link>
+            </Button>
+        </div>
       </div>
       
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{customer.name}</CardTitle>
+            {hasAdditionalInfo && <EditCustomerDialog customer={customer} />}
         </CardHeader>
         <CardContent className="space-y-4">
             {customer.whatsapp && (
@@ -60,7 +67,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
                     <p className="text-card-foreground">{customer.address}</p>
                 </div>
             )}
-            {!customer.whatsapp && !customer.address && (
+            {!hasAdditionalInfo && (
                 <p className="text-muted-foreground">Nenhuma informação adicional cadastrada.</p>
             )}
         </CardContent>
