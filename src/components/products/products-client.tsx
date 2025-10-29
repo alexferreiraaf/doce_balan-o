@@ -70,7 +70,6 @@ export function ProductsClient() {
             Meus Produtos
         </h1>
         <div className="flex items-center gap-2">
-            <AddProductCategoryDialog isPrimaryButton />
             <AddProductDialog />
         </div>
       </div>
