@@ -143,6 +143,14 @@
         "name": {
           "type": "string",
           "description": "Name of the customer."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the customer."
+        },
+        "whatsapp": {
+          "type": "string",
+          "description": "WhatsApp number of the customer."
         }
       },
       "required": [

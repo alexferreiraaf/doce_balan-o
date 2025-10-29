@@ -4,6 +4,7 @@ import Loading from '@/app/(main)/loading';
 import { Card, CardContent } from '../ui/card';
 import { AddCustomerDialog } from '../dashboard/add-customer-dialog';
 import { Users } from 'lucide-react';
+import Link from 'next/link';
 import {
   Table,
   TableBody,
@@ -13,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteCustomerButton } from './delete-customer-button';
+import { Button } from '../ui/button';
+import { ArrowRight } from 'lucide-react';
 
 
 export function CustomersClient() {
@@ -50,8 +53,13 @@ export function CustomersClient() {
                 </TableRow>
               ) : (
                 customers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell className="font-medium">{customer.name}</TableCell>
+                  <TableRow key={customer.id} className="group">
+                    <TableCell className="font-medium">
+                      <Link href={`/customers/${customer.id}`} className="flex items-center gap-2 hover:underline">
+                        {customer.name}
+                        <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-right">
                         <DeleteCustomerButton customerId={customer.id} />
                     </TableCell>

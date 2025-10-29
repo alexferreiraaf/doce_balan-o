@@ -34,6 +34,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do cliente deve ter pelo menos 2 caracteres.'),
+  address: z.string().optional(),
+  whatsapp: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof formSchema>;
@@ -49,6 +51,8 @@ export function AddCustomerDialog() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
+      address: '',
+      whatsapp: '',
     },
   });
 
@@ -62,6 +66,8 @@ export function AddCustomerDialog() {
       const collectionPath = `artifacts/${APP_ID}/customers`;
       const customerData = {
         name: data.name,
+        address: data.address || '',
+        whatsapp: data.whatsapp || '',
       };
 
       const customerCollection = collection(firestore, collectionPath);
@@ -116,6 +122,32 @@ export function AddCustomerDialog() {
                   <FormLabel>Nome do Cliente</FormLabel>
                   <FormControl>
                     <Input placeholder="Ex: João da Silva" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="whatsapp"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>WhatsApp (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: (11) 99999-8888" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Endereço (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Rua das Flores, 123, Bairro, Cidade" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
