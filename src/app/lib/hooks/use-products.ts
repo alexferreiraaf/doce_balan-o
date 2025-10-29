@@ -33,7 +33,7 @@ export function useProducts() {
       toast({
         variant: "destructive",
         title: "Erro ao carregar produtos",
-        description: "Não foi possível buscar os produtos. Tente recarregar a página.",
+        description: "Não foi possível buscar os produtos. Verifique suas permissões ou tente novamente.",
       });
     }
   }, [error, toast]);

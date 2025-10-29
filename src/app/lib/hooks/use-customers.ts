@@ -33,7 +33,7 @@ export function useCustomers() {
       toast({
         variant: "destructive",
         title: "Erro ao carregar clientes",
-        description: "Não foi possível buscar os clientes. Tente recarregar a página.",
+        description: "Não foi possível buscar os clientes. Verifique suas permissões ou tente novamente.",
       });
     }
   }, [error, toast]);
