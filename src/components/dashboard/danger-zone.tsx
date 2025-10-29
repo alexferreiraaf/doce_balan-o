@@ -1,7 +1,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { writeBatch, collection, getDocs, doc } from 'firebase/firestore';
+import { writeBatch, collection, doc } from 'firebase/firestore';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +20,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
@@ -55,10 +54,8 @@ export function DangerZone({ transactions }: DangerZoneProps) {
     setIsDeleting(true);
 
     const collectionPath = `artifacts/${APP_ID}/users/${user.uid}/transactions`;
-    const transactionsCollection = collection(firestore, collectionPath);
-
+    
     try {
-      // Use um batch para deletar em massa
       const batch = writeBatch(firestore);
       transactions.forEach((transaction) => {
         const docRef = doc(firestore, collectionPath, transaction.id);
@@ -73,18 +70,13 @@ export function DangerZone({ transactions }: DangerZoneProps) {
       });
     } catch (error) {
       console.error('Error deleting all transactions: ', error);
-      errorEmitter.emit(
+       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
           path: collectionPath,
           operation: 'delete',
         })
       );
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao excluir lançamentos',
-        description: 'Não foi possível apagar os dados. Verifique suas permissões ou tente novamente.',
-      });
     } finally {
       setIsDeleting(false);
     }
