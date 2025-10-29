@@ -143,6 +143,9 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
              return;
         }
         transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
+      } else {
+        // For expenses, use the description from the form directly.
+        transactionDescription = data.description || 'Despesa sem descrição';
       }
 
       const transactionData = {
