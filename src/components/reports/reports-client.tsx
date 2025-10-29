@@ -13,15 +13,23 @@ export function ReportsClient() {
   const { transactions, loading } = useTransactions();
 
   const calculateSummary = useCallback((startDateMs: number) => {
-    const filtered = transactions.filter((t) => t.dateMs >= startDateMs);
+    const filtered = transactions.filter((t) => {
+        // Fallback to timestamp if dateMs is missing for older data
+        const transactionDateMs = t.dateMs || (t.timestamp?.toMillis() ?? 0);
+        return transactionDateMs >= startDateMs;
+    });
+
     const income = filtered
       .filter((t) => t.type === 'income' && t.status === 'paid')
       .reduce((sum, t) => sum + t.amount, 0);
+
     const expense = filtered
       .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
+      
     return { income, expense, balance: income - expense };
   }, [transactions]);
+
 
   const summaries = useMemo(() => {
     const today = new Date();
