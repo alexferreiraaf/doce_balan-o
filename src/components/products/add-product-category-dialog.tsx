@@ -92,7 +92,7 @@ export function AddProductCategoryDialog({ isPrimaryButton = false }: { isPrimar
         Nova Categoria
       </Button>
   ) : (
-      <Button variant="link" size="sm" className="p-0 h-auto">
+      <Button variant="link" size="sm" className="p-0 h-auto w-full sm:w-auto justify-end">
         <Plus className="mr-1 h-3 w-3" />
         Nova Categoria
       </Button>

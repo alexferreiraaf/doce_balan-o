@@ -69,8 +69,9 @@ export function ProductsClient() {
             <Package className="w-8 h-8 mr-3" />
             Meus Produtos
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-2">
             <AddProductDialog />
+            <AddProductCategoryDialog />
         </div>
       </div>
       
