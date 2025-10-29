@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteProductButton } from './delete-product-button';
+import { EditProductDialog } from './edit-product-dialog';
 
 
 export function ProductsClient() {
@@ -57,6 +58,7 @@ export function ProductsClient() {
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{formatCurrency(product.price)}</TableCell>
                     <TableCell className="text-right">
+                      <EditProductDialog product={product} />
                       <DeleteProductButton productId={product.id} />
                     </TableCell>
                   </TableRow>
