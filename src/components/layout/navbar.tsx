@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuLabel
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -28,6 +28,16 @@ const navLinks = [
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
   { href: '/products', label: 'Produtos', icon: Package },
   { href: '/customers', label: 'Clientes', icon: Users },
+];
+
+const mobileNavLinks = [
+  { href: '/', label: 'Início', icon: Home },
+  { href: '/transactions', label: 'Lançamentos', icon: List },
+];
+
+const registrationLinks = [
+    { href: '/products', label: 'Produtos', icon: Package },
+    { href: '/customers', label: 'Clientes', icon: Users },
 ];
 
 export function Navbar() {
@@ -59,6 +69,24 @@ export function Navbar() {
     if (!email) return 'A';
     return email.charAt(0).toUpperCase();
   };
+  
+  const NavButton = ({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) => (
+    <Link href={href} passHref>
+      <Button
+        variant="ghost"
+        className={cn(
+          'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+          pathname === href && 'text-primary font-semibold'
+        )}
+        asChild
+      >
+        <div>
+          <Icon className="w-6 h-6 mb-0.5" />
+          <span className="text-xs">{label}</span>
+        </div>
+      </Button>
+    </Link>
+  );
 
   return (
     <header className="bg-primary shadow-lg sticky top-0 z-40">
@@ -137,73 +165,38 @@ export function Navbar() {
       
       {/* Mobile Nav */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 grid grid-cols-5 items-center p-1.5 gap-1">
-          {navLinks.map(({ href, label, icon: Icon }, index) => {
-            // Place the Add Transaction button in the middle (index 2)
-            if (index === 2) {
-              return (
-                <>
-                   <Link key={href} href={href} passHref>
-                    <Button
-                        variant="ghost"
-                        className={cn(
-                        'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-                        pathname === href && 'text-primary font-semibold'
-                        )}
-                        asChild
-                    >
-                        <div>
-                        <Icon className="w-6 h-6 mb-0.5" />
-                        <span className="text-xs">{label}</span>
-                        </div>
-                    </Button>
-                    </Link>
-                </>
-              );
-            }
+        {mobileNavLinks.map((link) => (
+            <NavButton key={link.href} {...link} />
+        ))}
+        
+        <div className="flex justify-center items-center">
+            <AddTransactionSheet isMobile />
+        </div>
 
-            if (index === 3 || index === 4) {
-                 return null;
-            }
+        <NavButton href="/reports" label="Relatórios" icon={TrendingUp} />
 
-            return (
-              <Link key={href} href={href} passHref>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
                 <Button
-                  variant="ghost"
-                  className={cn(
-                    'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-                    pathname === href && 'text-primary font-semibold'
-                  )}
-                  asChild
+                    variant="ghost"
+                    className="flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full"
                 >
-                  <div>
-                    <Icon className="w-6 h-6 mb-0.5" />
-                    <span className="text-xs">{label}</span>
-                  </div>
+                    <Archive className="w-6 h-6 mb-0.5" />
+                    <span className="text-xs">Cadastros</span>
                 </Button>
-              </Link>
-            );
-          })}
-           {/* Novo Lançamento Button */}
-          <div className="flex justify-center items-center">
-             <AddTransactionSheet isMobile />
-          </div>
-          {navLinks.slice(3, 5).map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} passHref>
-              <Button
-                variant="ghost"
-                className={cn(
-                  'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-                  pathname === href && 'text-primary font-semibold'
-                )}
-                asChild
-              >
-                <div>
-                  <Icon className="w-6 h-6 mb-0.5" />
-                  <span className="text-xs">{label}</span>
-                </div>
-              </Button>
-            </Link>
-          ))}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" side="top" className="mb-2 w-40">
+                 {registrationLinks.map(link => (
+                     <DropdownMenuItem key={link.href} asChild>
+                        <Link href={link.href} className="flex items-center gap-2">
+                           <link.icon className="w-4 h-4" />
+                           <span>{link.label}</span>
+                        </Link>
+                    </DropdownMenuItem>
+                 ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+
       </div>
 
     </header>
