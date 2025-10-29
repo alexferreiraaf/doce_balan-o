@@ -137,30 +137,57 @@ export function Navbar() {
       
       {/* Mobile Nav */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 grid grid-cols-5 items-center p-1.5 gap-1">
-          {navLinks.slice(0, 2).map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} passHref>
-              <Button
-                variant="ghost"
-                className={cn(
-                  'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-                  pathname === href && 'text-primary font-semibold'
-                )}
-                asChild
-              >
-                <div>
-                  <Icon className="w-6 h-6 mb-0.5" />
-                  <span className="text-xs">{label}</span>
-                </div>
-              </Button>
-            </Link>
-          ))}
+          {navLinks.map(({ href, label, icon: Icon }, index) => {
+            // Place the Add Transaction button in the middle (index 2)
+            if (index === 2) {
+              return (
+                <>
+                   <Link key={href} href={href} passHref>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                        'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+                        pathname === href && 'text-primary font-semibold'
+                        )}
+                        asChild
+                    >
+                        <div>
+                        <Icon className="w-6 h-6 mb-0.5" />
+                        <span className="text-xs">{label}</span>
+                        </div>
+                    </Button>
+                    </Link>
+                </>
+              );
+            }
 
-          {/* Novo Lançamento Button */}
+            if (index === 3 || index === 4) {
+                 return null;
+            }
+
+            return (
+              <Link key={href} href={href} passHref>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+                    pathname === href && 'text-primary font-semibold'
+                  )}
+                  asChild
+                >
+                  <div>
+                    <Icon className="w-6 h-6 mb-0.5" />
+                    <span className="text-xs">{label}</span>
+                  </div>
+                </Button>
+              </Link>
+            );
+          })}
+           {/* Novo Lançamento Button */}
           <div className="flex justify-center items-center">
              <AddTransactionSheet isMobile />
           </div>
-
-          {navLinks.slice(2, 4).map(({ href, label, icon: Icon }) => (
+          {navLinks.slice(3, 5).map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} passHref>
               <Button
                 variant="ghost"
