@@ -14,8 +14,12 @@ export function ReportsClient() {
 
   const calculateSummary = useCallback((startDateMs: number) => {
     const filtered = transactions.filter((t) => t.dateMs >= startDateMs);
-    const income = filtered.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const expense = filtered.filter((t) => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const income = filtered
+      .filter((t) => t.type === 'income' && t.status === 'paid')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const expense = filtered
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
     return { income, expense, balance: income - expense };
   }, [transactions]);
 
