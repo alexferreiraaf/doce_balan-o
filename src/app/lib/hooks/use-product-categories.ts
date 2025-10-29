@@ -6,8 +6,6 @@ import { APP_ID } from '../constants';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export function useProductCategories() {
   const firestore = useFirestore();
@@ -31,19 +29,10 @@ export function useProductCategories() {
   useEffect(() => {
     if (error) {
       console.error("Error fetching product categories: ", error);
-       if (error.name === 'FirebaseError') {
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-                path: `artifacts/${APP_ID}/product-categories`,
-                operation: 'list',
-            })
-        );
-       }
       toast({
         variant: "destructive",
         title: "Erro ao carregar categorias",
-        description: "Não foi possível buscar as categorias de produtos.",
+        description: "Não foi possível buscar as categorias de produtos. Verifique suas permissões.",
       });
     }
   }, [error, toast]);
