@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DeleteCustomerButton } from './delete-customer-button';
 
 
 export function CustomersClient() {
@@ -37,12 +38,13 @@ export function CustomersClient() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome do Cliente</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {customers.length === 0 ? (
                 <TableRow>
-                  <TableCell className="h-24 text-center">
+                  <TableCell colSpan={2} className="h-24 text-center">
                     Nenhum cliente cadastrado.
                   </TableCell>
                 </TableRow>
@@ -50,6 +52,9 @@ export function CustomersClient() {
                 customers.map((customer) => (
                   <TableRow key={customer.id}>
                     <TableCell className="font-medium">{customer.name}</TableCell>
+                    <TableCell className="text-right">
+                        <DeleteCustomerButton customerId={customer.id} />
+                    </TableCell>
                   </TableRow>
                 ))
               )}
