@@ -41,11 +41,11 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
             return (
                 <li
                 key={t.id}
-                className={`flex items-center p-3 rounded-lg transition duration-150 ease-in-out ${
+                className={`flex flex-col sm:flex-row items-start sm:items-center p-3 rounded-lg transition duration-150 ease-in-out gap-2 ${
                     t.type === 'income' ? 'bg-green-100/50 hover:bg-green-100' : 'bg-red-100/50 hover:bg-red-100'
                 }`}
                 >
-                <div className="flex-grow flex flex-col gap-1">
+                <div className="flex-grow flex flex-col gap-1 w-full">
                     <span className="font-semibold text-card-foreground">{t.description}</span>
                     <div className='flex items-center gap-2 flex-wrap'>
                         <Badge variant="secondary" className="text-xs">{t.category}</Badge>
@@ -57,7 +57,7 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                     <span className={`font-bold text-lg ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                         {t.type === 'expense' && '- '}
                         {formatCurrency(t.amount)}

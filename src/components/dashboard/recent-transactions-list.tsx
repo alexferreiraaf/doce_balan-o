@@ -36,11 +36,11 @@ export function RecentTransactionsList({ transactions }: RecentTransactionsListP
         return (
             <li
             key={t.id}
-            className={`flex items-center p-3 rounded-lg transition duration-150 ease-in-out ${
+            className={`flex flex-col sm:flex-row items-start sm:items-center p-3 rounded-lg transition duration-150 ease-in-out gap-2 ${
                 t.status === 'pending' ? 'bg-amber-100/60' : (t.type === 'income' ? 'bg-green-100/50' : 'bg-red-100/50')
             }`}
             >
-            <div className="flex-grow flex flex-col gap-1">
+            <div className="flex-grow flex flex-col gap-1 w-full">
                 <span className="font-semibold text-card-foreground">{t.description}</span>
                 <div className='flex items-center gap-2 flex-wrap'>
                     <Badge variant="secondary" className="text-xs">{t.category}</Badge>
@@ -52,7 +52,7 @@ export function RecentTransactionsList({ transactions }: RecentTransactionsListP
                     )}
                 </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                 <span className={`font-bold text-lg ${
                     t.status === 'pending' ? 'text-amber-700' : (t.type === 'income' ? 'text-green-600' : 'text-red-600')
                     }`}>

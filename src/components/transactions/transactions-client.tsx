@@ -88,10 +88,10 @@ export function TransactionsClient() {
                 <ul className="space-y-3">
                 {pendingFiado.map((t) => (
                     <li
-                    key={t.id}
-                    className="flex items-center p-3 rounded-lg bg-amber-100/60"
+                      key={t.id}
+                      className="flex flex-col sm:flex-row items-start sm:items-center p-3 rounded-lg bg-amber-100/60 gap-2"
                     >
-                    <div className="flex-grow flex flex-col gap-1">
+                    <div className="flex-grow flex flex-col gap-1 w-full">
                         <span className="font-semibold text-card-foreground">{t.description}</span>
                         <div className='flex items-center gap-2'>
                             <Badge variant="secondary" className="text-xs">{t.category}</Badge>
@@ -100,12 +100,12 @@ export function TransactionsClient() {
                             </span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     size="sm" 
-                                    className="bg-green-500 hover:bg-green-600 text-white"
+                                    className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
                                     disabled={isUserLoading}
                                 >
                                     <CheckCircle className="w-4 h-4 mr-2" />

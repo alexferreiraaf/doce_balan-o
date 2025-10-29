@@ -155,7 +155,7 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
           Editar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar Cliente</DialogTitle>
           <DialogDescription>
@@ -217,7 +217,7 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                 control={form.control}
                 name="number"
@@ -258,12 +258,12 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormField
                 control={form.control}
                 name="city"
                 render={({ field }) => (
-                    <FormItem className='col-span-2'>
+                    <FormItem className='sm:col-span-2'>
                     <FormLabel>Cidade</FormLabel>
                     <FormControl>
                         <Input placeholder="Cidade" {...field} />

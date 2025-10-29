@@ -27,7 +27,7 @@ export function CustomersClient() {
 
   return (
     <div className="space-y-8">
-       <div className="flex items-center justify-between">
+       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center">
             <Users className="w-8 h-8 mr-3" />
             Meus Clientes

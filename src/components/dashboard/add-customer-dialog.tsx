@@ -150,7 +150,7 @@ export function AddCustomerDialog() {
           Novo Cliente
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Cliente</DialogTitle>
           <DialogDescription>
@@ -212,7 +212,7 @@ export function AddCustomerDialog() {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                 control={form.control}
                 name="number"
@@ -253,12 +253,12 @@ export function AddCustomerDialog() {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FormField
                 control={form.control}
                 name="city"
                 render={({ field }) => (
-                    <FormItem className='col-span-2'>
+                    <FormItem className='sm:col-span-2'>
                     <FormLabel>Cidade</FormLabel>
                     <FormControl>
                         <Input placeholder="Cidade" {...field} />

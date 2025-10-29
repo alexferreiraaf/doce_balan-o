@@ -26,7 +26,7 @@ export function AddTransactionSheet({ isMobile = false }: { isMobile?: boolean }
             <Plus className="w-8 h-8" />
           </Button>
         </SheetTrigger>
-        <SheetContent className="bg-background w-full sm:max-w-lg overflow-y-auto">
+        <SheetContent side="bottom" className="bg-background w-full h-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-2xl font-bold text-primary">Nova Transação</SheetTitle>
           <SheetDescription>
