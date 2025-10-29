@@ -24,6 +24,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  categoryId?: string;
 }
 
 export interface Customer {
@@ -31,4 +32,9 @@ export interface Customer {
   name: string;
   address?: string;
   whatsapp?: string;
+}
+
+export interface ProductCategory {
+  id: string;
+  name: string;
 }

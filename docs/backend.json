@@ -122,6 +122,13 @@
         "price": {
           "type": "number",
           "description": "Price of the product."
+        },
+        "categoryId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Reference to ProductCategory. (Relationship: ProductCategory 1:N Product)"
         }
       },
       "required": [
@@ -151,6 +158,26 @@
         "whatsapp": {
           "type": "string",
           "description": "WhatsApp number of the customer."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "ProductCategory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product Category",
+      "type": "object",
+      "description": "Represents a category for products.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the category."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the category."
         }
       },
       "required": [
@@ -230,8 +257,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "artifacts/{appId}/product-categories/{categoryId}",
+        "definition": {
+          "entityName": "ProductCategory",
+          "schema": {
+            "$ref": "#/backend/entities/ProductCategory"
+          },
+          "description": "Stores product categories, accessible to all users.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the Controle da Doçuras application."
+            },
+            {
+              "name": "categoryId",
+              "description": "The unique identifier of the product category."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific."
+    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories."
   }
 }

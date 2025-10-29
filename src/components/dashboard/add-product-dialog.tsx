@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Tag } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -31,10 +31,14 @@ import { APP_ID } from '@/app/lib/constants';
 import { useUser, useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
+import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+  categoryId: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -45,12 +49,14 @@ export function AddProductDialog() {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const { categories, loading: categoriesLoading } = useProductCategories();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       price: 0,
+      categoryId: '',
     },
   });
 
@@ -65,6 +71,7 @@ export function AddProductDialog() {
       const productData = {
         name: data.name,
         price: data.price,
+        categoryId: data.categoryId || '',
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -77,7 +84,6 @@ export function AddProductDialog() {
         })
         .catch((error) => {
           console.error('Error adding product: ', error);
-          // Emit a detailed, contextual error for better debugging
           errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
@@ -86,7 +92,6 @@ export function AddProductDialog() {
               requestResourceData: productData,
             })
           );
-          // Show a user-friendly error message
           toast({
             variant: 'destructive',
             title: 'Erro ao Adicionar Produto',
@@ -135,6 +140,33 @@ export function AddProductDialog() {
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="25,00" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                   <div className="flex justify-between items-center">
+                     <FormLabel>Categoria (Opcional)</FormLabel>
+                     <AddProductCategoryDialog />
+                   </div>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger disabled={categoriesLoading}>
+                        <SelectValue placeholder={categoriesLoading ? "Carregando..." : "Selecione uma categoria"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

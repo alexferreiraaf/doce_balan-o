@@ -32,10 +32,14 @@ import { useUser, useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import type { Product } from '@/app/lib/types';
+import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
+import { AddProductCategoryDialog } from './add-product-category-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+  categoryId: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -50,12 +54,14 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const { categories, loading: categoriesLoading } = useProductCategories();
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: product.name,
       price: product.price,
+      categoryId: product.categoryId || '',
     },
   });
 
@@ -72,6 +78,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       const productData = {
         name: data.name,
         price: data.price,
+        categoryId: data.categoryId || '',
       };
 
       updateDoc(productRef, productData)
@@ -136,6 +143,33 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="25,00" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                   <div className="flex justify-between items-center">
+                     <FormLabel>Categoria (Opcional)</FormLabel>
+                     <AddProductCategoryDialog />
+                   </div>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger disabled={categoriesLoading}>
+                        <SelectValue placeholder={categoriesLoading ? "Carregando..." : "Selecione uma categoria"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
