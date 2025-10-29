@@ -30,6 +30,7 @@ export interface Product {
 export interface Customer {
   id: string;
   name: string;
+  cep?: string;
   address?: string;
   whatsapp?: string;
 }
