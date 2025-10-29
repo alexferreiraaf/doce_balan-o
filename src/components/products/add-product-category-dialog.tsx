@@ -82,11 +82,6 @@ export function AddProductCategoryDialog() {
               requestResourceData: categoryData,
             })
           );
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao Adicionar Categoria',
-            description: 'Não foi possível salvar a categoria. Verifique suas permissões ou tente novamente.',
-          });
         });
     });
   };

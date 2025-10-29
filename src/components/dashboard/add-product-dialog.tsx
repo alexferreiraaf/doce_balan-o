@@ -92,11 +92,6 @@ export function AddProductDialog() {
               requestResourceData: productData,
             })
           );
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao Adicionar Produto',
-            description: 'Não foi possível salvar o produto. Verifique suas permissões ou tente novamente.',
-          });
         });
     });
   };

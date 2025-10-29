@@ -88,11 +88,6 @@ export function AddCustomerDialog() {
               requestResourceData: customerData,
             })
           );
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao Adicionar Cliente',
-            description: 'Não foi possível salvar o cliente. Verifique suas permissões ou tente novamente.',
-          });
         });
     });
   };

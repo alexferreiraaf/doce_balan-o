@@ -41,27 +41,24 @@ export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) 
     setIsDeleting(true);
     const customerRef = doc(firestore, `artifacts/${APP_ID}/customers/${customerId}`);
 
-    try {
-      await deleteDoc(customerRef);
-      toast({ title: 'Sucesso!', description: 'Cliente excluído.' });
-      setIsAlertOpen(false);
-    } catch (error) {
-      console.error('Error deleting customer: ', error);
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: customerRef.path,
-          operation: 'delete',
-        })
-      );
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível excluir o cliente.',
+    deleteDoc(customerRef)
+      .then(() => {
+        toast({ title: 'Sucesso!', description: 'Cliente excluído.' });
+        setIsAlertOpen(false);
+      })
+      .catch((error) => {
+        console.error('Error deleting customer: ', error);
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: customerRef.path,
+            operation: 'delete',
+          })
+        );
+      })
+      .finally(() => {
+        setIsDeleting(false);
       });
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   return (

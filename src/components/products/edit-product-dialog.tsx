@@ -96,11 +96,6 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
               requestResourceData: productData,
             })
           );
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao Atualizar Produto',
-            description: 'Não foi possível salvar as alterações. Verifique suas permissões ou tente novamente.',
-          });
         });
     });
   };

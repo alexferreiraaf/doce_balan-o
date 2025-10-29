@@ -41,27 +41,24 @@ export function DeleteProductButton({ productId }: DeleteProductButtonProps) {
     setIsDeleting(true);
     const productRef = doc(firestore, `artifacts/${APP_ID}/products/${productId}`);
 
-    try {
-      await deleteDoc(productRef);
-      toast({ title: 'Sucesso!', description: 'Produto excluído.' });
-      setIsAlertOpen(false);
-    } catch (error) {
-      console.error('Error deleting product: ', error);
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: productRef.path,
-          operation: 'delete',
-        })
-      );
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível excluir o produto.',
+    deleteDoc(productRef)
+      .then(() => {
+        toast({ title: 'Sucesso!', description: 'Produto excluído.' });
+        setIsAlertOpen(false);
+      })
+      .catch((error) => {
+        console.error('Error deleting product: ', error);
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: productRef.path,
+            operation: 'delete',
+          })
+        );
+      })
+      .finally(() => {
+        setIsDeleting(false);
       });
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   return (

@@ -92,11 +92,6 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
               requestResourceData: customerData,
             })
           );
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao Atualizar Cliente',
-            description: 'Não foi possível salvar as alterações. Verifique suas permissões ou tente novamente.',
-          });
         });
     });
   };
