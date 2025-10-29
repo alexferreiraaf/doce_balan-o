@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,27 @@ export function LoginForm() {
     },
   });
 
+  const handleAnonymousSignIn = () => {
+    startTransition(async () => {
+        try {
+            await signInAnonymously(auth);
+            toast({
+                title: 'Acesso anônimo',
+                description: 'Você está navegando como visitante.',
+            });
+            router.push('/');
+            router.refresh();
+        } catch (error) {
+            console.error("Anonymous sign-in failed: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro no Acesso Anônimo',
+                description: 'Não foi possível continuar. Tente novamente.',
+            });
+        }
+    });
+  };
+
   const onSubmit = (data: LoginFormValues) => {
     startTransition(async () => {
       try {
@@ -53,7 +74,7 @@ export function LoginForm() {
           title: 'Login bem-sucedido!',
           description: 'Bem-vindo(a) de volta!',
         });
-        router.push('/'); // Redirect to the main dashboard
+        router.push('/'); 
         router.refresh();
       } catch (error) {
         let description = 'Ocorreu um erro desconhecido. Tente novamente.';
@@ -122,9 +143,10 @@ export function LoginForm() {
           </Link>
         </p>
          <p className="mt-4 text-center text-sm text-muted-foreground">
-          Ou <Link href="/" className="font-semibold text-primary hover:underline">
+          Ou{' '}
+          <button onClick={handleAnonymousSignIn} className="font-semibold text-primary hover:underline" disabled={isPending}>
             continue como anônimo
-          </Link>
+          </button>
         </p>
       </CardContent>
     </Card>

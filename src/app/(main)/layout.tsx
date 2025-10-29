@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@/firebase';
-import { signInAnonymously } from 'firebase/auth';
+import { useUser } from '@/firebase';
 import Loading from './loading';
 import { Navbar } from '@/components/layout/navbar';
 
@@ -12,28 +11,25 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isUserLoading: isAuthLoading } = useUser();
-  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthLoading) return;
-    
-    // If not loading and no user, sign in anonymously
-    if (!user) {
-      signInAnonymously(auth).catch((error) => {
-        console.error("Anonymous sign-in failed: ", error);
-        // Optionally, redirect to an error page or show a message
-      });
+    if (isUserLoading) {
+      return; // Aguarda o fim do carregamento
     }
-  }, [user, isAuthLoading, auth, router]);
+    if (!user) {
+      // Se não há usuário (nem anônimo, nem real), redireciona para o login.
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
 
-  // While checking auth or user is null (during anonymous sign-in), show a loading screen
-  if (isAuthLoading || !user) {
+  // Exibe o loading enquanto o estado de autenticação está sendo verificado.
+  if (isUserLoading || !user) {
     return <Loading />;
   }
 
-  // If user is authenticated (anonymous or otherwise), render the main layout
+  // Se o usuário está autenticado (anônimo ou real), renderiza o layout principal.
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
