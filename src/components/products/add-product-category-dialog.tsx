@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, PlusCircle, Tag } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ const formSchema = z.object({
 
 type CategoryFormValues = z.infer<typeof formSchema>;
 
-export function AddProductCategoryDialog() {
+export function AddProductCategoryDialog({ isPrimaryButton = false }: { isPrimaryButton?: boolean }) {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -86,13 +86,22 @@ export function AddProductCategoryDialog() {
     });
   };
 
+  const TriggerButton = isPrimaryButton ? (
+      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+        <Tag className="mr-2 h-4 w-4" />
+        Nova Categoria
+      </Button>
+  ) : (
+      <Button variant="link" size="sm" className="p-0 h-auto">
+        <Plus className="mr-1 h-3 w-3" />
+        Nova Categoria
+      </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="link" size="sm" className="p-0 h-auto">
-          <Plus className="mr-1 h-3 w-3" />
-          Nova Categoria
-        </Button>
+        {TriggerButton}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

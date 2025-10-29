@@ -20,6 +20,7 @@ import type { Product, ProductCategory } from '@/app/lib/types';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { AddProductCategoryDialog } from './add-product-category-dialog';
 
 interface GroupedProducts {
   [categoryName: string]: Product[];
@@ -68,7 +69,10 @@ export function ProductsClient() {
             <Package className="w-8 h-8 mr-3" />
             Meus Produtos
         </h1>
-        <AddProductDialog />
+        <div className="flex items-center gap-2">
+            <AddProductCategoryDialog isPrimaryButton />
+            <AddProductDialog />
+        </div>
       </div>
       
       {products.length === 0 ? (
