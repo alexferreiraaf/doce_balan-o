@@ -42,7 +42,17 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
     );
   }
   
-  const hasAdditionalInfo = customer.whatsapp || customer.address;
+  const fullAddress = [
+    customer.street,
+    customer.number,
+    customer.complement,
+    customer.neighborhood,
+    customer.city,
+    customer.state,
+    customer.cep,
+  ].filter(Boolean).join(', ');
+
+  const hasAdditionalInfo = customer.whatsapp || fullAddress;
 
   return (
     <div className="space-y-8">
@@ -89,10 +99,10 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
                             </a>
                         </div>
                     )}
-                    {customer.address && (
+                    {fullAddress && (
                         <div className="flex items-start gap-3">
                             <Home className="w-5 h-5 text-muted-foreground mt-1" />
-                            <p className="text-card-foreground">{customer.address}</p>
+                            <p className="text-card-foreground">{fullAddress}</p>
                         </div>
                     )}
                     {!hasAdditionalInfo && (

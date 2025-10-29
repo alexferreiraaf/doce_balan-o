@@ -151,13 +151,37 @@
           "type": "string",
           "description": "Name of the customer."
         },
-        "address": {
-          "type": "string",
-          "description": "Address of the customer."
-        },
         "whatsapp": {
           "type": "string",
           "description": "WhatsApp number of the customer."
+        },
+        "cep": {
+          "type": "string",
+          "description": "CEP (postal code) of the customer."
+        },
+        "street": {
+          "type": "string",
+          "description": "Street name of the customer's address."
+        },
+        "number": {
+          "type": "string",
+          "description": "House/building number of the customer's address."
+        },
+        "complement": {
+          "type": "string",
+          "description": "Complementary address information (e.g., apartment number)."
+        },
+        "neighborhood": {
+          "type": "string",
+          "description": "Neighborhood of the customer's address."
+        },
+        "city": {
+          "type": "string",
+          "description": "City of the customer's address."
+        },
+        "state": {
+          "type": "string",
+          "description": "State of the customer's address."
         }
       },
       "required": [

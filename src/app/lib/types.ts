@@ -30,9 +30,14 @@ export interface Product {
 export interface Customer {
   id: string;
   name: string;
-  cep?: string;
-  address?: string;
   whatsapp?: string;
+  cep?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 export interface ProductCategory {

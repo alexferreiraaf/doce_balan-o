@@ -36,9 +36,14 @@ import type { Customer } from '@/app/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do cliente deve ter pelo menos 2 caracteres.'),
-  cep: z.string().optional(),
-  address: z.string().optional(),
   whatsapp: z.string().optional(),
+  cep: z.string().optional(),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof formSchema>;
@@ -58,10 +63,15 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: customer.name,
-      cep: customer.cep || '',
-      address: customer.address || '',
+      name: customer.name || '',
       whatsapp: customer.whatsapp || '',
+      cep: customer.cep || '',
+      street: customer.street || '',
+      number: customer.number || '',
+      complement: customer.complement || '',
+      neighborhood: customer.neighborhood || '',
+      city: customer.city || '',
+      state: customer.state || '',
     },
   });
 
@@ -76,10 +86,16 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
         const { data } = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
         if (data.erro) {
             toast({ variant: 'destructive', title: 'CEP não encontrado' });
-            form.setValue('address', '');
+            form.setValue('street', '');
+            form.setValue('neighborhood', '');
+            form.setValue('city', '');
+            form.setValue('state', '');
         } else {
-            const fullAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`;
-            form.setValue('address', fullAddress);
+            form.setValue('street', data.logradouro);
+            form.setValue('neighborhood', data.bairro);
+            form.setValue('city', data.localidade);
+            form.setValue('state', data.uf);
+            form.setFocus('number');
         }
     } catch (error) {
         toast({ variant: 'destructive', title: 'Erro ao buscar CEP', description: 'Não foi possível buscar o endereço. Tente novamente.' });
@@ -102,9 +118,14 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
 
       const customerData = {
         name: data.name,
-        cep: data.cep || '',
-        address: data.address || '',
         whatsapp: data.whatsapp || '',
+        cep: data.cep || '',
+        street: data.street || '',
+        number: data.number || '',
+        complement: data.complement || '',
+        neighborhood: data.neighborhood || '',
+        city: data.city || '',
+        state: data.state || '',
       };
 
       updateDoc(customerRef, customerData)
@@ -174,28 +195,97 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
               name="cep"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>CEP (Opcional)</FormLabel>
+                  <FormLabel>CEP</FormLabel>
                   <FormControl>
                     <Input placeholder="Digite o CEP para buscar" {...field} onBlur={handleCepBlur} />
                   </FormControl>
+                   {isFetchingCep && <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Buscando endereço...</div>}
                   <FormMessage />
                 </FormItem>
               )}
             />
              <FormField
               control={form.control}
-              name="address"
+              name="street"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Endereço</FormLabel>
+                  <FormLabel>Rua</FormLabel>
                   <FormControl>
-                    <Input placeholder="Preenchido pelo CEP ou manualmente" {...field} disabled={isFetchingCep} />
+                    <Input placeholder="Rua, Avenida, etc." {...field} />
                   </FormControl>
-                  {isFetchingCep && <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Buscando endereço...</div>}
                   <FormMessage />
                 </FormItem>
               )}
             />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="number"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Número</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Ex: 123" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="complement"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Complemento</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Apto, Bloco" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+             <FormField
+              control={form.control}
+              name="neighborhood"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bairro</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Bairro" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-3 gap-4">
+                <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                    <FormItem className='col-span-2'>
+                    <FormLabel>Cidade</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Cidade" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>UF</FormLabel>
+                    <FormControl>
+                        <Input placeholder="SP" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
