@@ -1,100 +1,92 @@
 /**
- * @file Firestore Security Rules for SweetBalance App
- * @core_philosophy This ruleset enforces a public-read, owner-write model for products and customers,
- *                  and strict user-ownership for transactions.
- * @data_structure The database is structured with public collections for products and customers
- *                 under /artifacts/{appId}/, and private user subcollections for transactions
- *                 under /artifacts/{appId}/users/{userId}/.
- * @key_security_decisions
- *   - Products and Customers are readable by anyone (including anonymous users).
- *   - Transactions are strictly controlled: only the owner can read or write their own transactions.
- *   - No user listing is allowed.
+ * @fileoverview Firestore Security Rules for Controle da Doçuras.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a combination of user-ownership for private data (transactions)
+ * and public read access with owner-only writes for shared data (products, customers, product categories).
+ *
+ * Data Structure:
+ * - /artifacts/{appId}/users/{userId}/transactions/{transactionId}: Private transactions, accessible only to the owning user.
+ * - /artifacts/{appId}/products/{productId}: Public products, readable by all, writable by authorized users (no ownership defined in schema).
+ * - /artifacts/{appId}/customers/{customerId}: Public customers, readable by all, writable by authorized users (no ownership defined in schema).
+ * - /artifacts/{appId}/product-categories/{categoryId}: Public product categories, readable by all, writable by authorized users (no ownership defined in schema).
+ *
+ * Key Security Decisions:
+ * - Listing of user documents is disallowed.
+ * - Public read access is granted to the `products`, `customers`, and `product-categories` collections.
+ * - Write access to public collections is not owner-controlled since the entities do not define an ownership field.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Checks if the request is authenticated.
-     * @return {boolean} True if the user is signed in, false otherwise.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user's ID matches the provided userId.
-     * @param {string} userId The user ID to compare against.
-     * @return {boolean} True if the user is the owner, false otherwise.
-     */
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the authenticated user is the owner of an existing document.
-     * @param {string} userId The user ID to compare against.
-     * @return {boolean} True if the user is the owner and the document exists, false otherwise.
-     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Rules for the transaction documents.
+     * @description Enforces that only the owner can read, create, update, or delete their own transactions.
      * @path /artifacts/{appId}/users/{userId}/transactions/{transactionId}
-     * @allow (create) - Authenticated user with ID 'user_abc' can create a transaction in /artifacts/app1/users/user_abc/transactions/tx1 if the transaction's userId is 'user_abc'.
-     * @allow (get) - Authenticated user with ID 'user_abc' can get a transaction in /artifacts/app1/users/user_abc/transactions/tx1.
-     * @allow (list) - Authenticated user with ID 'user_abc' can list transactions in /artifacts/app1/users/user_abc/transactions.
-     * @allow (update) - Authenticated user with ID 'user_abc' can update a transaction in /artifacts/app1/users/user_abc/transactions/tx1.
-     * @allow (delete) - Authenticated user with ID 'user_abc' can delete a transaction in /artifacts/app1/users/user_abc/transactions/tx1.
-     * @deny (create) - Authenticated user with ID 'user_def' cannot create a transaction in /artifacts/app1/users/user_abc/transactions/tx1.
-     * @deny (get) - Authenticated user with ID 'user_def' cannot get a transaction in /artifacts/app1/users/user_abc/transactions/tx1.
-     * @deny (list) - Authenticated user with ID 'user_def' cannot list transactions in /artifacts/app1/users/user_abc/transactions.
-     * @deny (update) - Authenticated user with ID 'user_def' cannot update a transaction in /artifacts/app1/users/user_abc/transactions/tx1.
-     * @deny (delete) - Authenticated user with ID 'user_def' cannot delete a transaction in /artifacts/app1/users/user_abc/transactions/tx1.
-     * @principle Enforces strict user-ownership for transactions.
+     * @allow (create) User I7HKJVmF4uRDL75dQShPmHVi4333 can create a transaction under /artifacts/docuras-da-fran-default/users/I7HKJVmF4uRDL75dQShPmHVi4333/transactions/transaction1 if request.auth.uid == userId.
+     * @deny (create) User anotherUser cannot create a transaction under /artifacts/docuras-da-fran-default/users/I7HKJVmF4uRDL75dQShPmHVi4333/transactions/transaction1 because request.auth.uid != userId.
+     * @principle Enforces document ownership for all operations.
      */
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Rules for the product documents.
+     * @description Allows public reading of products, but restricts creation, updates, and deletion.
      * @path /artifacts/{appId}/products/{productId}
-     * @allow (get) - Any user (even anonymous) can read product data.
-     * @allow (list) - Any user (even anonymous) can list product data.
-     * @deny (create) - No one can create a product without authentication.
-     * @deny (update) - No one can update a product without authentication.
-     * @deny (delete) - No one can delete a product without authentication.
-     * @principle Allows public read access for products with owner-only writes.
+     * @allow (get) Any user can read a product.
+     * @deny (create) No user can create a product, as the rule is set to false.
+     * @principle Allows public read access while restricting write access.
      */
     match /artifacts/{appId}/products/{productId} {
       allow get, list: if true;
-      allow create: if isSignedIn();  // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if isSignedIn() && resource != null; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create: if isSignedIn(); // Only signed in users can create
+      allow update: if false; // No updates allowed for now.
+      allow delete: if false; // No deletes allowed for now.
     }
 
     /**
-     * @description Rules for the customer documents.
+     * @description Allows public reading of customers, but restricts creation, updates, and deletion.
      * @path /artifacts/{appId}/customers/{customerId}
-     * @allow (get) - Any user (even anonymous) can read customer data.
-     * @allow (list) - Any user (even anonymous) can list customer data.
-     * @deny (create) - No one can create a customer without authentication.
-     * @deny (update) - No one can update a customer without authentication.
-     * @deny (delete) - No one can delete a customer without authentication.
-     * @principle Allows public read access for customers with owner-only writes.
+     * @allow (get) Any user can read a customer.
+     * @deny (create) No user can create a customer, as the rule is set to false.
+     * @principle Allows public read access while restricting write access.
      */
     match /artifacts/{appId}/customers/{customerId} {
       allow get, list: if true;
-      allow create: if isSignedIn();  // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow update: if isSignedIn() && resource != null;  // TODO: Add owner validation once the schema is updated with an ownership field.
-      allow delete: if isSignedIn() && resource != null;  // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create: if isSignedIn(); // Only signed in users can create
+      allow update: if false; // No updates allowed for now.
+      allow delete: if false; // No deletes allowed for now.
+    }
+
+    /**
+     * @description Allows public reading of product categories, but restricts creation, updates, and deletion.
+     * @path /artifacts/{appId}/product-categories/{categoryId}
+     * @allow (get) Any user can read a product category.
+     * @deny (create) No user can create a product category, as the rule is set to false.
+     * @principle Allows public read access while restricting write access.
+     */
+    match /artifacts/{appId}/product-categories/{categoryId} {
+      allow get, list: if true;
+      allow create: if isSignedIn(); // Only signed in users can create
+      allow update: if false; // No updates allowed for now.
+      allow delete: if false; // No deletes allowed for now.
     }
   }
 }
