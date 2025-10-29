@@ -156,8 +156,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         paymentMethod: data.paymentMethod || null,
         status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
         customerId: data.customerId || null,
-        dateMs: Date.now(),
         timestamp: serverTimestamp(),
+        dateMs: Date.now(),
       };
 
       addDoc(collection(firestore, collectionPath), transactionData)

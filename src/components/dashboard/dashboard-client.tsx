@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Wallet, TrendingUp, Clipboard, List } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Clipboard, List } from 'lucide-react';
 import Link from 'next/link';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -16,7 +16,7 @@ export function DashboardClient() {
   const { transactions, loading } = useTransactions();
   const { user } = useUser();
 
-  const { totalIncome, totalExpense, balance, pendingFiadoValue } = useMemo(() => {
+  const { totalIncome, totalExpense, balance } = useMemo(() => {
     const incomePaid = transactions
       .filter((t) => t.type === 'income' && t.status === 'paid')
       .reduce((sum, t) => sum + t.amount, 0);
@@ -25,14 +25,10 @@ export function DashboardClient() {
       .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
       
-    const fiado = transactions.filter((t) => t.status === 'pending');
-    const fiadoValue = fiado.reduce((sum, t) => sum + t.amount, 0);
-
     return {
       totalIncome: incomePaid,
       totalExpense: expense,
       balance: incomePaid - expense,
-      totalFiadoValue: fiadoValue
     };
   }, [transactions]);
 
@@ -65,7 +61,7 @@ export function DashboardClient() {
           title="Saídas (Gastos)"
           value={totalExpense}
           colorClass="border-red-400 text-gray-700"
-          icon={Clipboard}
+          icon={TrendingDown}
         />
       </div>
 

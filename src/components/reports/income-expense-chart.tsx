@@ -46,9 +46,9 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
         (m) => m.year === transactionDate.getFullYear() && m.month === transactionDate.getMonth()
       );
       if (monthIndex !== -1) {
-        if (t.type === 'income') {
+        if (t.type === 'income' && t.status === 'paid') {
           months[monthIndex].income += t.amount;
-        } else {
+        } else if (t.type === 'expense') {
           months[monthIndex].expense += t.amount;
         }
       }
