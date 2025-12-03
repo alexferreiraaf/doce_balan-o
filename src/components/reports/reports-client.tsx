@@ -14,7 +14,7 @@ export function ReportsClient() {
 
   const calculateSummary = useCallback((startDateMs: number) => {
     const filtered = transactions.filter((t) => {
-        const transactionDateMs = t.dateMs || t.timestamp?.toMillis();
+        const transactionDateMs = t.dateMs;
         if (!transactionDateMs) return false;
         return transactionDateMs >= startDateMs;
     });
