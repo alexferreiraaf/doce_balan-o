@@ -4,7 +4,7 @@ import Loading from '@/app/(main)/loading';
 import { ReportCard } from './simple-report';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMemo, useCallback } from 'react';
-import { GenerativeReport } from './generative-report';
+import { SummaryReport } from './summary-report';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
@@ -77,7 +77,7 @@ export function ReportsClient() {
         </TabsContent>
       </Tabs>
       
-      <GenerativeReport transactions={transactions} />
+      <SummaryReport transactions={transactions} />
 
     </div>
   );
