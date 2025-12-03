@@ -37,11 +37,8 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
     }).reverse();
 
     transactions.forEach((t) => {
-      // Add a guard clause to ensure timestamp is not null
-      if (!t.timestamp) {
-        return;
-      }
-      const transactionDate = t.timestamp.toDate();
+      // Use dateMs which is always available as a number (milliseconds)
+      const transactionDate = new Date(t.dateMs);
       const monthIndex = months.findIndex(
         (m) => m.year === transactionDate.getFullYear() && m.month === transactionDate.getMonth()
       );
