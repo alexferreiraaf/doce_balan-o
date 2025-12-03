@@ -29,7 +29,7 @@ export function CategoryChart({ transactions }: CategoryChartProps) {
       }, {} as { [key: string]: number })
 
     return Object.entries(expenseByCategory)
-      .map(([name, value]) => ({ name, value, fill: `hsl(var(--chart-${(Object.keys(acc).indexOf(name) % 5) + 1}))` }))
+      .map(([name, value], index) => ({ name, value, fill: `hsl(var(--chart-${(index % 5) + 1}))` }))
       .sort((a, b) => b.value - a.value)
   }, [transactions])
 
