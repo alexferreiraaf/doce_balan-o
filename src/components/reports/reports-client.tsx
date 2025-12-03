@@ -14,8 +14,9 @@ export function ReportsClient() {
 
   const calculateSummary = useCallback((startDateMs: number) => {
     const filtered = transactions.filter((t) => {
+        // Ensure dateMs exists and is a number before comparing
         const transactionDateMs = t.dateMs;
-        if (!transactionDateMs) return false;
+        if (!transactionDateMs || typeof transactionDateMs !== 'number') return false;
         return transactionDateMs >= startDateMs;
     });
 
@@ -33,13 +34,24 @@ export function ReportsClient() {
 
   const summaries = useMemo(() => {
     const today = new Date();
-    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).getTime();
-    const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate()).getTime();
-    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()).getTime();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(today.getDate() - 7);
+    const oneWeekAgoMs = oneWeekAgo.getTime();
+
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(today.getMonth() - 1);
+    const oneMonthAgoMs = oneMonthAgo.getTime();
+
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+    const oneYearAgoMs = oneYearAgo.getTime();
+
     return {
-      weekly: calculateSummary(oneWeekAgo),
-      monthly: calculateSummary(oneMonthAgo),
-      annual: calculateSummary(oneYearAgo),
+      weekly: calculateSummary(oneWeekAgoMs),
+      monthly: calculateSummary(oneMonthAgoMs),
+      annual: calculateSummary(oneYearAgoMs),
     };
   }, [calculateSummary]);
 

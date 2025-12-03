@@ -37,6 +37,7 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
     }).reverse();
 
     transactions.forEach((t) => {
+      // Use dateMs which is a reliable number (timestamp in milliseconds)
       const transactionDateMs = t.dateMs;
       if (!transactionDateMs) return;
 
