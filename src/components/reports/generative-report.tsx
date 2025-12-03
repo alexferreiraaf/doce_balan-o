@@ -49,7 +49,15 @@ export function GenerativeReport({ transactions }: GenerativeReportProps) {
             }
 
             try {
-                const generatedReport = await getGenerativeReport(filteredTransactions, period);
+                // Simplifica o objeto antes de passar para a Server Action
+                const simplifiedTransactions = filteredTransactions.map(t => ({
+                    type: t.type,
+                    category: t.category,
+                    amount: t.amount,
+                    status: t.status,
+                    dateMs: t.dateMs,
+                }));
+                const generatedReport = await getGenerativeReport(simplifiedTransactions, period);
                 setReport(generatedReport);
             } catch (e) {
                 console.error(e);

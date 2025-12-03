@@ -1,25 +1,25 @@
 'use server';
 
-import type { Transaction } from '@/app/lib/types';
 import { generateReport } from '@/ai/flows/generate-report';
 
-export async function getGenerativeReport(transactions: Transaction[], period: string) {
+// Definindo um tipo simplificado para a transação que será usada pela IA
+type SimpleTransaction = {
+    type: 'income' | 'expense';
+    category: string;
+    amount: number;
+    status: string;
+    dateMs: number;
+}
+
+export async function getGenerativeReport(transactions: SimpleTransaction[], period: string) {
   if (transactions.length === 0) {
     return 'Não há dados suficientes para gerar um relatório.';
   }
 
   try {
-    // Mapeia para um objeto mais simples para evitar erros de serialização.
-    // A IA só precisa desses campos de qualquer maneira.
-    const simplifiedTransactions = transactions.map(t => ({
-        type: t.type,
-        category: t.category,
-        amount: t.amount,
-        status: t.status,
-    }));
-
+    // O objeto de transação já está simplificado, então podemos passá-lo diretamente.
     const result = await generateReport({
-        transactions: simplifiedTransactions,
+        transactions: transactions,
         period,
     });
     return result.report;
