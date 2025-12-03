@@ -1,83 +1,108 @@
-'use client';
-import { useMemo } from 'react';
-import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import type { Transaction } from '@/app/lib/types';
-import { formatCurrency } from '@/lib/utils';
+"use client"
 
-const COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  '#82ca9d',
-  '#ffc658',
-];
+import * as React from "react"
+import { TrendingUp } from "lucide-react"
+import { Label, Pie, PieChart } from "recharts"
 
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background/80 backdrop-blur-sm p-2 border rounded-lg shadow-lg">
-        <p className="font-semibold">{`${payload[0].name}`}</p>
-        <p className="text-primary">{`${formatCurrency(payload[0].value)}`}</p>
-      </div>
-    );
-  }
-
-  return null;
-};
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import type { Transaction } from "@/app/lib/types"
+import { formatCurrency } from "@/lib/utils"
 
 interface CategoryChartProps {
-  transactions: Transaction[];
+  transactions: Transaction[]
 }
 
 export function CategoryChart({ transactions }: CategoryChartProps) {
-  const data = useMemo(() => {
+  const chartData = React.useMemo(() => {
     const expenseByCategory = transactions
-      .filter((t) => t.type === 'expense')
+      .filter((t) => t.type === "expense")
       .reduce((acc, t) => {
         if (!acc[t.category]) {
-          acc[t.category] = 0;
+          acc[t.category] = 0
         }
-        acc[t.category] += t.amount;
-        return acc;
-      }, {} as { [key: string]: number });
+        acc[t.category] += t.amount
+        return acc
+      }, {} as { [key: string]: number })
 
     return Object.entries(expenseByCategory)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [transactions]);
+      .map(([name, value]) => ({ name, value, fill: `hsl(var(--chart-${(Object.keys(acc).indexOf(name) % 5) + 1}))` }))
+      .sort((a, b) => b.value - a.value)
+  }, [transactions])
 
-  if (data.length === 0) {
+  const totalValue = React.useMemo(() => {
+    return chartData.reduce((acc, curr) => acc + curr.value, 0)
+  }, [chartData])
+
+  const chartConfig = React.useMemo(() => {
+    return chartData.reduce((acc, { name, fill }) => {
+      acc[name] = { label: name, color: fill };
+      return acc;
+    }, {} as any)
+  }, [chartData]);
+
+
+  if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-60 md:h-80 text-muted-foreground">
         <p>Sem dados de despesas para exibir.</p>
       </div>
-    );
+    )
   }
 
   return (
-    <div style={{ width: '100%', height: 300 }}>
-      <ResponsiveContainer>
+    <div className="flex items-center justify-center">
+      <ChartContainer
+        config={chartConfig}
+        className="mx-auto aspect-square max-h-[300px]"
+      >
         <PieChart>
+          <ChartTooltip
+            cursor={false}
+            content={<ChartTooltipContent hideLabel nameKey="name" />}
+          />
           <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            outerRadius={80}
-            fill="#8884d8"
+            data={chartData}
             dataKey="value"
             nameKey="name"
+            innerRadius="60%"
+            strokeWidth={5}
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
+            <Label
+              content={({ viewBox }) => {
+                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                  return (
+                    <text
+                      x={viewBox.cx}
+                      y={viewBox.cy}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                    >
+                      <tspan
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        className="fill-foreground text-3xl font-bold"
+                      >
+                        {formatCurrency(totalValue)}
+                      </tspan>
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) + 24}
+                        className="fill-muted-foreground"
+                      >
+                        Total
+                      </tspan>
+                    </text>
+                  )
+                }
+              }}
+            />
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{fontSize: "0.8rem"}} />
         </PieChart>
-      </ResponsiveContainer>
+      </ChartContainer>
     </div>
-  );
+  )
 }

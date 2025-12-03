@@ -1,89 +1,89 @@
-'use client';
-import { useMemo } from 'react';
-import { Bar, BarChart, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { Transaction } from '@/app/lib/types';
-import { formatCurrency } from '@/lib/utils';
+"use client"
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-background/80 backdrop-blur-sm p-2 border rounded-lg shadow-lg">
-          <p className="font-semibold">{label}</p>
-          <p className="text-green-500">{`Receita: ${formatCurrency(payload[0].value)}`}</p>
-          <p className="text-red-500">{`Despesa: ${formatCurrency(payload[1].value)}`}</p>
-        </div>
-      );
-    }
-  
-    return null;
-  };
+import * as React from "react"
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
+
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import type { Transaction } from "@/app/lib/types"
 
 interface IncomeExpenseChartProps {
-    transactions: Transaction[];
+  transactions: Transaction[]
+}
+
+const chartConfig = {
+  income: {
+    label: "Receitas",
+    color: "hsl(var(--chart-5))",
+  },
+  expense: {
+    label: "Despesas",
+    color: "hsl(var(--chart-4))",
+  },
 }
 
 export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
-  const data = useMemo(() => {
+  const chartData = React.useMemo(() => {
     const months = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
       return {
-        name: d.toLocaleString('default', { month: 'short' }),
+        name: d.toLocaleString("default", { month: "short" }),
         year: d.getFullYear(),
         month: d.getMonth(),
         income: 0,
         expense: 0,
-      };
-    }).reverse();
+      }
+    }).reverse()
 
     transactions.forEach((t) => {
-      // Use dateMs which is a reliable number (timestamp in milliseconds)
-      const transactionDateMs = t.dateMs;
-      if (!transactionDateMs) return;
+      const transactionDateMs = t.dateMs
+      if (!transactionDateMs) return
 
-      const transactionDate = new Date(transactionDateMs);
+      const transactionDate = new Date(transactionDateMs)
       const monthIndex = months.findIndex(
-        (m) => m.year === transactionDate.getFullYear() && m.month === transactionDate.getMonth()
-      );
+        (m) =>
+          m.year === transactionDate.getFullYear() &&
+          m.month === transactionDate.getMonth()
+      )
 
       if (monthIndex !== -1) {
-        if (t.type === 'income' && t.status === 'paid') {
-          months[monthIndex].income += t.amount;
-        } else if (t.type === 'expense') {
-          months[monthIndex].expense += t.amount;
+        if (t.type === "income" && t.status === "paid") {
+          months[monthIndex].income += t.amount
+        } else if (t.type === "expense") {
+          months[monthIndex].expense += t.amount
         }
       }
-    });
+    })
 
-    return months;
-  }, [transactions]);
+    return months
+  }, [transactions])
 
   if (transactions.length === 0) {
     return (
       <div className="flex items-center justify-center h-60 md:h-80 text-muted-foreground">
         <p>Sem dados para exibir o gráfico.</p>
       </div>
-    );
+    )
   }
 
   return (
-    <div style={{ width: '100%', height: 300 }}>
-      <ResponsiveContainer>
-        <BarChart data={data} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-          <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-          <YAxis
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => `R$${Number(value) / 1000}k`}
-          />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsla(var(--muted), 0.5)' }} />
-          <Legend wrapperStyle={{fontSize: "0.8rem"}} />
-          <Bar dataKey="income" name="Receitas" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="expense" name="Despesas" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
+    <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+      <BarChart accessibilityLayer data={chartData}>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          dataKey="name"
+          tickLine={false}
+          tickMargin={10}
+          axisLine={false}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Bar dataKey="income" fill="var(--color-income)" radius={4} />
+        <Bar dataKey="expense" fill="var(--color-expense)" radius={4} />
+      </BarChart>
+    </ChartContainer>
+  )
 }

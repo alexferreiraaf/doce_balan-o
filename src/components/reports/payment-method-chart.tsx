@@ -1,92 +1,118 @@
-'use client';
-import { useMemo } from 'react';
-import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import type { Transaction, PaymentMethod } from '@/app/lib/types';
-import { formatCurrency } from '@/lib/utils';
+"use client"
 
-const COLORS = {
-  pix: 'hsl(var(--chart-1))',
-  dinheiro: 'hsl(var(--chart-2))',
-  cartao: 'hsl(var(--chart-3))',
-  fiado: 'hsl(var(--chart-4))',
-};
+import * as React from "react"
+import { Label, Pie, PieChart } from "recharts"
+
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import type { Transaction, PaymentMethod } from "@/app/lib/types"
+import { formatCurrency } from "@/lib/utils"
 
 const PAYMENT_METHOD_NAMES: Record<PaymentMethod, string> = {
-    pix: 'PIX',
-    dinheiro: 'Dinheiro',
-    cartao: 'Cartão',
-    fiado: 'Fiado',
-};
-
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background/80 backdrop-blur-sm p-2 border rounded-lg shadow-lg">
-        <p className="font-semibold">{`${payload[0].name}`}</p>
-        <p className="text-primary">{`${formatCurrency(payload[0].value)}`}</p>
-      </div>
-    );
-  }
-
-  return null;
-};
+  pix: "PIX",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+  fiado: "Fiado",
+}
 
 interface PaymentMethodChartProps {
-  transactions: Transaction[];
+  transactions: Transaction[]
 }
 
 export function PaymentMethodChart({ transactions }: PaymentMethodChartProps) {
-  const data = useMemo(() => {
-    const incomeByPaymentMethod = transactions
-      .filter((t) => t.type === 'income' && t.paymentMethod)
+  const chartData = React.useMemo(() => {
+    const incomeByMethod = transactions
+      .filter((t) => t.type === "income" && t.paymentMethod)
       .reduce((acc, t) => {
-        const method = t.paymentMethod!;
+        const method = t.paymentMethod!
         if (!acc[method]) {
-          acc[method] = 0;
+          acc[method] = 0
         }
-        acc[method] += t.amount;
-        return acc;
-      }, {} as { [key in PaymentMethod]?: number });
+        acc[method] += t.amount
+        return acc
+      }, {} as { [key in PaymentMethod]?: number })
 
-    return (Object.keys(incomeByPaymentMethod) as PaymentMethod[])
-      .map((method) => ({ 
-          name: PAYMENT_METHOD_NAMES[method], 
-          value: incomeByPaymentMethod[method] || 0,
-          method,
-        }))
-      .sort((a, b) => b.value - a.value);
-  }, [transactions]);
+    return (Object.keys(incomeByMethod) as PaymentMethod[])
+      .map((method, index) => ({
+        name: PAYMENT_METHOD_NAMES[method],
+        value: incomeByMethod[method] || 0,
+        fill: `hsl(var(--chart-${(index % 5) + 1}))`,
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [transactions])
 
-  if (data.length === 0) {
+  const totalValue = React.useMemo(() => {
+    return chartData.reduce((acc, curr) => acc + curr.value, 0)
+  }, [chartData])
+
+  const chartConfig = React.useMemo(() => {
+    return chartData.reduce((acc, { name, fill }) => {
+      acc[name] = { label: name, color: fill };
+      return acc;
+    }, {} as any)
+  }, [chartData]);
+
+  if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-60 md:h-80 text-muted-foreground">
         <p>Sem dados de receitas para exibir.</p>
       </div>
-    );
+    )
   }
 
   return (
-    <div style={{ width: '100%', height: 300 }}>
-      <ResponsiveContainer>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-            nameKey="name"
-          >
-            {data.map((entry) => (
-              <Cell key={`cell-${entry.method}`} fill={COLORS[entry.method]} />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{fontSize: "0.8rem"}} />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="flex items-center justify-center">
+    <ChartContainer
+      config={chartConfig}
+      className="mx-auto aspect-square max-h-[300px]"
+    >
+      <PieChart>
+        <ChartTooltip
+          cursor={false}
+          content={<ChartTooltipContent hideLabel nameKey="name" />}
+        />
+        <Pie
+          data={chartData}
+          dataKey="value"
+          nameKey="name"
+          innerRadius="60%"
+          strokeWidth={5}
+        >
+          <Label
+            content={({ viewBox }) => {
+              if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                return (
+                  <text
+                    x={viewBox.cx}
+                    y={viewBox.cy}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    <tspan
+                      x={viewBox.cx}
+                      y={viewBox.cy}
+                      className="fill-foreground text-3xl font-bold"
+                    >
+                      {formatCurrency(totalValue)}
+                    </tspan>
+                    <tspan
+                      x={viewBox.cx}
+                      y={(viewBox.cy || 0) + 24}
+                      className="fill-muted-foreground"
+                    >
+                      Total
+                    </tspan>
+                  </text>
+                )
+              }
+            }}
+          />
+        </Pie>
+      </PieChart>
+    </ChartContainer>
     </div>
-  );
+  )
 }
