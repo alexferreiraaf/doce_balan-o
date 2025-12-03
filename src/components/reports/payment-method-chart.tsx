@@ -72,7 +72,7 @@ export function PaymentMethodChart({ transactions }: PaymentMethodChartProps) {
       <PieChart>
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent hideLabel nameKey="name" />}
+          content={<ChartTooltipContent hideLabel nameKey="name" formatter={(value) => formatCurrency(value as number)}/>}
         />
         <Pie
           data={chartData}

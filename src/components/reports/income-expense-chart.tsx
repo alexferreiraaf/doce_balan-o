@@ -9,6 +9,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import type { Transaction } from "@/app/lib/types"
+import { formatCurrency } from "@/lib/utils"
 
 interface IncomeExpenseChartProps {
   transactions: Transaction[]
@@ -17,11 +18,11 @@ interface IncomeExpenseChartProps {
 const chartConfig = {
   income: {
     label: "Receitas",
-    color: "hsl(var(--chart-5))",
+    color: "hsl(var(--chart-2))",
   },
   expense: {
     label: "Despesas",
-    color: "hsl(var(--chart-4))",
+    color: "hsl(var(--chart-1))",
   },
 }
 
@@ -80,7 +81,18 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
           tickMargin={10}
           axisLine={false}
         />
-        <ChartTooltip content={<ChartTooltipContent />} />
+        <ChartTooltip
+          cursor={false}
+          content={<ChartTooltipContent 
+            formatter={(value, name) => (
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">{chartConfig[name as keyof typeof chartConfig].label}</span>
+                <span className="font-bold">{formatCurrency(value as number)}</span>
+              </div>
+            )}
+            
+          />}
+        />
         <Bar dataKey="income" fill="var(--color-income)" radius={4} />
         <Bar dataKey="expense" fill="var(--color-expense)" radius={4} />
       </BarChart>
