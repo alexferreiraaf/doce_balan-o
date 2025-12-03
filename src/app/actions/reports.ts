@@ -9,7 +9,8 @@ export async function getGenerativeReport(transactions: Transaction[], period: s
   }
 
   try {
-    // We might need to simplify the transaction objects if they are too large
+    // Mapeia para um objeto mais simples para evitar erros de serialização.
+    // A IA só precisa desses campos de qualquer maneira.
     const simplifiedTransactions = transactions.map(t => ({
         type: t.type,
         category: t.category,
