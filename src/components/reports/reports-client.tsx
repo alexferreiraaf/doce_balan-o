@@ -4,6 +4,7 @@ import Loading from '@/app/(main)/loading';
 import { ReportCard } from './simple-report';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMemo, useCallback } from 'react';
+import { GenerativeReport } from './generative-report';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
@@ -75,6 +76,9 @@ export function ReportsClient() {
           <ReportCard title="Balanço do Último Ano" summary={summaries.annual} />
         </TabsContent>
       </Tabs>
+      
+      <GenerativeReport transactions={transactions} />
+
     </div>
   );
 }
