@@ -2,19 +2,14 @@
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(main)/loading';
 import { ReportCard } from './simple-report';
-import { CategoryChart } from './category-chart';
-import { IncomeExpenseChart } from './income-expense-chart';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMemo, useCallback } from 'react';
-import { PaymentMethodChart } from './payment-method-chart';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
 
   const calculateSummary = useCallback((startDateMs: number) => {
     const filtered = transactions.filter((t) => {
-        // Ensure dateMs exists and is a number before comparing
         const transactionDateMs = t.dateMs;
         if (!transactionDateMs || typeof transactionDateMs !== 'number') return false;
         return transactionDateMs >= startDateMs;
@@ -34,7 +29,7 @@ export function ReportsClient() {
 
   const summaries = useMemo(() => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
+    today.setHours(0, 0, 0, 0);
 
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(today.getDate() - 7);
@@ -80,33 +75,6 @@ export function ReportsClient() {
           <ReportCard title="Balanço do Último Ano" summary={summaries.annual} />
         </TabsContent>
       </Tabs>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Gastos por Categoria</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CategoryChart transactions={transactions} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Vendas por Método de Pagamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PaymentMethodChart transactions={transactions} />
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Receitas vs Despesas (Últimos 6 meses)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <IncomeExpenseChart transactions={transactions} />
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
