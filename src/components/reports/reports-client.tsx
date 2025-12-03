@@ -14,8 +14,8 @@ export function ReportsClient() {
 
   const calculateSummary = useCallback((startDateMs: number) => {
     const filtered = transactions.filter((t) => {
-        // Fallback to timestamp if dateMs is missing for older data
-        const transactionDateMs = t.dateMs || (t.timestamp?.toMillis() ?? 0);
+        const transactionDateMs = t.dateMs || t.timestamp?.toMillis();
+        if (!transactionDateMs) return false;
         return transactionDateMs >= startDateMs;
     });
 

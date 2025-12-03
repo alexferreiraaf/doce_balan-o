@@ -37,11 +37,14 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
     }).reverse();
 
     transactions.forEach((t) => {
-      // Use dateMs which is always available as a number (milliseconds)
-      const transactionDate = new Date(t.dateMs);
+      const transactionDateMs = t.dateMs || t.timestamp?.toMillis();
+      if (!transactionDateMs) return;
+
+      const transactionDate = new Date(transactionDateMs);
       const monthIndex = months.findIndex(
         (m) => m.year === transactionDate.getFullYear() && m.month === transactionDate.getMonth()
       );
+
       if (monthIndex !== -1) {
         if (t.type === 'income' && t.status === 'paid') {
           months[monthIndex].income += t.amount;
