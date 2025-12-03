@@ -2,12 +2,12 @@
 import { useCustomer } from '@/app/lib/hooks/use-customer';
 import Loading from '@/app/(main)/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { User, Home, Phone, ShoppingCart, Share2 } from 'lucide-react';
+import { User, Home, Phone, ShoppingCart, ClipboardCopy } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { EditCustomerDialog } from './edit-customer-dialog';
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TransactionList } from '../transactions/transaction-list';
 import { useToast } from '@/hooks/use-toast';
@@ -22,13 +22,6 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
   const { customer, loading: customerLoading } = useCustomer(customerId);
   const { transactions, loading: transactionsLoading } = useTransactions();
   const { toast } = useToast();
-  const [canShare, setCanShare] = useState(false);
-
-  useEffect(() => {
-    if (navigator.share) {
-      setCanShare(true);
-    }
-  }, []);
 
   const customerTransactions = useMemo(() => {
     return transactions.filter(t => t.customerId === customerId);
@@ -36,11 +29,13 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
 
   const loading = customerLoading || transactionsLoading;
 
-  const handleShare = async () => {
-    if (!customer || customerTransactions.length === 0) {
+  const handleCopyToClipboard = async () => {
+    if (!customer) return;
+
+    if (customerTransactions.length === 0) {
       toast({
         variant: "destructive",
-        title: "Nada para compartilhar",
+        title: "Nada para copiar",
         description: "O cliente não possui histórico de compras.",
       });
       return;
@@ -53,19 +48,20 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
       return `${transactionDate} - ${t.description}: ${formatCurrency(t.amount)}`;
     }).join('\n');
     
-    const shareText = `Histórico de Compras de ${customer.name}:\n\n${transactionLines}\n\nTotal: ${formatCurrency(total)}`;
+    const textToCopy = `Histórico de Compras de ${customer.name}:\n\n${transactionLines}\n\nTotal: ${formatCurrency(total)}`;
 
     try {
-      await navigator.share({
-        title: `Histórico de Compras - ${customer.name}`,
-        text: shareText,
+      await navigator.clipboard.writeText(textToCopy);
+      toast({
+        title: "Copiado para a área de transferência!",
+        description: "Você já pode colar o histórico de compras.",
       });
     } catch (error) {
-      console.error("Erro ao compartilhar:", error);
+      console.error("Erro ao copiar para a área de transferência:", error);
       toast({
         variant: "destructive",
-        title: "Falha ao compartilhar",
-        description: "Não foi possível abrir a caixa de diálogo de compartilhamento.",
+        title: "Falha ao copiar",
+        description: "Não foi possível copiar o texto.",
       });
     }
   };
@@ -107,12 +103,10 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
             {customer.name}
         </h1>
         <div className="flex items-center gap-2">
-            {canShare && (
-              <Button variant="outline" onClick={handleShare}>
-                <Share2 className="mr-2 h-4 w-4" />
-                Compartilhar
-              </Button>
-            )}
+            <Button variant="outline" onClick={handleCopyToClipboard}>
+              <ClipboardCopy className="mr-2 h-4 w-4" />
+              Copiar Histórico
+            </Button>
             <EditCustomerDialog customer={customer} />
             <Button asChild variant="outline">
                 <Link href="/customers">Voltar</Link>
