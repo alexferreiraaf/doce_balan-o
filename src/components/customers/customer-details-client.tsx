@@ -2,7 +2,7 @@
 import { useCustomer } from '@/app/lib/hooks/use-customer';
 import Loading from '@/app/(main)/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { User, Home, Phone, ShoppingCart, BarChart3 } from 'lucide-react';
+import { User, Home, Phone, ShoppingCart } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { EditCustomerDialog } from './edit-customer-dialog';
@@ -10,7 +10,6 @@ import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TransactionList } from '../transactions/transaction-list';
-import { PaymentMethodChart } from '../reports/payment-method-chart';
 
 interface CustomerDetailsClientProps {
   customerId: string;
@@ -70,7 +69,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
       </div>
       
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="details">
             <User className="w-4 h-4 mr-2" />
             Detalhes
@@ -78,10 +77,6 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
           <TabsTrigger value="history">
             <ShoppingCart className="w-4 h-4 mr-2" />
             Histórico
-          </TabsTrigger>
-          <TabsTrigger value="report">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Relatório
           </TabsTrigger>
         </TabsList>
 
@@ -116,17 +111,6 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
             <div className="mt-4">
                 <TransactionList transactions={customerTransactions} title="Histórico de Compras" />
             </div>
-        </TabsContent>
-
-        <TabsContent value="report">
-             <Card className="mt-4">
-                <CardHeader>
-                    <CardTitle>Formas de Pagamento Utilizadas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <PaymentMethodChart transactions={customerTransactions} />
-                </CardContent>
-            </Card>
         </TabsContent>
       </Tabs>
     </div>
