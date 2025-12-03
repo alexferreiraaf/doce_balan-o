@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle } from 'lucide-react';
+import { Clock, CheckCircle, User } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -23,12 +23,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
 import { TransactionList } from './transaction-list';
+import { useCustomers } from '@/app/lib/hooks/use-customers';
 
 export function TransactionsClient() {
-  const { transactions, loading } = useTransactions();
+  const { transactions, loading: transactionsLoading } = useTransactions();
+  const { customers, loading: customersLoading } = useCustomers();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const loading = transactionsLoading || customersLoading;
 
   const { paidTransactions, pendingFiado, totalFiadoValue } = useMemo(() => {
     const paid = transactions.filter(t => t.status !== 'pending');
@@ -86,16 +90,24 @@ export function TransactionsClient() {
             </CardHeader>
             <CardContent>
                 <ul className="space-y-3">
-                {pendingFiado.map((t) => (
+                {pendingFiado.map((t) => {
+                    const customerName = customers.find(c => c.id === t.customerId)?.name;
+                    return (
                     <li
                       key={t.id}
                       className="flex flex-col sm:flex-row items-start sm:items-center p-3 rounded-lg bg-amber-100/60 gap-2"
                     >
                     <div className="flex-grow flex flex-col gap-1 w-full">
                         <span className="font-semibold text-card-foreground">{t.description}</span>
-                        <div className='flex items-center gap-2'>
+                        <div className='flex items-center gap-2 flex-wrap'>
                             <Badge variant="secondary" className="text-xs">{t.category}</Badge>
-                            <span className="text-sm font-bold text-amber-700">
+                            {customerName && (
+                                <Badge variant="outline" className="text-xs border-primary/50">
+                                    <User className="w-3 h-3 mr-1" />
+                                    {customerName}
+                                </Badge>
+                            )}
+                             <span className="text-sm font-bold text-amber-700">
                                 {formatCurrency(t.amount)}
                             </span>
                         </div>
@@ -121,7 +133,7 @@ export function TransactionsClient() {
                         <DeleteTransactionButton transactionId={t.id} />
                     </div>
                     </li>
-                ))}
+                )})}
                 </ul>
             </CardContent>
          </Card>

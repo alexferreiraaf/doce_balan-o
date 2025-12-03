@@ -1,11 +1,12 @@
 'use client';
 
-import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, ArrowRight } from 'lucide-react';
-import type { Transaction, PaymentMethod } from '@/app/lib/types';
+import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, ArrowRight, User } from 'lucide-react';
+import type { Transaction, PaymentMethod, Customer } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
 import { Button } from '../ui/button';
+import { useCustomers } from '@/app/lib/hooks/use-customers';
 
 interface RecentTransactionsListProps {
   transactions: Transaction[];
@@ -19,6 +20,8 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
 };
 
 export function RecentTransactionsList({ transactions }: RecentTransactionsListProps) {
+    const { customers } = useCustomers();
+
   if (transactions.length === 0) {
     return (
       <div className="text-center p-8 text-muted-foreground">
@@ -33,6 +36,7 @@ export function RecentTransactionsList({ transactions }: RecentTransactionsListP
     <ul className="space-y-3">
       {transactions.map((t) => {
         const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
+        const customerName = customers.find(c => c.id === t.customerId)?.name;
         return (
             <li
             key={t.id}
@@ -48,6 +52,12 @@ export function RecentTransactionsList({ transactions }: RecentTransactionsListP
                         <Badge variant={t.paymentMethod === 'fiado' ? 'destructive' : 'outline'} className="text-xs">
                             <paymentInfo.icon className="w-3 h-3 mr-1" />
                             {paymentInfo.text}
+                        </Badge>
+                    )}
+                     {customerName && (
+                        <Badge variant="outline" className="text-xs border-primary/50">
+                            <User className="w-3 h-3 mr-1" />
+                            {customerName}
                         </Badge>
                     )}
                 </div>

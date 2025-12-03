@@ -1,11 +1,12 @@
 'use client';
 
-import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt } from 'lucide-react';
+import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Transaction, PaymentMethod } from '@/app/lib/types';
+import type { Transaction, PaymentMethod, Customer } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
+import { useCustomers } from '@/app/lib/hooks/use-customers';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -20,6 +21,8 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
 };
 
 export function TransactionList({ transactions, title }: TransactionListProps) {
+  const { customers } = useCustomers();
+
   if (transactions.length === 0) {
     return (
         <div className="text-center p-8 text-muted-foreground border rounded-lg mt-8">
@@ -38,6 +41,7 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
         <ul className="space-y-3">
           {transactions.map((t) => {
             const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
+            const customerName = customers.find(c => c.id === t.customerId)?.name;
             return (
                 <li
                 key={t.id}
@@ -54,6 +58,12 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                                 <paymentInfo.icon className="w-3 h-3 mr-1" />
                                 {paymentInfo.text}
                             </Badge>
+                        )}
+                         {customerName && (
+                          <Badge variant="outline" className="text-xs border-primary/50">
+                              <User className="w-3 h-3 mr-1" />
+                              {customerName}
+                          </Badge>
                         )}
                     </div>
                 </div>
