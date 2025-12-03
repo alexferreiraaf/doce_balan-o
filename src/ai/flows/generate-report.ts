@@ -18,13 +18,13 @@ const SimpleTransactionSchema = z.object({
   status: z.string(),
 });
 
-export const GenerateReportInputSchema = z.object({
+const GenerateReportInputSchema = z.object({
   transactions: z.array(SimpleTransactionSchema).describe('A lista de transações financeiras.'),
   period: z.string().describe('O período que o relatório deve cobrir (ex: "últimos 30 dias", "últimos 7 dias", "todo o período").'),
 });
 export type GenerateReportInput = z.infer<typeof GenerateReportInputSchema>;
 
-export const GenerateReportOutputSchema = z.object({
+const GenerateReportOutputSchema = z.object({
   report: z.string().describe('O relatório financeiro gerado em texto, formatado em parágrafos com \\n.'),
 });
 export type GenerateReportOutput = z.infer<typeof GenerateReportOutputSchema>;
