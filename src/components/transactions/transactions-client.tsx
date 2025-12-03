@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle, User } from 'lucide-react';
+import { Clock, CheckCircle, User, Edit } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -24,6 +24,7 @@ import {
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
 import { TransactionList } from './transaction-list';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
+import { EditTransactionSheet } from './edit-transaction-sheet';
 
 export function TransactionsClient() {
   const { transactions, loading: transactionsLoading } = useTransactions();
@@ -130,6 +131,7 @@ export function TransactionsClient() {
                                 <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        <EditTransactionSheet transaction={t} />
                         <DeleteTransactionButton transactionId={t.id} />
                     </div>
                     </li>

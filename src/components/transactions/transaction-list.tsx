@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
+import { EditTransactionSheet } from './edit-transaction-sheet';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -72,6 +73,7 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                         {t.type === 'expense' && '- '}
                         {formatCurrency(t.amount)}
                     </span>
+                    <EditTransactionSheet transaction={t} />
                     <DeleteTransactionButton transactionId={t.id} />
                 </div>
                 </li>
