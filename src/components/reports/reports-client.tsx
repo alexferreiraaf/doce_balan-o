@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ReportCard } from './simple-report';
+import { IncomeExpenseChart } from './income-expense-chart';
+import { CategoryPieChart } from './category-pie-chart';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
@@ -86,7 +88,6 @@ export function ReportsClient() {
                   mode="single"
                   selected={startDate}
                   onSelect={setStartDate}
-                  initialFocus
                 />
               </PopoverContent>
             </Popover>
@@ -108,7 +109,6 @@ export function ReportsClient() {
                   mode="single"
                   selected={endDate}
                   onSelect={setEndDate}
-                  initialFocus
                 />
               </PopoverContent>
             </Popover>
@@ -123,6 +123,11 @@ export function ReportsClient() {
       
       <ReportCard title={reportTitle} summary={summary} />
       
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <IncomeExpenseChart transactions={filteredTransactions} />
+        <CategoryPieChart transactions={filteredTransactions} />
+      </div>
+
       <SummaryReport transactions={filteredTransactions} />
 
     </div>
