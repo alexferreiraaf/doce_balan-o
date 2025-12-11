@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Transaction } from '@/app/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { format, eachDayOfInterval } from 'date-fns';
+import { format, eachDayOfInterval, startOfDay } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
 
@@ -16,20 +16,7 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
   const chartData = useMemo(() => {
     if (transactions.length === 0) return [];
     
-    const minDate = Math.min(...transactions.map(t => t.dateMs));
-    const maxDate = Math.max(...transactions.map(t => t.dateMs));
-    
-    const dateInterval = eachDayOfInterval({
-        start: new Date(minDate),
-        end: new Date(maxDate)
-    });
-
     const dailyData = new Map<string, { income: number; expense: number }>();
-    
-    dateInterval.forEach(day => {
-        const formattedDate = format(day, 'dd/MM');
-        dailyData.set(formattedDate, { income: 0, expense: 0 });
-    });
 
     transactions.forEach(t => {
       const date = format(new Date(t.dateMs), 'dd/MM');
@@ -42,10 +29,17 @@ export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
       dailyData.set(date, dayData);
     });
 
-    return Array.from(dailyData.entries()).map(([date, { income, expense }]) => ({
+    const sortedDates = Array.from(dailyData.keys()).sort((a, b) => {
+        const [dayA, monthA] = a.split('/').map(Number);
+        const [dayB, monthB] = b.split('/').map(Number);
+        if (monthA !== monthB) return monthA - monthB;
+        return dayA - dayB;
+    });
+
+    return sortedDates.map(date => ({
       date,
-      Receitas: income,
-      Despesas: expense,
+      Receitas: dailyData.get(date)?.income || 0,
+      Despesas: dailyData.get(date)?.expense || 0,
     }));
   }, [transactions]);
 
