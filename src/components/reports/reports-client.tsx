@@ -4,8 +4,8 @@ import Loading from '@/app/(main)/loading';
 import { SummaryReport } from './summary-report';
 import { useMemo, useState } from 'react';
 import { DateRange } from 'react-day-picker';
-import { addDays, format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { addDays, format, addMonths, subMonths } from 'date-fns';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -14,25 +14,28 @@ import { ReportCard } from './simple-report';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -30),
-    to: new Date(),
-  });
+  const [startDate, setStartDate] = useState<Date | undefined>(addDays(new Date(), -30));
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+
+  const dateRange: DateRange | undefined = useMemo(() => ({
+    from: startDate,
+    to: endDate,
+  }), [startDate, endDate]);
 
   const filteredTransactions = useMemo(() => {
-    if (!date?.from || !date?.to) {
-      return transactions;
+    if (!startDate || !endDate) {
+      return [];
     }
     // Set time to end of day for 'to' date to include all transactions on that day
-    const toDate = new Date(date.to);
+    const toDate = new Date(endDate);
     toDate.setHours(23, 59, 59, 999);
 
     return transactions.filter((t) => {
       const transactionDateMs = t.dateMs;
       if (!transactionDateMs || typeof transactionDateMs !== 'number') return false;
-      return transactionDateMs >= date.from!.getTime() && transactionDateMs <= toDate.getTime();
+      return transactionDateMs >= startDate.getTime() && transactionDateMs <= toDate.getTime();
     });
-  }, [transactions, date]);
+  }, [transactions, startDate, endDate]);
 
 
   const summary = useMemo(() => {
@@ -47,53 +50,74 @@ export function ReportsClient() {
     return { income, expense, balance: income - expense };
   }, [filteredTransactions]);
 
+  const handleMonthChange = (direction: 'next' | 'prev') => {
+    const operation = direction === 'next' ? addMonths : subMonths;
+    setStartDate(prev => prev ? operation(prev, 1) : undefined);
+    setEndDate(prev => prev ? operation(prev, 1) : undefined);
+  };
+
 
   if (loading) {
     return <Loading />;
   }
   
-  const reportTitle = `Balanço de ${date?.from ? format(date.from, "LLL dd, y") : ''}${date?.to ? ` a ${format(date.to, "LLL dd, y")}`: ''}`;
+  const reportTitle = `Balanço de ${startDate ? format(startDate, "dd/MM/y") : ''}${endDate ? ` a ${format(endDate, "dd/MM/y")}`: ''}`;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight text-primary">Relatórios de Desempenho</h1>
-         <div className={cn("grid gap-2")}>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="date"
-                variant={"outline"}
-                className={cn(
-                  "w-[300px] justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date?.from ? (
-                  date.to ? (
-                    <>
-                      {format(date.from, "LLL dd, y")} -{" "}
-                      {format(date.to, "LLL dd, y")}
-                    </>
-                  ) : (
-                    format(date.from, "LLL dd, y")
-                  )
-                ) : (
-                  <span>Selecione um período</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={setDate}
-                numberOfMonths={2}
-              />
-            </PopoverContent>
-          </Popover>
+         <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-[140px] justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "dd/MM/y") : <span>Data Inicial</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-[140px] justify-start text-left font-normal",
+                    !endDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "dd/MM/y") : <span>Data Final</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={setEndDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}>
+                <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}>
+                <ChevronRight className="h-4 w-4" />
+            </Button>
         </div>
       </div>
       
