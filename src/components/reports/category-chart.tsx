@@ -31,10 +31,10 @@ export function CategoryChart({ transactions }: CategoryChartProps) {
       <CardContent>
          {expenseData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={expenseData} layout="vertical" margin={{ top: 5, right: 20, left: 50, bottom: 5 }}>
+                <BarChart data={expenseData} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" tickFormatter={(value) => formatCurrency(Number(value))} tick={{ fontSize: 12 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} interval={0} />
                     <Tooltip
                         contentStyle={{
                             backgroundColor: 'hsl(var(--background))',
