@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { ReportCard } from './simple-report';
 import { IncomeExpenseChart } from './income-expense-chart';
-import { CategoryPieChart } from './category-pie-chart';
+import { CategoryChart } from './category-chart';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
@@ -131,7 +131,7 @@ export function ReportsClient() {
           startDate={startDate || new Date()}
           endDate={endDate || new Date()}
         />
-        <CategoryPieChart transactions={filteredTransactions} />
+        <CategoryChart transactions={filteredTransactions} />
       </div>
 
       <SummaryReport transactions={filteredTransactions} />
