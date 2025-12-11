@@ -20,6 +20,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ThemeToggle } from './theme-toggle';
 
 
 const navLinks = [
@@ -117,12 +118,13 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
             {!isUserLoading && (
                 <div className="hidden sm:block">
                     <AddTransactionSheet />
                 </div>
             )}
+            <ThemeToggle />
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">
