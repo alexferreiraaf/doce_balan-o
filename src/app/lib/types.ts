@@ -13,6 +13,8 @@ export interface Transaction {
   amount: number;
   discount?: number;
   deliveryFee?: number;
+  additionalDescription?: string;
+  additionalValue?: number;
   paymentMethod?: PaymentMethod;
   status: TransactionStatus;
   customerId?: string;

@@ -35,6 +35,14 @@
           "type": "number",
           "description": "Delivery fee applied to the transaction."
         },
+        "additionalDescription": {
+          "type": "string",
+          "description": "Description of an additional item for an income transaction."
+        },
+        "additionalValue": {
+          "type": "number",
+          "description": "Value of the additional item for an income transaction."
+        },
         "paymentMethod": {
           "type": [
             "string",

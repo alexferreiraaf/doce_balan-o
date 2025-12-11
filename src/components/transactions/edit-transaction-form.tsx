@@ -46,6 +46,8 @@ const formSchema = z.object({
   quantity: z.coerce.number().optional(),
   discount: z.coerce.number().optional(),
   deliveryFee: z.coerce.number().optional(),
+  additionalDescription: z.string().optional(),
+  additionalValue: z.coerce.number().optional(),
   paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
   customerId: z.string().optional(),
 }).refine(data => {
@@ -77,7 +79,12 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
   // Helper to find product from description
   const findProductByDescription = (description: string, products: Product[]): Product | undefined => {
     if (!description.startsWith('Venda de')) return undefined;
-    const productName = description.split(' ').slice(3).join(' ');
+    
+    // Extracts product name from "Venda de 1x Chocolate" or "Venda de 1x Chocolate (+ Adicional)"
+    const nameMatch = description.match(/Venda de \d+x (.+?)(?: \(\+ .+\))?$/);
+    if (!nameMatch) return undefined;
+
+    const productName = nameMatch[1];
     return products.find(p => p.name === productName);
   };
 
@@ -96,6 +103,8 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
       quantity: transaction.type === 'income' ? initialQuantity : 1,
       discount: transaction.discount || 0,
       deliveryFee: transaction.deliveryFee || 0,
+      additionalDescription: transaction.additionalDescription || '',
+      additionalValue: transaction.additionalValue || 0,
       paymentMethod: transaction.paymentMethod || undefined,
       customerId: transaction.customerId || '',
     },
@@ -106,20 +115,21 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
   const quantityValue = form.watch('quantity');
   const discountValue = form.watch('discount');
   const deliveryFeeValue = form.watch('deliveryFee');
+  const additionalValue = form.watch('additionalValue');
   
   // Effect to calculate total amount for income
   useEffect(() => {
-    if (type === 'income' && productIdValue && quantityValue && products.length > 0) {
-      const product = products.find((p) => p.id === productIdValue);
-      if (product) {
-        const productTotal = product.price * Number(quantityValue);
+    if (type === 'income') {
+        const product = products.find((p) => p.id === productIdValue);
+        const productPrice = product ? product.price : 0;
+        const productTotal = productPrice * Number(quantityValue || 0);
         const discount = Number(discountValue || 0);
         const deliveryFee = Number(deliveryFeeValue || 0);
-        const totalAmount = productTotal - discount + deliveryFee;
+        const additional = Number(additionalValue || 0);
+        const totalAmount = productTotal - discount + deliveryFee + additional;
         form.setValue('amount', totalAmount);
-      }
     }
-  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, type, products, form]);
+  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, additionalValue, type, products, form]);
 
   // Effect to reset fields when product changes
   useEffect(() => {
@@ -145,6 +155,9 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
              return;
         }
         transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
+        if(data.additionalDescription) {
+            transactionDescription += ` (+ ${data.additionalDescription})`
+        }
       } else {
         transactionDescription = data.description || 'Despesa sem descrição';
       }
@@ -156,6 +169,8 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
+        additionalDescription: data.additionalDescription || '',
+        additionalValue: data.additionalValue || 0,
         paymentMethod: data.paymentMethod || null,
         status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
         customerId: data.customerId || null,
@@ -291,6 +306,34 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
                     </FormItem>
                 )}
             />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="additionalDescription"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Adicional (Desc.)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ex: Mais Nutella" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                <FormField
+                    control={form.control}
+                    name="additionalValue"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Valor Adicional (R$)</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
              <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}

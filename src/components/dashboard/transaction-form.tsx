@@ -37,6 +37,7 @@ import type { Product } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
+import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -48,6 +49,8 @@ const formSchema = z.object({
   quantity: z.coerce.number().optional(),
   discount: z.coerce.number().optional(),
   deliveryFee: z.coerce.number().optional(),
+  additionalDescription: z.string().optional(),
+  additionalValue: z.coerce.number().optional(),
   paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
   customerId: z.string().optional(),
 }).refine(data => {
@@ -85,6 +88,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       quantity: 1,
       discount: 0,
       deliveryFee: 0,
+      additionalDescription: '',
+      additionalValue: 0,
     },
   });
 
@@ -94,6 +99,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   const quantityValue = form.watch('quantity');
   const discountValue = form.watch('discount');
   const deliveryFeeValue = form.watch('deliveryFee');
+  const additionalValue = form.watch('additionalValue');
 
   // Effect for category suggestion (for expenses)
   useEffect(() => {
@@ -114,17 +120,17 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
 
   // Effect to calculate total amount for income
   useEffect(() => {
-    if (typeValue === 'income' && productIdValue && quantityValue && products.length > 0) {
-      const product = products.find((p) => p.id === productIdValue);
-      if (product) {
-        const productTotal = product.price * Number(quantityValue);
+    if (typeValue === 'income') {
+        const product = products.find((p) => p.id === productIdValue);
+        const productPrice = product ? product.price : 0;
+        const productTotal = productPrice * Number(quantityValue || 0);
         const discount = Number(discountValue || 0);
         const deliveryFee = Number(deliveryFeeValue || 0);
-        const totalAmount = productTotal - discount + deliveryFee;
+        const additional = Number(additionalValue || 0);
+        const totalAmount = productTotal - discount + deliveryFee + additional;
         form.setValue('amount', totalAmount);
-      }
     }
-  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, typeValue, products, form]);
+  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, additionalValue, typeValue, products, form]);
 
   const onSubmit = (data: TransactionFormValues) => {
     if (!user || !firestore) {
@@ -143,6 +149,9 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
              return;
         }
         transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
+        if(data.additionalDescription) {
+            transactionDescription += ` (+ ${data.additionalDescription})`
+        }
       } else {
         // For expenses, use the description from the form directly.
         transactionDescription = data.description || 'Despesa sem descrição';
@@ -156,6 +165,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
+        additionalDescription: data.additionalDescription || '',
+        additionalValue: data.additionalValue || 0,
         paymentMethod: data.paymentMethod || null,
         status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
         customerId: data.customerId || null,
@@ -166,7 +177,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       addDoc(collection(firestore, collectionPath), transactionData)
         .then(() => {
             toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
-            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0});
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0});
             setSheetOpen(false);
         })
         .catch((error) => {
@@ -195,6 +206,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     form.setValue('quantity', 1);
     form.setValue('discount', 0);
     form.setValue('deliveryFee', 0);
+    form.setValue('additionalDescription', '');
+    form.setValue('additionalValue', 0);
     setSuggestions([]);
   };
 
@@ -324,6 +337,34 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                     </FormItem>
                 )}
             />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="additionalDescription"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Adicional (Desc.)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ex: Mais Nutella" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                <FormField
+                    control={form.control}
+                    name="additionalValue"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Valor Adicional (R$)</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
              <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
