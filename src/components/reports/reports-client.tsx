@@ -88,6 +88,7 @@ export function ReportsClient() {
                   mode="single"
                   selected={startDate}
                   onSelect={setStartDate}
+                  initialFocus={false}
                 />
               </PopoverContent>
             </Popover>
@@ -109,6 +110,7 @@ export function ReportsClient() {
                   mode="single"
                   selected={endDate}
                   onSelect={setEndDate}
+                  initialFocus={false}
                 />
               </PopoverContent>
             </Popover>
@@ -124,7 +126,11 @@ export function ReportsClient() {
       <ReportCard title={reportTitle} summary={summary} />
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <IncomeExpenseChart transactions={filteredTransactions} />
+        <IncomeExpenseChart 
+          transactions={filteredTransactions} 
+          startDate={startDate || new Date()}
+          endDate={endDate || new Date()}
+        />
         <CategoryPieChart transactions={filteredTransactions} />
       </div>
 

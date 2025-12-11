@@ -10,38 +10,48 @@ import { ptBR } from 'date-fns/locale';
 
 interface IncomeExpenseChartProps {
   transactions: Transaction[];
+  startDate: Date;
+  endDate: Date;
 }
 
-export function IncomeExpenseChart({ transactions }: IncomeExpenseChartProps) {
+export function IncomeExpenseChart({ transactions, startDate, endDate }: IncomeExpenseChartProps) {
   const chartData = useMemo(() => {
-    if (transactions.length === 0) return [];
-    
+    if (!startDate || !endDate || startDate > endDate) return [];
+
+    const dateInterval = eachDayOfInterval({
+        start: startOfDay(startDate),
+        end: startOfDay(endDate),
+    });
+
     const dailyData = new Map<string, { income: number; expense: number }>();
 
+    // Initialize all days in the interval with zero values
+    dateInterval.forEach(day => {
+        const dateKey = format(day, 'dd/MM');
+        dailyData.set(dateKey, { income: 0, expense: 0 });
+    });
+    
+    // Populate with actual transaction data
     transactions.forEach(t => {
-      const date = format(new Date(t.dateMs), 'dd/MM');
-      const dayData = dailyData.get(date) || { income: 0, expense: 0 };
-      if (t.type === 'income' && t.status === 'paid') {
-        dayData.income += t.amount;
-      } else if (t.type === 'expense') {
-        dayData.expense += t.amount;
+      const dateKey = format(new Date(t.dateMs), 'dd/MM');
+      const dayData = dailyData.get(dateKey);
+
+      if (dayData) {
+        if (t.type === 'income' && t.status === 'paid') {
+          dayData.income += t.amount;
+        } else if (t.type === 'expense') {
+          dayData.expense += t.amount;
+        }
+        dailyData.set(dateKey, dayData);
       }
-      dailyData.set(date, dayData);
     });
 
-    const sortedDates = Array.from(dailyData.keys()).sort((a, b) => {
-        const [dayA, monthA] = a.split('/').map(Number);
-        const [dayB, monthB] = b.split('/').map(Number);
-        if (monthA !== monthB) return monthA - monthB;
-        return dayA - dayB;
-    });
-
-    return sortedDates.map(date => ({
+    return Array.from(dailyData.entries()).map(([date, data]) => ({
       date,
-      Receitas: dailyData.get(date)?.income || 0,
-      Despesas: dailyData.get(date)?.expense || 0,
+      Receitas: data.income,
+      Despesas: data.expense,
     }));
-  }, [transactions]);
+  }, [transactions, startDate, endDate]);
 
   return (
     <Card>
