@@ -1,9 +1,8 @@
 'use client';
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(main)/loading';
-import { ReportCard } from './simple-report';
-import { useMemo, useState } from 'react';
 import { SummaryReport } from './summary-report';
+import { useMemo, useState } from 'react';
 import { DateRange } from 'react-day-picker';
 import { addDays, format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
@@ -11,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { ReportCard } from './simple-report';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
@@ -86,7 +86,6 @@ export function ReportsClient() {
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
               <Calendar
-                initialFocus
                 mode="range"
                 defaultMonth={date?.from}
                 selected={date}
