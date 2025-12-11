@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from 'recharts';
 import type { Transaction } from '@/app/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { format, eachDayOfInterval, startOfDay } from 'date-fns';
@@ -75,6 +75,7 @@ export function IncomeExpenseChart({ transactions, startDate, endDate }: IncomeE
                 }}
                 formatter={(value: number) => formatCurrency(value)}
                 />
+                <Legend />
                 <Bar dataKey="Receitas" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Despesas" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
             </BarChart>

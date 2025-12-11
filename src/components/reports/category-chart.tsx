@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import type { Transaction } from '@/app/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { formatCurrency } from '@/lib/utils';
@@ -31,7 +31,7 @@ export function CategoryChart({ transactions }: CategoryChartProps) {
       <CardContent>
          {expenseData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={expenseData} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                <BarChart data={expenseData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" tickFormatter={(value) => formatCurrency(Number(value))} tick={{ fontSize: 12 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} interval={0} />
@@ -42,7 +42,8 @@ export function CategoryChart({ transactions }: CategoryChartProps) {
                         }}
                         formatter={(value: number) => [formatCurrency(value), "Total"]}
                     />
-                    <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} barSize={20} />
+                    <Legend />
+                    <Bar dataKey="value" name="Despesa" fill="hsl(var(--chart-4))" radius={[0, 4, 4, 0]} barSize={20} />
                 </BarChart>
             </ResponsiveContainer>
          ) : (
