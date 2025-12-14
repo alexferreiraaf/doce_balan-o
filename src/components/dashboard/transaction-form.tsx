@@ -53,6 +53,8 @@ const formSchema = z.object({
   additionalValue: z.coerce.number().optional(),
   paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
   customerId: z.string().optional(),
+  hasDownPayment: z.enum(['yes', 'no']).optional(),
+  downPayment: z.coerce.number().optional(),
 }).refine(data => {
     if (data.type === 'income') {
         return !!data.paymentMethod;
@@ -90,6 +92,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       deliveryFee: 0,
       additionalDescription: '',
       additionalValue: 0,
+      hasDownPayment: 'no',
+      downPayment: 0,
     },
   });
 
@@ -100,6 +104,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   const discountValue = form.watch('discount');
   const deliveryFeeValue = form.watch('deliveryFee');
   const additionalValue = form.watch('additionalValue');
+  const hasDownPaymentValue = form.watch('hasDownPayment');
 
   // Effect for category suggestion (for expenses)
   useEffect(() => {
@@ -167,6 +172,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         deliveryFee: data.deliveryFee || 0,
         additionalDescription: data.additionalDescription || '',
         additionalValue: data.additionalValue || 0,
+        downPayment: data.hasDownPayment === 'yes' ? data.downPayment || 0 : 0,
         paymentMethod: data.paymentMethod || null,
         status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
         customerId: data.customerId || null,
@@ -177,7 +183,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       addDoc(collection(firestore, collectionPath), transactionData)
         .then(() => {
             toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
-            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0});
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0});
             setSheetOpen(false);
         })
         .catch((error) => {
@@ -208,6 +214,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     form.setValue('deliveryFee', 0);
     form.setValue('additionalDescription', '');
     form.setValue('additionalValue', 0);
+    form.setValue('hasDownPayment', 'no');
+    form.setValue('downPayment', 0);
     setSuggestions([]);
   };
 
@@ -393,6 +401,54 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                     )}
                 />
             </div>
+
+            <FormField
+              control={form.control}
+              name="hasDownPayment"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Houve valor de entrada?</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="yes" id="dp-yes" />
+                        </FormControl>
+                        <FormLabel htmlFor="dp-yes" className="font-normal cursor-pointer">Sim</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <RadioGroupItem value="no" id="dp-no" />
+                        </FormControl>
+                        <FormLabel htmlFor="dp-no" className="font-normal cursor-pointer">Não</FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {hasDownPaymentValue === 'yes' && (
+              <FormField
+                control={form.control}
+                name="downPayment"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor de Entrada (R$)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
              <FormField
               control={form.control}
               name="amount"

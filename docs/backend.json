@@ -43,6 +43,10 @@
           "type": "number",
           "description": "Value of the additional item for an income transaction."
         },
+        "downPayment": {
+          "type": "number",
+          "description": "Down payment amount for an income transaction."
+        },
         "paymentMethod": {
           "type": [
             "string",

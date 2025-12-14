@@ -15,6 +15,7 @@ export interface Transaction {
   deliveryFee?: number;
   additionalDescription?: string;
   additionalValue?: number;
+  downPayment?: number;
   paymentMethod?: PaymentMethod;
   status: TransactionStatus;
   customerId?: string;
