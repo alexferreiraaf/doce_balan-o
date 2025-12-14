@@ -38,7 +38,10 @@ export function TransactionsClient() {
   const { paidTransactions, pendingFiado, totalFiadoValue } = useMemo(() => {
     const paid = transactions.filter(t => t.status !== 'pending');
     const fiado = transactions.filter((t) => t.status === 'pending');
-    const fiadoValue = fiado.reduce((sum, t) => sum + t.amount, 0);
+    const fiadoValue = fiado.reduce((sum, t) => {
+        const remainingAmount = t.amount - (t.downPayment || 0);
+        return sum + remainingAmount;
+    }, 0);
 
     return {
       paidTransactions: paid,
@@ -93,6 +96,7 @@ export function TransactionsClient() {
                 <ul className="space-y-3">
                 {pendingFiado.map((t) => {
                     const customerName = customers.find(c => c.id === t.customerId)?.name;
+                    const remainingAmount = t.amount - (t.downPayment || 0);
                     return (
                     <li
                       key={t.id}
@@ -109,7 +113,7 @@ export function TransactionsClient() {
                                 </Badge>
                             )}
                              <span className="text-sm font-bold text-amber-700">
-                                {formatCurrency(t.amount)}
+                                {formatCurrency(remainingAmount)}
                             </span>
                         </div>
                     </div>

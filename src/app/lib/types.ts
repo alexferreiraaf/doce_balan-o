@@ -16,7 +16,7 @@ export interface Transaction {
   additionalDescription?: string;
   additionalValue?: number;
   downPayment?: number;
-  paymentMethod?: PaymentMethod;
+  paymentMethod?: PaymentMethod | null;
   status: TransactionStatus;
   customerId?: string;
   timestamp: Timestamp;

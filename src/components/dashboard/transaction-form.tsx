@@ -56,7 +56,7 @@ const formSchema = z.object({
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
 }).refine(data => {
-    if (data.type === 'income') {
+    if (data.type === 'income' && !data.downPayment) {
         return !!data.paymentMethod;
     }
     return true;
@@ -147,6 +147,8 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       const collectionPath = `artifacts/${APP_ID}/users/${user.uid}/transactions`;
       
       let transactionDescription = data.description || '';
+      const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
+
       if (data.type === 'income') {
         const product = products.find(p => p.id === data.productId);
         if (!product || !data.quantity) {
@@ -157,9 +159,23 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         if(data.additionalDescription) {
             transactionDescription += ` (+ ${data.additionalDescription})`
         }
+        if (downPaymentValue > 0) {
+            transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
+        }
+
       } else {
         // For expenses, use the description from the form directly.
         transactionDescription = data.description || 'Despesa sem descrição';
+      }
+
+      let paymentMethod = data.paymentMethod || null;
+      let status: 'paid' | 'pending' = 'paid';
+
+      if (downPaymentValue > 0) {
+        paymentMethod = 'fiado';
+        status = 'pending';
+      } else if (data.paymentMethod === 'fiado') {
+        status = 'pending';
       }
 
       const transactionData = {
@@ -172,9 +188,9 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         deliveryFee: data.deliveryFee || 0,
         additionalDescription: data.additionalDescription || '',
         additionalValue: data.additionalValue || 0,
-        downPayment: data.hasDownPayment === 'yes' ? data.downPayment || 0 : 0,
-        paymentMethod: data.paymentMethod || null,
-        status: data.paymentMethod === 'fiado' ? 'pending' : 'paid',
+        downPayment: downPaymentValue,
+        paymentMethod: paymentMethod,
+        status: status,
         customerId: data.customerId || null,
         timestamp: serverTimestamp(),
         dateMs: Date.now(),
@@ -462,48 +478,52 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="paymentMethod"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Forma de Pagamento</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="pix" id="pix" />
-                        </FormControl>
-                        <FormLabel htmlFor="pix" className="font-normal cursor-pointer">PIX</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="dinheiro" id="dinheiro" />
-                        </FormControl>
-                        <FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="cartao" id="cartao" />
-                        </FormControl>
-                        <FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="fiado" id="fiado" />
-                        </FormControl>
-                        <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            
+            {hasDownPaymentValue !== 'yes' && (
+              <FormField
+                control={form.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Forma de Pagamento</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="grid grid-cols-2 gap-4"
+                      >
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="pix" id="pix" />
+                          </FormControl>
+                          <FormLabel htmlFor="pix" className="font-normal cursor-pointer">PIX</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="dinheiro" id="dinheiro" />
+                          </FormControl>
+                          <FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="cartao" id="cartao" />
+                          </FormControl>
+                          <FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="fiado" id="fiado" />
+                          </FormControl>
+                          <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
           </div>
         )}
 
