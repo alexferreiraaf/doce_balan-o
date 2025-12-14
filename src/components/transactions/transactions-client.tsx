@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle, User, Edit } from 'lucide-react';
+import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -97,24 +97,37 @@ export function TransactionsClient() {
                 {pendingFiado.map((t) => {
                     const customerName = customers.find(c => c.id === t.customerId)?.name;
                     const remainingAmount = t.amount - (t.downPayment || 0);
+                    const hasDownPayment = (t.downPayment || 0) > 0;
                     return (
                     <li
                       key={t.id}
                       className="flex flex-col sm:flex-row items-start sm:items-center p-3 rounded-lg bg-amber-100/60 gap-2"
                     >
-                    <div className="flex-grow flex flex-col gap-1 w-full">
-                        <span className="font-semibold text-card-foreground">{t.description}</span>
+                    <div className="flex-grow flex flex-col gap-2 w-full">
+                        <span className="font-semibold text-card-foreground">{t.description.replace(/ \(Entrada de R\$\d+,\d+\)/, '')}</span>
                         <div className='flex items-center gap-2 flex-wrap'>
-                            <Badge variant="secondary" className="text-xs">{t.category}</Badge>
                             {customerName && (
                                 <Badge variant="outline" className="text-xs border-primary/50">
                                     <User className="w-3 h-3 mr-1" />
                                     {customerName}
                                 </Badge>
                             )}
-                             <span className="text-sm font-bold text-amber-700">
-                                {formatCurrency(remainingAmount)}
-                            </span>
+                            {hasDownPayment && (
+                                <>
+                                 <Badge variant="secondary" className="text-xs">
+                                    <Banknote className="w-3 h-3 mr-1" />
+                                    Total: {formatCurrency(t.amount)}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs bg-green-200 text-green-800 border-green-300">
+                                    <CircleArrowDown className="w-3 h-3 mr-1" />
+                                    Entrada: {formatCurrency(t.downPayment!)}
+                                  </Badge>
+                                </>
+                            )}
+                             <Badge variant="destructive" className="text-xs">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Pendente: {formatCurrency(remainingAmount)}
+                            </Badge>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
