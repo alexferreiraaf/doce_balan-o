@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '../ui/badge';
+import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 
 interface CartItem extends Product {
   quantity: number;
@@ -224,13 +225,19 @@ export function POSClient() {
       )
     });
   };
-
-  const removeFromCart = (productId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
-  };
   
   const handleFinalize = () => {
-    setShowFinalizeSheet(true);
+    if (cart.length > 0) {
+      setShowFinalizeSheet(true);
+    }
+  }
+
+  const handleSheetOpenChange = (open: boolean) => {
+    setShowFinalizeSheet(open);
+    if (!open) {
+      // Clear cart after sale is finalized/cancelled
+      setCart([]);
+    }
   }
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -242,35 +249,43 @@ export function POSClient() {
 
   if (isMobile) {
       return (
-          <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex flex-col h-full">
-            <div className="p-4 pb-0">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="products"><Package className="w-4 h-4 mr-2" />Produtos</TabsTrigger>
-                    <TabsTrigger value="cart">
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Venda
-                        {cart.length > 0 && <Badge className="ml-2">{cart.length}</Badge>}
-                    </TabsTrigger>
-                </TabsList>
-            </div>
-            <TabsContent value="products" className="flex-grow overflow-hidden">
-                <div className="p-4 h-full flex flex-col gap-4">
-                     <ProductFilters
-                        categories={categories}
-                        selectedCategory={selectedCategory}
-                        onSelectCategory={setSelectedCategory}
-                        searchTerm={searchTerm}
-                        onSearchTermChange={setSearchTerm}
-                    />
-                    <ScrollArea className="flex-grow">
-                        <ProductGrid products={filteredProducts} onProductClick={addToCart} />
-                    </ScrollArea>
+          <>
+            <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex flex-col h-full">
+                <div className="p-4 pb-0">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="products"><Package className="w-4 h-4 mr-2" />Produtos</TabsTrigger>
+                        <TabsTrigger value="cart">
+                            <ShoppingCart className="w-4 h-4 mr-2" />
+                            Venda
+                            {cart.length > 0 && <Badge className="ml-2">{cart.length}</Badge>}
+                        </TabsTrigger>
+                    </TabsList>
                 </div>
-            </TabsContent>
-            <TabsContent value="cart" className="flex-grow p-4 overflow-hidden">
-                <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
-            </TabsContent>
-        </Tabs>
+                <TabsContent value="products" className="flex-grow overflow-hidden">
+                    <div className="p-4 h-full flex flex-col gap-4">
+                        <ProductFilters
+                            categories={categories}
+                            selectedCategory={selectedCategory}
+                            onSelectCategory={setSelectedCategory}
+                            searchTerm={searchTerm}
+                            onSearchTermChange={setSearchTerm}
+                        />
+                        <ScrollArea className="flex-grow">
+                            <ProductGrid products={filteredProducts} onProductClick={addToCart} />
+                        </ScrollArea>
+                    </div>
+                </TabsContent>
+                <TabsContent value="cart" className="flex-grow p-4 overflow-hidden">
+                    <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
+                </TabsContent>
+            </Tabs>
+            <AddTransactionSheet
+                open={showFinalizeSheet}
+                onOpenChange={handleSheetOpenChange}
+                cart={cart}
+                cartTotal={total}
+            />
+        </>
       )
   }
 
@@ -295,12 +310,12 @@ export function POSClient() {
         <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
       </div>
 
-       {/* This is where the AddTransactionSheet will be triggered from */}
-       {showFinalizeSheet && (
-           <div className="hidden">
-            <AddTransactionSheet open={showFinalizeSheet} onOpenChange={setShowFinalizeSheet} />
-           </div>
-       )}
+      <AddTransactionSheet
+        open={showFinalizeSheet}
+        onOpenChange={handleSheetOpenChange}
+        cart={cart}
+        cartTotal={total}
+      />
     </div>
   );
 }

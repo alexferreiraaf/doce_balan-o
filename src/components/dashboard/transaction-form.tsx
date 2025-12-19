@@ -33,7 +33,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { AddProductDialog } from './add-product-dialog';
 import { formatCurrency } from '@/lib/utils';
-import type { Product } from '@/app/lib/types';
+import type { Product, Transaction } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
@@ -68,12 +68,22 @@ const formSchema = z.object({
 
 type TransactionFormValues = z.infer<typeof formSchema>;
 
-export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean) => void }) {
+interface CartItem extends Product {
+  quantity: number;
+}
+
+interface TransactionFormProps {
+    setSheetOpen: (open: boolean) => void;
+    cart?: CartItem[];
+    cartTotal?: number;
+}
+
+export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFormProps) {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [type, setType] = useState<'income' | 'expense'>('expense');
+  const [type, setType] = useState<'income' | 'expense'>(cart ? 'income' : 'expense');
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, startSuggestionTransition] = useTransition();
@@ -84,9 +94,9 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: 'expense',
-      description: '',
-      amount: 0,
+      type: cart ? 'income' : 'expense',
+      description: cart ? cart.map(item => `${item.quantity}x ${item.name}`).join(', ') : '',
+      amount: cartTotal ?? 0,
       quantity: 1,
       discount: 0,
       deliveryFee: 0,
@@ -94,6 +104,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       additionalValue: 0,
       hasDownPayment: 'no',
       downPayment: 0,
+      category: cart ? INCOME_CATEGORIES[0] : undefined,
     },
   });
 
@@ -125,7 +136,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
 
   // Effect to calculate total amount for income
   useEffect(() => {
-    if (typeValue === 'income') {
+    if (typeValue === 'income' && !cart) {
         const product = products.find((p) => p.id === productIdValue);
         const productPrice = product ? product.price : 0;
         const productTotal = productPrice * Number(quantityValue || 0);
@@ -135,7 +146,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         const totalAmount = productTotal - discount + deliveryFee + additional;
         form.setValue('amount', totalAmount);
     }
-  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, additionalValue, typeValue, products, form]);
+  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, additionalValue, typeValue, products, form, cart]);
 
   const onSubmit = (data: TransactionFormValues) => {
     if (!user || !firestore) {
@@ -149,7 +160,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
       let transactionDescription = data.description || '';
       const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
 
-      if (data.type === 'income') {
+      if (data.type === 'income' && !cart) {
         const product = products.find(p => p.id === data.productId);
         if (!product || !data.quantity) {
              toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um produto e quantidade.' });
@@ -159,13 +170,15 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
         if(data.additionalDescription) {
             transactionDescription += ` (+ ${data.additionalDescription})`
         }
-        if (downPaymentValue > 0) {
-            transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
-        }
-
+      } else if (data.type === 'income' && cart) {
+        transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
       } else {
         // For expenses, use the description from the form directly.
         transactionDescription = data.description || 'Despesa sem descrição';
+      }
+
+      if (downPaymentValue > 0) {
+        transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
       }
 
       let paymentMethod = data.paymentMethod || null;
@@ -235,33 +248,37 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
     setSuggestions([]);
   };
 
+  const isPOSSale = !!cart;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Button
-            type="button"
-            onClick={() => handleTypeChange('expense')}
-            className={`font-semibold transition-all duration-200 h-12 text-base ${
-              type === 'expense'
-                ? 'bg-red-500 hover:bg-red-600 text-white shadow-md'
-                : 'bg-muted text-muted-foreground hover:bg-red-100'
-            }`}
-          >
-            Saída
-          </Button>
-          <Button
-            type="button"
-            onClick={() => handleTypeChange('income')}
-            className={`font-semibold transition-all duration-200 h-12 text-base ${
-              type === 'income'
-                ? 'bg-green-500 hover:bg-green-600 text-white shadow-md'
-                : 'bg-muted text-muted-foreground hover:bg-green-100'
-            }`}
-          >
-            Entrada
-          </Button>
-        </div>
+        {!isPOSSale && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Button
+              type="button"
+              onClick={() => handleTypeChange('expense')}
+              className={`font-semibold transition-all duration-200 h-12 text-base ${
+                type === 'expense'
+                  ? 'bg-red-500 hover:bg-red-600 text-white shadow-md'
+                  : 'bg-muted text-muted-foreground hover:bg-red-100'
+              }`}
+            >
+              Saída
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleTypeChange('income')}
+              className={`font-semibold transition-all duration-200 h-12 text-base ${
+                type === 'income'
+                  ? 'bg-green-500 hover:bg-green-600 text-white shadow-md'
+                  : 'bg-muted text-muted-foreground hover:bg-green-100'
+              }`}
+            >
+              Entrada
+            </Button>
+          </div>
+        )}
 
         {type === 'expense' ? (
           <>
@@ -294,46 +311,64 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
           </>
         ) : (
           <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="productId"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex justify-between items-center">
-                    <FormLabel>Produto</FormLabel>
-                    <AddProductDialog />
-                  </div>
-                  <Select onValueChange={field.onChange} value={field.value}>
+            {!isPOSSale ? (
+              <>
+                <FormField
+                  control={form.control}
+                  name="productId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex justify-between items-center">
+                        <FormLabel>Produto</FormLabel>
+                        <AddProductDialog />
+                      </div>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger disabled={productsLoading}>
+                            <SelectValue placeholder={productsLoading ? "Carregando produtos..." : "Selecione um produto"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name} ({formatCurrency(p.price)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantidade</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="1" step="1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            ) : (
+                <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Itens da Venda</FormLabel>
                     <FormControl>
-                      <SelectTrigger disabled={productsLoading}>
-                        <SelectValue placeholder={productsLoading ? "Carregando produtos..." : "Selecione um produto"} />
-                      </SelectTrigger>
+                        <Textarea {...field} readOnly className="bg-muted" rows={3}/>
                     </FormControl>
-                    <SelectContent>
-                      {products.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name} ({formatCurrency(p.price)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantidade</FormLabel>
-                  <FormControl>
-                    <Input type="number" min="1" step="1" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            )}
             <FormField
                 control={form.control}
                 name="customerId"
@@ -361,35 +396,38 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                     </FormItem>
                 )}
             />
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="additionalDescription"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Adicional (Desc.)</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Ex: Mais Nutella" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+            {!isPOSSale && (
+                 <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="additionalDescription"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Adicional (Desc.)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ex: Mais Nutella" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="additionalValue"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Valor Adicional (R$)</FormLabel>
+                            <FormControl>
+                                <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
                     />
-                <FormField
-                    control={form.control}
-                    name="additionalValue"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Valor Adicional (R$)</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-             <div className="grid grid-cols-2 gap-4">
+                </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
                     name="discount"
@@ -472,7 +510,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
                 <FormItem>
                   <FormLabel>Valor Total</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} readOnly className="bg-muted font-bold" />
+                    <Input type="number" {...field} readOnly={isPOSSale} className="bg-muted font-bold" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -567,7 +605,7 @@ export function TransactionForm({ setSheetOpen }: { setSheetOpen: (open: boolean
             </Button>
             <Button type="submit" disabled={isPending || isAuthLoading} className="w-full sm:w-auto">
               {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Adicionar Lançamento
+              {isPOSSale ? 'Finalizar Venda' : 'Adicionar Lançamento'}
             </Button>
         </div>
 
