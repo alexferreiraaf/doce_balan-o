@@ -39,6 +39,7 @@ const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
   categoryId: z.string().optional(),
+  imageUrl: z.string().url('Por favor, insira uma URL de imagem válida.').optional().or(z.literal('')),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -57,6 +58,7 @@ export function AddProductDialog() {
       name: '',
       price: 0,
       categoryId: '',
+      imageUrl: '',
     },
   });
 
@@ -72,6 +74,7 @@ export function AddProductDialog() {
         name: data.name,
         price: data.price,
         categoryId: data.categoryId || '',
+        imageUrl: data.imageUrl || '',
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -104,7 +107,7 @@ export function AddProductDialog() {
           Novo Produto
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
@@ -134,6 +137,19 @@ export function AddProductDialog() {
                   <FormLabel>Preço (R$)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="25,00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL da Imagem (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://exemplo.com/imagem.png" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

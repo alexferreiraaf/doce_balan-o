@@ -141,6 +141,11 @@
             "null"
           ],
           "description": "Reference to ProductCategory. (Relationship: ProductCategory 1:N Product)"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL for the product image.",
+          "format": "uri"
         }
       },
       "required": [

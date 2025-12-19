@@ -4,7 +4,7 @@ import Loading from '@/app/(main)/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddProductDialog } from '../dashboard/add-product-dialog';
-import { Package, Tag } from 'lucide-react';
+import { Package, Tag, ImageOff } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
   Table,
@@ -21,6 +21,7 @@ import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { AddProductCategoryDialog } from './add-product-category-dialog';
+import Image from 'next/image';
 
 interface GroupedProducts {
   [categoryName: string]: Product[];
@@ -98,6 +99,7 @@ export function ProductsClient() {
                             <Table>
                                 <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[80px]">Imagem</TableHead>
                                     <TableHead>Produto</TableHead>
                                     <TableHead>Preço</TableHead>
                                     <TableHead className="text-right">Ações</TableHead>
@@ -106,6 +108,15 @@ export function ProductsClient() {
                                 <TableBody>
                                 {groupedProducts[categoryName].map((product) => (
                                     <TableRow key={product.id}>
+                                    <TableCell>
+                                      <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                                        {product.imageUrl ? (
+                                           <Image src={product.imageUrl} alt={product.name} width={64} height={64} className="object-cover w-full h-full" />
+                                        ) : (
+                                          <ImageOff className="w-6 h-6 text-muted-foreground" />
+                                        )}
+                                      </div>
+                                    </TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
                                     <TableCell>{formatCurrency(product.price)}</TableCell>
                                     <TableCell className="text-right">

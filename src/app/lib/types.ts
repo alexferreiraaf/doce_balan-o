@@ -28,6 +28,7 @@ export interface Product {
   name: string;
   price: number;
   categoryId?: string;
+  imageUrl?: string;
 }
 
 export interface Customer {

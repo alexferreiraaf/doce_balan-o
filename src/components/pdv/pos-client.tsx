@@ -1,12 +1,13 @@
 'use client';
 import { useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { Product, ProductCategory } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, Search, ShoppingCart, Package } from 'lucide-react';
+import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Input } from '../ui/input';
@@ -81,6 +82,7 @@ function POSLoading() {
                         {[...Array(12)].map((_, i) => (
                              <Card key={i} className="animate-pulse">
                                 <div className="p-4 space-y-2">
+                                    <Skeleton className="h-24 w-full" />
                                     <Skeleton className="h-6 w-3/4" />
                                     <Skeleton className="h-5 w-1/2" />
                                 </div>
@@ -120,11 +122,18 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
             {products.map((product) => (
               <Card
                 key={product.id}
-                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col"
+                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden"
                 onClick={() => onProductClick(product)}
               >
-                <div className="p-4 flex flex-col justify-between h-full flex-grow">
-                  <h3 className="font-semibold text-card-foreground">{product.name}</h3>
+                <div className="w-full h-32 bg-muted flex items-center justify-center overflow-hidden">
+                    {product.imageUrl ? (
+                        <Image src={product.imageUrl} alt={product.name} width={150} height={150} className="object-cover w-full h-full" />
+                    ) : (
+                        <Package className="w-12 h-12 text-muted-foreground" />
+                    )}
+                </div>
+                <div className="p-3 flex flex-col justify-between h-full flex-grow">
+                  <h3 className="font-semibold text-card-foreground leading-tight">{product.name}</h3>
                   <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
                 </div>
               </Card>

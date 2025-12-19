@@ -40,6 +40,7 @@ const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
   categoryId: z.string().optional(),
+  imageUrl: z.string().url('Por favor, insira uma URL de imagem válida.').optional().or(z.literal('')),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -62,6 +63,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       name: product.name,
       price: product.price,
       categoryId: product.categoryId || '',
+      imageUrl: product.imageUrl || '',
     },
   });
 
@@ -79,6 +81,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         name: data.name,
         price: data.price,
         categoryId: data.categoryId || '',
+        imageUrl: data.imageUrl || '',
       };
 
       updateDoc(productRef, productData)
@@ -107,7 +110,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
           <Edit className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
           <DialogDescription>
@@ -137,6 +140,19 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                   <FormLabel>Preço (R$)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="25,00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL da Imagem (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://exemplo.com/imagem.png" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
