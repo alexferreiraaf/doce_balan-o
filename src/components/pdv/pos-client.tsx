@@ -1,17 +1,72 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import type { Product } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, ShoppingCart, Trash2 } from 'lucide-react';
+import type { Product, ProductCategory } from '@/app/lib/types';
+import { MinusCircle, PlusCircle, Search, ShoppingCart } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
+import { Input } from '../ui/input';
+import { cn } from '@/lib/utils';
 
 interface CartItem extends Product {
   quantity: number;
 }
+
+interface ProductFiltersProps {
+  categories: ProductCategory[];
+  selectedCategory: string;
+  onSelectCategory: (categoryId: string) => void;
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
+}
+
+function ProductFilters({
+  categories,
+  selectedCategory,
+  onSelectCategory,
+  searchTerm,
+  onSearchTermChange,
+}: ProductFiltersProps) {
+  return (
+    <Card className="p-3 sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="Procurar delícias..."
+            className="pl-10 h-11 text-base"
+            value={searchTerm}
+            onChange={(e) => onSearchTermChange(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mb-2">
+            <Button
+              variant={selectedCategory === 'all' ? 'default' : 'outline'}
+              className={cn("rounded-full h-11", selectedCategory !== 'all' && 'bg-card')}
+              onClick={() => onSelectCategory('all')}
+            >
+              Todos
+            </Button>
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={selectedCategory === category.id ? 'default' : 'outline'}
+                className={cn("rounded-full h-11", selectedCategory !== category.id && 'bg-card')}
+                onClick={() => onSelectCategory(category.id)}
+              >
+                {category.name}
+              </Button>
+            ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 
 function POSLoading() {
     return (
@@ -49,7 +104,21 @@ function POSLoading() {
 
 export function POSClient() {
   const { products, loading: productsLoading } = useProducts();
+  const { categories, loading: categoriesLoading } = useProductCategories();
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((product) => {
+        if (selectedCategory === 'all') return true;
+        return product.categoryId === selectedCategory;
+      })
+      .filter((product) =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+  }, [products, selectedCategory, searchTerm]);
 
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
@@ -83,31 +152,39 @@ export function POSClient() {
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  if (productsLoading) {
+  const loading = productsLoading || categoriesLoading;
+  if (loading) {
     return <POSLoading />;
   }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-full">
       {/* Product Selection */}
-      <div className="lg:col-span-2 bg-card border rounded-lg">
+      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col">
+        <ProductFilters
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+        />
         <ScrollArea className="h-full p-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((product) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {filteredProducts.map((product) => (
               <Card
                 key={product.id}
-                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all"
+                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col"
                 onClick={() => addToCart(product)}
               >
-                <div className="p-4 flex flex-col justify-between h-full">
+                <div className="p-4 flex flex-col justify-between h-full flex-grow">
                   <h3 className="font-semibold text-card-foreground">{product.name}</h3>
                   <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
                 </div>
               </Card>
             ))}
-             {products.length === 0 && (
+             {filteredProducts.length === 0 && (
                 <div className="col-span-full text-center py-10">
-                    <p className="text-muted-foreground">Nenhum produto cadastrado.</p>
+                    <p className="text-muted-foreground">Nenhum produto encontrado.</p>
                 </div>
             )}
           </div>
