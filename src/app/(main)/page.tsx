@@ -1,12 +1,12 @@
-import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { POSClient } from "@/components/pdv/pos-client";
 import { Suspense } from "react";
 import Loading from "./loading";
 
-export default function DashboardPage() {
+export default function POSPage() {
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="h-screen-minus-navbar">
       <Suspense fallback={<Loading />}>
-        <DashboardClient />
+        <POSClient />
       </Suspense>
     </div>
   );

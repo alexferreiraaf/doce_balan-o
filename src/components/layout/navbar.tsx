@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -24,7 +24,8 @@ import { ThemeToggle } from './theme-toggle';
 
 
 const navLinks = [
-  { href: '/', label: 'Início', icon: Home },
+  { href: '/', label: 'PDV', icon: Home },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Lançamentos', icon: List },
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
   { href: '/products', label: 'Produtos', icon: Package },
@@ -32,7 +33,8 @@ const navLinks = [
 ];
 
 const mobileNavLinks = [
-  { href: '/', label: 'Início', icon: Home },
+  { href: '/', label: 'PDV', icon: Home },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Lançamentos', icon: List },
 ];
 
@@ -171,10 +173,6 @@ export function Navbar() {
             <NavButton key={link.href} {...link} />
         ))}
         
-        <div className="flex justify-center items-center">
-            <AddTransactionSheet isMobile />
-        </div>
-
         <NavButton href="/reports" label="Relatórios" icon={TrendingUp} />
 
         <DropdownMenu>

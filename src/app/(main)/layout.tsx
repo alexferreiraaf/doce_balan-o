@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import Loading from './loading';
 import { Navbar } from '@/components/layout/navbar';
+import { cn } from '@/lib/utils';
 
 export default function MainLayout({
   children,
@@ -13,6 +14,7 @@ export default function MainLayout({
 }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (isUserLoading) {
@@ -29,11 +31,15 @@ export default function MainLayout({
     return <Loading />;
   }
 
+  const isPOSPage = pathname === '/';
+
   // Se o usuário está autenticado (anônimo ou real), renderiza o layout principal.
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className={cn("min-h-screen flex flex-col bg-background", isPOSPage && "h-screen overflow-hidden")}>
       <Navbar />
-      <main className="flex-grow pb-24 sm:pb-0">{children}</main>
+      <main className="flex-grow pb-24 sm:pb-0 flex-1">
+        {children}
+      </main>
     </div>
   );
 }

@@ -9,6 +9,9 @@ export default {
   ],
   theme: {
     extend: {
+      height: {
+        'screen-minus-navbar': 'calc(100vh - 68px)',
+      },
       fontFamily: {
         body: ['Inter', 'sans-serif'],
         headline: ['Inter', 'sans-serif'],
