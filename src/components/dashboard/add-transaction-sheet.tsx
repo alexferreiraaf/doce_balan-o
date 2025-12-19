@@ -36,8 +36,8 @@ export function AddTransactionSheet({ isMobile = false, open: controlledOpen, on
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (!isOpen && onOpenChange) {
-        onOpenChange(isOpen);
+    if (!isOpen && setControlledOpen) {
+        setControlledOpen(isOpen);
     }
   }
 
