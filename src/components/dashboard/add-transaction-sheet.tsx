@@ -12,8 +12,17 @@ import {
 } from '@/components/ui/sheet';
 import { TransactionForm } from './transaction-form';
 
-export function AddTransactionSheet({ isMobile = false }: { isMobile?: boolean }) {
-  const [open, setOpen] = useState(false);
+interface AddTransactionSheetProps {
+  isMobile?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function AddTransactionSheet({ isMobile = false, open: controlledOpen, onOpenChange: setControlledOpen }: AddTransactionSheetProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = setControlledOpen ?? setInternalOpen;
 
   if (isMobile) {
     return (

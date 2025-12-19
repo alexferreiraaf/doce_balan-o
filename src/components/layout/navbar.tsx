@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -35,7 +35,6 @@ const navLinks = [
 const mobileNavLinks = [
   { href: '/', label: 'PDV', icon: Home },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Lançamentos', icon: List },
 ];
 
 const registrationLinks = [
@@ -91,6 +90,8 @@ export function Navbar() {
     </Link>
   );
 
+  const isPOSPage = pathname === '/';
+
   return (
     <header className="bg-primary shadow-lg sticky top-0 z-40">
       <nav className="max-w-7xl mx-auto flex justify-between items-center p-4">
@@ -121,7 +122,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-            {!isUserLoading && (
+            {!isUserLoading && !isPOSPage && (
                 <div className="hidden sm:block">
                     <AddTransactionSheet />
                 </div>
@@ -173,29 +174,16 @@ export function Navbar() {
             <NavButton key={link.href} {...link} />
         ))}
         
-        <NavButton href="/reports" label="Relatórios" icon={TrendingUp} />
+        {isPOSPage ? (
+           <div />
+        ) : (
+           <div className="relative flex justify-center items-center">
+             <AddTransactionSheet isMobile={true} />
+           </div>
+        )}
 
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button
-                    variant="ghost"
-                    className="flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full"
-                >
-                    <Archive className="w-6 h-6 mb-0.5" />
-                    <span className="text-xs">Cadastros</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" side="top" className="mb-2 w-40">
-                 {registrationLinks.map(link => (
-                     <DropdownMenuItem key={link.href} asChild>
-                        <Link href={link.href} className="flex items-center gap-2">
-                           <link.icon className="w-4 h-4" />
-                           <span>{link.label}</span>
-                        </Link>
-                    </DropdownMenuItem>
-                 ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+        <NavButton href="/transactions" label="Lançamentos" icon={List} />
+        <NavButton href="/reports" label="Relatórios" icon={TrendingUp} />
 
       </div>
 

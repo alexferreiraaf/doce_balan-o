@@ -6,11 +6,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { Product, ProductCategory } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, Search, ShoppingCart } from 'lucide-react';
+import { MinusCircle, PlusCircle, Search, ShoppingCart, Package } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Input } from '../ui/input';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Badge } from '../ui/badge';
 
 interface CartItem extends Product {
   quantity: number;
@@ -102,12 +105,88 @@ function POSLoading() {
     )
 }
 
+function ProductGrid({ products, onProductClick }: { products: Product[], onProductClick: (product: Product) => void }) {
+    if (products.length === 0) {
+        return (
+            <div className="col-span-full text-center py-10">
+                <p className="text-muted-foreground">Nenhum produto encontrado.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {products.map((product) => (
+              <Card
+                key={product.id}
+                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col"
+                onClick={() => onProductClick(product)}
+              >
+                <div className="p-4 flex flex-col justify-between h-full flex-grow">
+                  <h3 className="font-semibold text-card-foreground">{product.name}</h3>
+                  <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
+                </div>
+              </Card>
+            ))}
+        </div>
+    );
+}
+
+function CartView({ cart, onUpdateQuantity, onFinalize, total }: { cart: CartItem[], onUpdateQuantity: (id: string, qty: number) => void, onFinalize: () => void, total: number}) {
+     return (
+        <Card className="h-full flex flex-col">
+          <div className="p-4 border-b">
+            <h2 className="text-xl font-bold flex items-center gap-2"><ShoppingCart className="w-6 h-6"/> Venda Atual</h2>
+          </div>
+          <ScrollArea className="flex-grow p-4">
+            {cart.length === 0 ? (
+              <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+                <p>Selecione produtos para iniciar uma venda.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                    <div className="flex-grow">
+                      <p className="font-semibold">{item.name}</p>
+                      <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}>
+                         <MinusCircle className="w-4 h-4 text-destructive" />
+                       </Button>
+                       <span className="font-bold w-4 text-center">{item.quantity}</span>
+                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}>
+                         <PlusCircle className="w-4 h-4 text-green-600" />
+                       </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          <div className="p-4 mt-auto border-t space-y-3">
+             <div className="flex justify-between items-center text-xl font-bold">
+                <span>Total:</span>
+                <span>{formatCurrency(total)}</span>
+             </div>
+            <Button className="w-full h-12 text-lg" disabled={cart.length === 0} onClick={onFinalize}>
+              Finalizar Venda
+            </Button>
+          </div>
+        </Card>
+    );
+}
+
 export function POSClient() {
   const { products, loading: productsLoading } = useProducts();
   const { categories, loading: categoriesLoading } = useProductCategories();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showFinalizeSheet, setShowFinalizeSheet] = useState(false);
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState('products');
 
   const filteredProducts = useMemo(() => {
     return products
@@ -132,29 +211,67 @@ export function POSClient() {
       }
       return [...prevCart, { ...product, quantity: 1 }];
     });
+     if(isMobile) setMobileTab('cart');
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
-      return;
-    }
-    setCart((prevCart) =>
-      prevCart.map((item) =>
+    setCart((prevCart) => {
+      if (quantity <= 0) {
+        return prevCart.filter((item) => item.id !== productId);
+      }
+      return prevCart.map((item) =>
         item.id === productId ? { ...item, quantity } : item
       )
-    );
+    });
   };
 
   const removeFromCart = (productId: string) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
   };
+  
+  const handleFinalize = () => {
+    setShowFinalizeSheet(true);
+  }
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const loading = productsLoading || categoriesLoading;
   if (loading) {
     return <POSLoading />;
+  }
+
+  if (isMobile) {
+      return (
+          <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex flex-col h-full">
+            <div className="p-4 pb-0">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="products"><Package className="w-4 h-4 mr-2" />Produtos</TabsTrigger>
+                    <TabsTrigger value="cart">
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Venda
+                        {cart.length > 0 && <Badge className="ml-2">{cart.length}</Badge>}
+                    </TabsTrigger>
+                </TabsList>
+            </div>
+            <TabsContent value="products" className="flex-grow overflow-hidden">
+                <div className="p-4 h-full flex flex-col gap-4">
+                     <ProductFilters
+                        categories={categories}
+                        selectedCategory={selectedCategory}
+                        onSelectCategory={setSelectedCategory}
+                        searchTerm={searchTerm}
+                        onSearchTermChange={setSearchTerm}
+                    />
+                    <ScrollArea className="flex-grow">
+                        <ProductGrid products={filteredProducts} onProductClick={addToCart} />
+                    </ScrollArea>
+                </div>
+            </TabsContent>
+            <TabsContent value="cart" className="flex-grow p-4 overflow-hidden">
+                <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
+            </TabsContent>
+        </Tabs>
+      )
   }
 
   return (
@@ -169,72 +286,21 @@ export function POSClient() {
             onSearchTermChange={setSearchTerm}
         />
         <ScrollArea className="h-full p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {filteredProducts.map((product) => (
-              <Card
-                key={product.id}
-                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col"
-                onClick={() => addToCart(product)}
-              >
-                <div className="p-4 flex flex-col justify-between h-full flex-grow">
-                  <h3 className="font-semibold text-card-foreground">{product.name}</h3>
-                  <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
-                </div>
-              </Card>
-            ))}
-             {filteredProducts.length === 0 && (
-                <div className="col-span-full text-center py-10">
-                    <p className="text-muted-foreground">Nenhum produto encontrado.</p>
-                </div>
-            )}
-          </div>
+          <ProductGrid products={filteredProducts} onProductClick={addToCart} />
         </ScrollArea>
       </div>
 
       {/* Sale Summary */}
       <div className="lg:col-span-1">
-        <Card className="h-full flex flex-col">
-          <div className="p-4 border-b">
-            <h2 className="text-xl font-bold flex items-center gap-2"><ShoppingCart className="w-6 h-6"/> Venda Atual</h2>
-          </div>
-          <ScrollArea className="flex-grow p-4">
-            {cart.length === 0 ? (
-              <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                <p>Selecione produtos para iniciar uma venda.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                    <div className="flex-grow">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
-                         <MinusCircle className="w-4 h-4 text-destructive" />
-                       </Button>
-                       <span className="font-bold w-4 text-center">{item.quantity}</span>
-                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
-                         <PlusCircle className="w-4 h-4 text-green-600" />
-                       </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-          <div className="p-4 mt-auto border-t space-y-3">
-             <div className="flex justify-between items-center text-xl font-bold">
-                <span>Total:</span>
-                <span>{formatCurrency(total)}</span>
-             </div>
-            <Button className="w-full h-12 text-lg" disabled={cart.length === 0}>
-              Finalizar Venda
-            </Button>
-          </div>
-        </Card>
+        <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
       </div>
+
+       {/* This is where the AddTransactionSheet will be triggered from */}
+       {showFinalizeSheet && (
+           <div className="hidden">
+            <AddTransactionSheet open={showFinalizeSheet} onOpenChange={setShowFinalizeSheet} />
+           </div>
+       )}
     </div>
   );
 }
