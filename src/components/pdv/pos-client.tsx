@@ -135,38 +135,40 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
 
 function CartView({ cart, onUpdateQuantity, onFinalize, total }: { cart: CartItem[], onUpdateQuantity: (id: string, qty: number) => void, onFinalize: () => void, total: number}) {
      return (
-        <Card className="h-full flex flex-col">
-          <div className="p-4 border-b">
+        <Card className="flex flex-col max-h-full">
+          <div className="p-4 border-b flex-shrink-0">
             <h2 className="text-xl font-bold flex items-center gap-2"><ShoppingCart className="w-6 h-6"/> Venda Atual</h2>
           </div>
-          <ScrollArea className="flex-grow p-4">
-            {cart.length === 0 ? (
-              <div className="text-center text-muted-foreground h-full flex items-center justify-center">
-                <p>Selecione produtos para iniciar uma venda.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                    <div className="flex-grow">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
+          <ScrollArea className="flex-grow">
+            <div className="p-4">
+              {cart.length === 0 ? (
+                <div className="text-center text-muted-foreground h-full flex items-center justify-center py-10">
+                  <p>Selecione produtos para iniciar uma venda.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                      <div className="flex-grow">
+                        <p className="font-semibold">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}>
+                          <MinusCircle className="w-4 h-4 text-destructive" />
+                        </Button>
+                        <span className="font-bold w-4 text-center">{item.quantity}</span>
+                        <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}>
+                          <PlusCircle className="w-4 h-4 text-green-600" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}>
-                         <MinusCircle className="w-4 h-4 text-destructive" />
-                       </Button>
-                       <span className="font-bold w-4 text-center">{item.quantity}</span>
-                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}>
-                         <PlusCircle className="w-4 h-4 text-green-600" />
-                       </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </ScrollArea>
-          <div className="p-4 mt-auto border-t space-y-3">
+          <div className="p-4 mt-auto border-t space-y-3 flex-shrink-0">
              <div className="flex justify-between items-center text-xl font-bold">
                 <span>Total:</span>
                 <span>{formatCurrency(total)}</span>
@@ -300,7 +302,7 @@ export function POSClient() {
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
         />
-        <ScrollArea className="h-full p-4">
+        <ScrollArea className="flex-grow p-4">
           <ProductGrid products={filteredProducts} onProductClick={addToCart} />
         </ScrollArea>
       </div>
