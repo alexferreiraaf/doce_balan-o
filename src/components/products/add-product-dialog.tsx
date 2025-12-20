@@ -69,48 +69,56 @@ export function AddProductDialog() {
     },
   });
 
+  const resetFormState = () => {
+    form.reset();
+    setImagePreview(null);
+    setUploadProgress(null);
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  }
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && user && storage) {
-      setImagePreview(URL.createObjectURL(file));
-      form.setValue('imageUrl', ''); // Clear URL if file is selected
+    if (!file) return;
 
-      const storageRef = ref(storage, `product-images/${user.uid}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      setUploadProgress(0);
-
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        },
-        (error) => {
-          console.error("Upload failed:", error);
-          toast({ variant: "destructive", title: "Falha no Upload", description: "Não foi possível enviar a imagem. Tente novamente." });
-          setUploadProgress(null);
-          setImagePreview(null);
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            form.setValue('imageUrl', downloadURL);
-            setImagePreview(downloadURL);
-            setUploadProgress(100);
-          });
-        }
-      );
+    if (!user || !storage) {
+        toast({ variant: "destructive", title: "Erro de Autenticação", description: "Você precisa estar logado para fazer upload." });
+        return;
     }
+
+    setImagePreview(URL.createObjectURL(file));
+    form.setValue('imageUrl', '');
+
+    const storageRef = ref(storage, `product-images/${user.uid}/${Date.now()}_${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+    
+    setUploadProgress(0);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error("Upload failed:", error);
+        toast({ variant: "destructive", title: "Falha no Upload", description: "Não foi possível enviar a imagem. Tente novamente." });
+        setUploadProgress(null);
+        setImagePreview(null);
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          form.setValue('imageUrl', downloadURL);
+          setUploadProgress(100);
+        });
+      }
+    );
   };
 
   const handleUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const url = event.target.value;
     form.setValue('imageUrl', url);
-    if (form.getValues('imageUrl')) {
-        setImagePreview(url);
-    } else {
-        setImagePreview(null);
-    }
+    setImagePreview(url || null);
   };
   
   const clearImage = () => {
@@ -146,9 +154,8 @@ export function AddProductDialog() {
       addDoc(productCollection, productData)
         .then(() => {
           toast({ title: 'Sucesso!', description: 'Produto adicionado.' });
-          form.reset();
           setOpen(false);
-          clearImage();
+          resetFormState();
         })
         .catch((error) => {
           console.error('Error adding product: ', error);
@@ -165,7 +172,7 @@ export function AddProductDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if(!isOpen) clearImage(); }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if(!isOpen) resetFormState(); }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full sm:w-auto">
           <PlusCircle className="mr-2 h-4 w-4" />
@@ -272,7 +279,7 @@ export function AddProductDialog() {
               )}
             />
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => { setOpen(false); clearImage(); }}>
+                <Button type="button" variant="outline" onClick={() => { setOpen(false); resetFormState(); }}>
                 Cancelar
                 </Button>
                 <Button type="submit" disabled={isPending || isAuthLoading || (uploadProgress !== null && uploadProgress < 100)}>

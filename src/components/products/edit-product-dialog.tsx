@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -75,48 +75,65 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     },
   });
 
+  // Effect to reset image preview when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+        setImagePreview(product.imageUrl || null);
+        form.reset({
+            name: product.name,
+            price: product.price,
+            categoryId: product.categoryId || '',
+            imageUrl: product.imageUrl || '',
+        });
+    } else {
+        setImagePreview(null);
+        setUploadProgress(null);
+    }
+  }, [open, product, form]);
+
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && user && storage) {
-      setImagePreview(URL.createObjectURL(file));
-      form.setValue('imageUrl', ''); // Clear URL if file is selected
+    if (!file) return;
 
-      const storageRef = ref(storage, `product-images/${user.uid}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      setUploadProgress(0);
-
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        },
-        (error) => {
-          console.error("Upload failed:", error);
-          toast({ variant: "destructive", title: "Falha no Upload", description: "Não foi possível enviar a imagem. Tente novamente." });
-          setUploadProgress(null);
-          setImagePreview(product.imageUrl || null); // Revert preview on fail
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            form.setValue('imageUrl', downloadURL);
-            setImagePreview(downloadURL);
-            setUploadProgress(100);
-          });
-        }
-      );
+    if (!user || !storage) {
+        toast({ variant: "destructive", title: "Erro de Autenticação", description: "Você precisa estar logado para fazer upload." });
+        return;
     }
+    
+    setImagePreview(URL.createObjectURL(file));
+    form.setValue('imageUrl', '');
+
+    const storageRef = ref(storage, `product-images/${user.uid}/${Date.now()}_${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    setUploadProgress(0);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error("Upload failed:", error);
+        toast({ variant: "destructive", title: "Falha no Upload", description: "Não foi possível enviar a imagem. Tente novamente." });
+        setUploadProgress(null);
+        setImagePreview(product.imageUrl || null); // Revert preview on fail
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          form.setValue('imageUrl', downloadURL);
+          setUploadProgress(100);
+        });
+      }
+    );
   };
 
   const handleUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const url = event.target.value;
     form.setValue('imageUrl', url);
-    if (form.getValues('imageUrl')) {
-        setImagePreview(url);
-    } else {
-        setImagePreview(null);
-    }
+    setImagePreview(url || null);
   };
   
   const clearImage = () => {
