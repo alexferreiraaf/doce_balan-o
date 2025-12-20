@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Edit, Upload, X } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { Loader2, PlusCircle, Link as LinkIcon, Upload, X } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
 
@@ -33,10 +33,9 @@ import { APP_ID } from '@/app/lib/constants';
 import { useUser, useFirestore, useStorage } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
-import type { Product } from '@/app/lib/types';
-import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
-import { AddProductCategoryDialog } from './add-product-category-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
+import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
 import { Progress } from '../ui/progress';
 
 const formSchema = z.object({
@@ -48,11 +47,7 @@ const formSchema = z.object({
 
 type ProductFormValues = z.infer<typeof formSchema>;
 
-interface EditProductDialogProps {
-    product: Product;
-}
-
-export function EditProductDialog({ product }: EditProductDialogProps) {
+export function AddProductDialog() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const storage = useStorage();
@@ -62,16 +57,15 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
   const { categories, loading: categoriesLoading } = useProductCategories();
 
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(product.imageUrl || null);
-
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: product.name,
-      price: product.price,
-      categoryId: product.categoryId || '',
-      imageUrl: product.imageUrl || '',
+      name: '',
+      price: 0,
+      categoryId: '',
+      imageUrl: '',
     },
   });
 
@@ -96,7 +90,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
           console.error("Upload failed:", error);
           toast({ variant: "destructive", title: "Falha no Upload", description: "Não foi possível enviar a imagem. Tente novamente." });
           setUploadProgress(null);
-          setImagePreview(product.imageUrl || null); // Revert preview on fail
+          setImagePreview(null);
         },
         () => {
           getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
@@ -123,7 +117,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     setImagePreview(null);
     form.setValue('imageUrl', '');
     setUploadProgress(null);
-    const fileInput = document.getElementById(`file-upload-${product.id}`) as HTMLInputElement;
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   }
 
@@ -139,9 +133,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     }
 
     startTransition(() => {
-      const docPath = `artifacts/${APP_ID}/products/${product.id}`;
-      const productRef = doc(firestore, docPath);
-
+      const collectionPath = `artifacts/${APP_ID}/products`;
       const productData = {
         name: data.name,
         price: data.price,
@@ -149,18 +141,22 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         imageUrl: data.imageUrl || '',
       };
 
-      updateDoc(productRef, productData)
+      const productCollection = collection(firestore, collectionPath);
+
+      addDoc(productCollection, productData)
         .then(() => {
-          toast({ title: 'Sucesso!', description: 'Produto atualizado.' });
+          toast({ title: 'Sucesso!', description: 'Produto adicionado.' });
+          form.reset();
           setOpen(false);
+          clearImage();
         })
         .catch((error) => {
-          console.error('Error updating product: ', error);
+          console.error('Error adding product: ', error);
           errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
-              path: docPath,
-              operation: 'update',
+              path: collectionPath,
+              operation: 'create',
               requestResourceData: productData,
             })
           );
@@ -169,17 +165,18 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if(!isOpen) clearImage(); }}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Edit className="w-4 h-4" />
+        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Novo Produto
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Editar Produto</DialogTitle>
+          <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
-            Atualize as informações do produto abaixo.
+            Cadastre um novo produto para usar nos lançamentos de entrada.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -226,7 +223,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                         <div>
                             <Upload className="mr-2 h-4 w-4" />
                             <span>Upload</span>
-                            <Input id={`file-upload-${product.id}`} type="file" className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
+                            <Input id="file-upload" type="file" className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
                         </div>
                     </Button>
                 </div>
@@ -246,7 +243,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                  )}
                 <FormMessage />
             </FormItem>
-
+            
             <FormField
               control={form.control}
               name="categoryId"
@@ -275,12 +272,12 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
               )}
             />
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => { setOpen(false); clearImage(); }}>
                 Cancelar
                 </Button>
                 <Button type="submit" disabled={isPending || isAuthLoading || (uploadProgress !== null && uploadProgress < 100)}>
                 {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                 Salvar Alterações
+                Salvar Produto
                 </Button>
             </DialogFooter>
           </form>

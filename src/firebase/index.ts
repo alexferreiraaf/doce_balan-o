@@ -4,16 +4,20 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
+
 
 function getFirebaseServices(firebaseApp: FirebaseApp): {
   firebaseApp: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
+  storage: FirebaseStorage;
 } {
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
     firestore: getFirestore(firebaseApp),
+    storage: getStorage(firebaseApp),
   };
 }
 

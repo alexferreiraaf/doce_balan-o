@@ -3,7 +3,7 @@ import { useProducts } from '@/app/lib/hooks/use-products';
 import Loading from '@/app/(main)/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { AddProductDialog } from '../dashboard/add-product-dialog';
+import { AddProductDialog } from './add-product-dialog';
 import { Package, Tag, ImageOff } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -26,6 +26,22 @@ import Image from 'next/image';
 interface GroupedProducts {
   [categoryName: string]: Product[];
 }
+
+// Function to construct the URL for the resized image
+const getResizedImageUrl = (originalUrl: string) => {
+  if (!originalUrl.includes('firebasestorage.googleapis.com')) {
+    return originalUrl;
+  }
+  const resizedImageSuffix = '_200x200.webp';
+  const url = new URL(originalUrl);
+  // Decode the path to handle encoded characters like %2F for /
+  const path = decodeURIComponent(url.pathname);
+  // Re-encode and append the suffix before the query parameters
+  const newPath = path.replace(/(\.jpg|\.jpeg|\.png|\.webp)/i, `${resizedImageSuffix}$1`);
+  url.pathname = newPath;
+  return url.toString();
+};
+
 
 export function ProductsClient() {
   const { products, loading: productsLoading } = useProducts();
@@ -70,9 +86,9 @@ export function ProductsClient() {
             <Package className="w-8 h-8 mr-3" />
             Meus Produtos
         </h1>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex items-center gap-2">
+            <AddProductCategoryDialog isPrimaryButton />
             <AddProductDialog />
-            <AddProductCategoryDialog />
         </div>
       </div>
       
@@ -111,7 +127,18 @@ export function ProductsClient() {
                                     <TableCell>
                                       <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden">
                                         {product.imageUrl ? (
-                                           <Image src={product.imageUrl} alt={product.name} width={64} height={64} className="object-cover w-full h-full" />
+                                           <Image 
+                                             src={getResizedImageUrl(product.imageUrl)} 
+                                             alt={product.name} 
+                                             width={64} 
+                                             height={64} 
+                                             className="object-cover w-full h-full"
+                                             onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.onerror = null; // prevents infinite loop
+                                                target.src = product.imageUrl || '';
+                                              }}
+                                           />
                                         ) : (
                                           <ImageOff className="w-6 h-6 text-muted-foreground" />
                                         )}

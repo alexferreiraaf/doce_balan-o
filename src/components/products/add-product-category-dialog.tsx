@@ -87,7 +87,7 @@ export function AddProductCategoryDialog({ isPrimaryButton = false }: { isPrimar
   };
 
   const TriggerButton = isPrimaryButton ? (
-      <Button variant="outline" size="sm" className="w-full sm:w-auto">
+      <Button>
         <Tag className="mr-2 h-4 w-4" />
         Nova Categoria
       </Button>
