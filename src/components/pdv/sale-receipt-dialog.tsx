@@ -55,7 +55,7 @@ export function SaleReceiptDialog({
   const receiptDetails = useMemo(() => {
     if (!transaction) return null;
 
-    const saleDate = transaction.timestamp?.toDate ? format(transaction.timestamp.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
+    const saleDate = transaction.dateMs ? format(new Date(transaction.dateMs), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
     const orderNumber = transaction.id.slice(-6).toUpperCase();
 
     // Reconstruct cart from description
