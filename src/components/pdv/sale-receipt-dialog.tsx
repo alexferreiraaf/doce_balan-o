@@ -8,7 +8,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
 import type { Transaction, Customer, Product } from '@/app/lib/types';
 import { format } from 'date-fns';
@@ -16,10 +15,8 @@ import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Share2 } from 'lucide-react';
 import { useMemo } from 'react';
+import { useProducts } from '@/app/lib/hooks/use-products';
 
-interface CartItem extends Product {
-  quantity: number;
-}
 
 interface SaleReceiptDialogProps {
   transaction: Transaction;
@@ -29,17 +26,20 @@ interface SaleReceiptDialogProps {
 }
 
 // Helper to parse cart items from the transaction description
-const parseCartFromDescription = (description: string): { name: string; quantity: number }[] => {
+const parseCartFromDescription = (description: string, allProducts: Product[]): { name: string; quantity: number, price: number }[] => {
     // Example description: "1x Bolo de Chocolate, 2x Torta de Limão"
     if (!description.includes('x ')) return [];
     
     return description.split(', ').map(part => {
         const match = part.match(/(\d+)x (.*)/);
         if (match) {
-            return { quantity: parseInt(match[1], 10), name: match[2] };
+            const quantity = parseInt(match[1], 10);
+            const name = match[2];
+            const product = allProducts.find(p => p.name === name);
+            return { quantity, name, price: product?.price || 0 };
         }
         return null;
-    }).filter(Boolean) as { name: string; quantity: number }[];
+    }).filter((item): item is { name: string; quantity: number, price: number } => item !== null);
 };
 
 
@@ -50,6 +50,7 @@ export function SaleReceiptDialog({
   onOpenChange,
 }: SaleReceiptDialogProps) {
   const { toast } = useToast();
+  const { products } = useProducts();
 
   const receiptDetails = useMemo(() => {
     if (!transaction) return null;
@@ -58,7 +59,7 @@ export function SaleReceiptDialog({
     const orderNumber = transaction.id.slice(-6).toUpperCase();
 
     // Reconstruct cart from description
-    const parsedItems = parseCartFromDescription(transaction.description);
+    const parsedItems = parseCartFromDescription(transaction.description, products);
     const subtotal = transaction.amount - (transaction.deliveryFee || 0) + (transaction.discount || 0);
 
     const receiptLines = [
@@ -71,7 +72,7 @@ export function SaleReceiptDialog({
       customer ? `Cliente: ${customer.name}` : '',
       '',
       '--- Itens ---',
-      ...parsedItems.map(item => `${item.quantity}x ${item.name}`),
+      ...parsedItems.map(item => `${item.quantity}x ${item.name} (${formatCurrency(item.price)})`),
       '',
       '--- Totais ---',
       `Subtotal: ${formatCurrency(subtotal)}`,
@@ -79,7 +80,7 @@ export function SaleReceiptDialog({
       transaction.deliveryFee ? `Taxa de Entrega: ${formatCurrency(transaction.deliveryFee)}` : '',
       `TOTAL: ${formatCurrency(transaction.amount)}`,
       '',
-      transaction.downPayment ? `Entrada: ${formatCurrency(transaction.downPayment)}` : '',
+      transaction.downPayment && transaction.downPayment > 0 ? `Entrada: ${formatCurrency(transaction.downPayment)}` : '',
       transaction.status === 'pending' ? `VALOR PENDENTE: ${formatCurrency(transaction.amount - (transaction.downPayment || 0))}` : '',
       '',
       'Obrigado pela preferência!',
@@ -87,7 +88,7 @@ export function SaleReceiptDialog({
     ];
 
     return receiptLines.filter(line => line !== '').join('\n');
-  }, [transaction, customer]);
+  }, [transaction, customer, products]);
 
 
   if (!transaction) {
