@@ -29,35 +29,6 @@ interface ProductFiltersProps {
   onSearchTermChange: (term: string) => void;
 }
 
-function getResizedImageUrl(originalUrl?: string, size = '200x200') {
-    if (!originalUrl || !originalUrl.includes('firebasestorage.googleapis.com')) {
-        return originalUrl;
-    }
-    try {
-        const url = new URL(originalUrl);
-        const path = decodeURIComponent(url.pathname);
-        const lastSlash = path.lastIndexOf('/');
-        const filenameWithToken = path.substring(lastSlash + 1);
-        const filename = filenameWithToken.split('?')[0];
-        
-        const extensionIndex = filename.lastIndexOf('.');
-        if (extensionIndex === -1) return originalUrl;
-
-        const baseName = filename.substring(0, extensionIndex);
-        const extension = filename.substring(extensionIndex);
-        
-        const resizedFilename = `${baseName}_${size}${extension}`;
-        
-        url.pathname = path.replace(filename, resizedFilename);
-        
-        return url.toString();
-    } catch (e) {
-        console.error("Failed to parse or modify image URL:", e);
-        return originalUrl;
-    }
-}
-
-
 function ProductFilters({
   categories,
   selectedCategory,
@@ -148,17 +119,15 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
 
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {products.map((product) => {
-              const imageUrl = getResizedImageUrl(product.imageUrl);
-              return (
+            {products.map((product) => (
               <Card
                 key={product.id}
                 className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden"
                 onClick={() => onProductClick(product)}
               >
                 <div className="w-full h-32 bg-muted flex items-center justify-center overflow-hidden">
-                    {imageUrl ? (
-                        <Image src={imageUrl} alt={product.name} width={150} height={150} className="object-cover w-full h-full" />
+                    {product.imageUrl ? (
+                        <Image src={product.imageUrl} alt={product.name} width={150} height={150} className="object-cover w-full h-full" />
                     ) : (
                         <Package className="w-12 h-12 text-muted-foreground" />
                     )}
@@ -168,7 +137,7 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                   <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
                 </div>
               </Card>
-            )})}
+            ))}
         </div>
     );
 }
