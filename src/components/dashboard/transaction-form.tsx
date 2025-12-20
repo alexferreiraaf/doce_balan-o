@@ -33,11 +33,14 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { AddProductDialog } from './add-product-dialog';
 import { formatCurrency } from '@/lib/utils';
-import type { Product, Transaction } from '@/app/lib/types';
+import type { Product, Transaction, Customer } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
+import { SaleReceiptDialog } from '../pdv/sale-receipt-dialog';
+import { Timestamp } from 'firebase/firestore';
+
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -87,6 +90,8 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, startSuggestionTransition] = useTransition();
+  const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   const { products, loading: productsLoading } = useProducts();
   const { customers, loading: customersLoading } = useCustomers();
@@ -210,8 +215,20 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
       };
 
       addDoc(collection(firestore, collectionPath), transactionData)
-        .then(() => {
+        .then((docRef) => {
             toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
+            
+            // For income, show receipt
+            if (data.type === 'income') {
+              const finalTransaction: Transaction = {
+                ...transactionData,
+                id: docRef.id,
+                timestamp: Timestamp.now() // Use client-side timestamp for immediate display
+              };
+              setLastTransaction(finalTransaction);
+              setShowReceipt(true);
+            }
+
             form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0});
             setSheetOpen(false);
         })
@@ -250,250 +267,60 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
 
   const isPOSSale = !!cart;
 
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {!isPOSSale && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Button
-              type="button"
-              onClick={() => handleTypeChange('expense')}
-              className={`font-semibold transition-all duration-200 h-12 text-base ${
-                type === 'expense'
-                  ? 'bg-red-500 hover:bg-red-600 text-white shadow-md'
-                  : 'bg-muted text-muted-foreground hover:bg-red-100'
-              }`}
-            >
-              Saída
-            </Button>
-            <Button
-              type="button"
-              onClick={() => handleTypeChange('income')}
-              className={`font-semibold transition-all duration-200 h-12 text-base ${
-                type === 'income'
-                  ? 'bg-green-500 hover:bg-green-600 text-white shadow-md'
-                  : 'bg-muted text-muted-foreground hover:bg-green-100'
-              }`}
-            >
-              Entrada
-            </Button>
-          </div>
-        )}
+  const selectedCustomer = customers.find(c => c.id === form.watch('customerId'));
 
-        {type === 'expense' ? (
-          <>
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Açúcar, Forma de bolo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor (R$)</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        ) : (
-          <div className="space-y-4">
-            {!isPOSSale ? (
-              <>
-                <FormField
-                  control={form.control}
-                  name="productId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex justify-between items-center">
-                        <FormLabel>Produto</FormLabel>
-                        <AddProductDialog />
-                      </div>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger disabled={productsLoading}>
-                            <SelectValue placeholder={productsLoading ? "Carregando produtos..." : "Selecione um produto"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {products.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.name} ({formatCurrency(p.price)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantidade</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="1" step="1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            ) : (
-                <FormField
+  return (
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {!isPOSSale && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Button
+                type="button"
+                onClick={() => handleTypeChange('expense')}
+                className={`font-semibold transition-all duration-200 h-12 text-base ${
+                  type === 'expense'
+                    ? 'bg-red-500 hover:bg-red-600 text-white shadow-md'
+                    : 'bg-muted text-muted-foreground hover:bg-red-100'
+                }`}
+              >
+                Saída
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleTypeChange('income')}
+                className={`font-semibold transition-all duration-200 h-12 text-base ${
+                  type === 'income'
+                    ? 'bg-green-500 hover:bg-green-600 text-white shadow-md'
+                    : 'bg-muted text-muted-foreground hover:bg-green-100'
+                }`}
+              >
+                Entrada
+              </Button>
+            </div>
+          )}
+
+          {type === 'expense' ? (
+            <>
+              <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Itens da Venda</FormLabel>
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
                     <FormControl>
-                        <Textarea {...field} readOnly className="bg-muted" rows={3}/>
+                      <Input placeholder="Ex: Açúcar, Forma de bolo" {...field} />
                     </FormControl>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-            )}
-            <FormField
-                control={form.control}
-                name="customerId"
-                render={({ field }) => (
-                    <FormItem>
-                    <div className="flex justify-between items-center">
-                        <FormLabel>Cliente (Opcional)</FormLabel>
-                        <AddCustomerDialog />
-                    </div>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                        <SelectTrigger disabled={customersLoading}>
-                            <SelectValue placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"} />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {customers.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            {!isPOSSale && (
-                 <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="additionalDescription"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Adicional (Desc.)</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Ex: Mais Nutella" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    <FormField
-                        control={form.control}
-                        name="additionalValue"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Valor Adicional (R$)</FormLabel>
-                            <FormControl>
-                                <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-            )}
-            
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="discount"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Desconto (R$)</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                <FormField
-                    control={form.control}
-                    name="deliveryFee"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Taxa de Entrega (R$)</FormLabel>
-                        <FormControl>
-                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="hasDownPayment"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Houve valor de entrada?</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="yes" id="dp-yes" />
-                        </FormControl>
-                        <FormLabel htmlFor="dp-yes" className="font-normal cursor-pointer">Sim</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2">
-                        <FormControl>
-                          <RadioGroupItem value="no" id="dp-no" />
-                        </FormControl>
-                        <FormLabel htmlFor="dp-no" className="font-normal cursor-pointer">Não</FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {hasDownPaymentValue === 'yes' && (
+              />
               <FormField
                 control={form.control}
-                name="downPayment"
+                name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor de Entrada (R$)</FormLabel>
+                    <FormLabel>Valor (R$)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="0,00" {...field} />
                     </FormControl>
@@ -501,29 +328,160 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
                   </FormItem>
                 )}
               />
-            )}
-
-             <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor Total</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} readOnly={isPOSSale} className="bg-muted font-bold" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            </>
+          ) : (
+            <div className="space-y-4">
+              {!isPOSSale ? (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="productId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Produto</FormLabel>
+                          <AddProductDialog />
+                        </div>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger disabled={productsLoading}>
+                              <SelectValue placeholder={productsLoading ? "Carregando produtos..." : "Selecione um produto"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name} ({formatCurrency(p.price)})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantidade</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="1" step="1" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              ) : (
+                  <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Itens da Venda</FormLabel>
+                      <FormControl>
+                          <Textarea {...field} readOnly className="bg-muted" rows={3}/>
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
               )}
-            />
-            
-            {hasDownPaymentValue !== 'yes' && (
+              <FormField
+                  control={form.control}
+                  name="customerId"
+                  render={({ field }) => (
+                      <FormItem>
+                      <div className="flex justify-between items-center">
+                          <FormLabel>Cliente (Opcional)</FormLabel>
+                          <AddCustomerDialog />
+                      </div>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                          <SelectTrigger disabled={customersLoading}>
+                              <SelectValue placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"} />
+                          </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                          {customers.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                              </SelectItem>
+                          ))}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+              />
+              {!isPOSSale && (
+                  <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                          control={form.control}
+                          name="additionalDescription"
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Adicional (Desc.)</FormLabel>
+                              <FormControl>
+                                  <Input placeholder="Ex: Mais Nutella" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                          />
+                      <FormField
+                          control={form.control}
+                          name="additionalValue"
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Valor Adicional (R$)</FormLabel>
+                              <FormControl>
+                                  <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                      control={form.control}
+                      name="discount"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Desconto (R$)</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                  <FormField
+                      control={form.control}
+                      name="deliveryFee"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Taxa de Entrega (R$)</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+              </div>
+
               <FormField
                 control={form.control}
-                name="paymentMethod"
+                name="hasDownPayment"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>Forma de Pagamento</FormLabel>
+                    <FormLabel>Houve valor de entrada?</FormLabel>
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
@@ -532,27 +490,15 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
                       >
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
-                            <RadioGroupItem value="pix" id="pix" />
+                            <RadioGroupItem value="yes" id="dp-yes" />
                           </FormControl>
-                          <FormLabel htmlFor="pix" className="font-normal cursor-pointer">PIX</FormLabel>
+                          <FormLabel htmlFor="dp-yes" className="font-normal cursor-pointer">Sim</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
-                            <RadioGroupItem value="dinheiro" id="dinheiro" />
+                            <RadioGroupItem value="no" id="dp-no" />
                           </FormControl>
-                          <FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <RadioGroupItem value="cartao" id="cartao" />
-                          </FormControl>
-                          <FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <RadioGroupItem value="fiado" id="fiado" />
-                          </FormControl>
-                          <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
+                          <FormLabel htmlFor="dp-no" className="font-normal cursor-pointer">Não</FormLabel>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>
@@ -560,56 +506,140 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
                   </FormItem>
                 )}
               />
-            )}
 
-          </div>
-        )}
-
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Categoria</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {(type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isSuggesting && type === 'expense' && <p className="text-xs text-muted-foreground mt-1">Sugerindo categorias...</p>}
-              {suggestions.length > 0 && type === 'expense' && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className='text-sm text-muted-foreground'>Sugestões:</span>
-                  {suggestions.map(s => (
-                    <Badge key={s} variant="secondary" className="cursor-pointer" onClick={() => form.setValue('category', s)}>{s}</Badge>
-                  ))}
-                </div>
+              {hasDownPaymentValue === 'yes' && (
+                <FormField
+                  control={form.control}
+                  name="downPayment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor de Entrada (R$)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 space-y-2 space-y-reverse sm:space-y-0">
-            <Button type="button" variant="outline" onClick={() => setSheetOpen(false)} className="w-full sm:w-auto">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isPending || isAuthLoading} className="w-full sm:w-auto">
-              {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isPOSSale ? 'Finalizar Venda' : 'Adicionar Lançamento'}
-            </Button>
-        </div>
 
-      </form>
-    </Form>
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor Total</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} readOnly={isPOSSale} className="bg-muted font-bold" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {hasDownPaymentValue !== 'yes' && (
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Forma de Pagamento</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="grid grid-cols-2 gap-4"
+                        >
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <RadioGroupItem value="pix" id="pix" />
+                            </FormControl>
+                            <FormLabel htmlFor="pix" className="font-normal cursor-pointer">PIX</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <RadioGroupItem value="dinheiro" id="dinheiro" />
+                            </FormControl>
+                            <FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <RadioGroupItem value="cartao" id="cartao" />
+                            </FormControl>
+                            <FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                              <RadioGroupItem value="fiado" id="fiado" />
+                            </FormControl>
+                            <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+            </div>
+          )}
+
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {(type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isSuggesting && type === 'expense' && <p className="text-xs text-muted-foreground mt-1">Sugerindo categorias...</p>}
+                {suggestions.length > 0 && type === 'expense' && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className='text-sm text-muted-foreground'>Sugestões:</span>
+                    {suggestions.map(s => (
+                      <Badge key={s} variant="secondary" className="cursor-pointer" onClick={() => form.setValue('category', s)}>{s}</Badge>
+                    ))}
+                  </div>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 space-y-2 space-y-reverse sm:space-y-0">
+              <Button type="button" variant="outline" onClick={() => setSheetOpen(false)} className="w-full sm:w-auto">
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isPending || isAuthLoading} className="w-full sm:w-auto">
+                {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPOSSale ? 'Finalizar Venda' : 'Adicionar Lançamento'}
+              </Button>
+          </div>
+
+        </form>
+      </Form>
+      {lastTransaction && (
+          <SaleReceiptDialog
+              transaction={lastTransaction}
+              customer={selectedCustomer}
+              cart={cart}
+              isOpen={showReceipt}
+              onOpenChange={setShowReceipt}
+          />
+      )}
+    </>
   );
 }
