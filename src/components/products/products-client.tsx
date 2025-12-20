@@ -27,6 +27,32 @@ interface GroupedProducts {
   [categoryName: string]: Product[];
 }
 
+function getResizedImageUrl(originalUrl?: string, size = '200x200') {
+    if (!originalUrl || !originalUrl.includes('firebasestorage.googleapis.com')) {
+        return originalUrl;
+    }
+    try {
+        const url = new URL(originalUrl);
+        const pathParts = url.pathname.split('/');
+        const originalFilename = decodeURIComponent(pathParts.pop() || '');
+        const extensionIndex = originalFilename.lastIndexOf('.');
+        if (extensionIndex === -1) return originalUrl;
+
+        const filename = originalFilename.substring(0, extensionIndex);
+        const extension = originalFilename.substring(extensionIndex);
+        
+        const resizedFilename = `${filename}_${size}${extension}`;
+        
+        pathParts.push(encodeURIComponent(resizedFilename));
+        url.pathname = pathParts.join('/');
+        return url.toString();
+    } catch (e) {
+        console.error("Failed to parse or modify image URL:", e);
+        return originalUrl;
+    }
+}
+
+
 export function ProductsClient() {
   const { products, loading: productsLoading } = useProducts();
   const { categories, loading: categoriesLoading } = useProductCategories();
@@ -106,12 +132,14 @@ export function ProductsClient() {
                                 </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                {groupedProducts[categoryName].map((product) => (
+                                {groupedProducts[categoryName].map((product) => {
+                                  const imageUrl = getResizedImageUrl(product.imageUrl, '64x64');
+                                  return (
                                     <TableRow key={product.id}>
                                     <TableCell>
                                       <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden">
-                                        {product.imageUrl ? (
-                                           <Image src={product.imageUrl} alt={product.name} width={64} height={64} className="object-cover w-full h-full" />
+                                        {imageUrl ? (
+                                           <Image src={imageUrl} alt={product.name} width={64} height={64} className="object-cover w-full h-full" />
                                         ) : (
                                           <ImageOff className="w-6 h-6 text-muted-foreground" />
                                         )}
@@ -124,7 +152,7 @@ export function ProductsClient() {
                                         <DeleteProductButton productId={product.id} />
                                     </TableCell>
                                     </TableRow>
-                                ))}
+                                )})}
                                 </TableBody>
                             </Table>
                         </AccordionContent>
