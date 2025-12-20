@@ -89,6 +89,39 @@ export function Navbar() {
       </Button>
     </Link>
   );
+  
+  const MobileMenuButton = ({ label, icon: Icon, links }: { label: string; icon: React.ElementType; links: typeof registrationLinks }) => {
+    const isAnyActive = links.some(link => pathname === link.href);
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                 <Button
+                    variant="ghost"
+                    className={cn(
+                    'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+                    isAnyActive && 'text-primary font-semibold'
+                    )}
+                >
+                    <div>
+                    <Icon className="w-6 h-6 mb-0.5" />
+                    <span className="text-xs">{label}</span>
+                    </div>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48 mb-2" align="center" side="top">
+                <DropdownMenuLabel>Cadastros</DropdownMenuLabel>
+                <DropdownMenuSeparator/>
+                {links.map(({ href, label, icon: Icon }) => (
+                    <DropdownMenuItem key={href} onSelect={() => router.push(href)}>
+                        <Icon className="mr-2 h-4 w-4" />
+                        <span>{label}</span>
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+  }
 
   const isPOSPage = pathname === '/';
 
@@ -174,14 +207,8 @@ export function Navbar() {
             <NavButton key={link.href} {...link} />
         ))}
         
-        {isPOSPage ? (
-           <div />
-        ) : (
-           <div className="relative flex justify-center items-center">
-             <AddTransactionSheet isMobile={true} />
-           </div>
-        )}
-
+        <MobileMenuButton label="Cadastros" icon={Archive} links={registrationLinks} />
+        
         <NavButton href="/transactions" label="Lançamentos" icon={List} />
         <NavButton href="/reports" label="Relatórios" icon={TrendingUp} />
 
