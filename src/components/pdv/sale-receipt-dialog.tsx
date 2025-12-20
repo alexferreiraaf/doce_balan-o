@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Share2 } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface CartItem extends Product {
   quantity: number;
@@ -23,53 +24,77 @@ interface CartItem extends Product {
 interface SaleReceiptDialogProps {
   transaction: Transaction;
   customer?: Customer;
-  cart?: CartItem[];
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+// Helper to parse cart items from the transaction description
+const parseCartFromDescription = (description: string): { name: string; quantity: number }[] => {
+    // Example description: "1x Bolo de Chocolate, 2x Torta de Limão"
+    if (!description.includes('x ')) return [];
+    
+    return description.split(', ').map(part => {
+        const match = part.match(/(\d+)x (.*)/);
+        if (match) {
+            return { quantity: parseInt(match[1], 10), name: match[2] };
+        }
+        return null;
+    }).filter(Boolean) as { name: string; quantity: number }[];
+};
+
+
 export function SaleReceiptDialog({
   transaction,
   customer,
-  cart,
   isOpen,
   onOpenChange,
 }: SaleReceiptDialogProps) {
   const { toast } = useToast();
 
+  const receiptDetails = useMemo(() => {
+    if (!transaction) return null;
+
+    const saleDate = transaction.timestamp?.toDate ? format(transaction.timestamp.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
+    const orderNumber = transaction.id.slice(-6).toUpperCase();
+
+    // Reconstruct cart from description
+    const parsedItems = parseCartFromDescription(transaction.description);
+    const subtotal = transaction.amount - (transaction.deliveryFee || 0) + (transaction.discount || 0);
+
+    const receiptLines = [
+      'receipt',
+      '***************************',
+      '      COMPROVANTE DE VENDA       ',
+      '***************************',
+      `Pedido: #${orderNumber}`,
+      `Data: ${saleDate}`,
+      customer ? `Cliente: ${customer.name}` : '',
+      '',
+      '--- Itens ---',
+      ...parsedItems.map(item => `${item.quantity}x ${item.name}`),
+      '',
+      '--- Totais ---',
+      `Subtotal: ${formatCurrency(subtotal)}`,
+      transaction.discount ? `Desconto: -${formatCurrency(transaction.discount)}` : '',
+      transaction.deliveryFee ? `Taxa de Entrega: ${formatCurrency(transaction.deliveryFee)}` : '',
+      `TOTAL: ${formatCurrency(transaction.amount)}`,
+      '',
+      transaction.downPayment ? `Entrada: ${formatCurrency(transaction.downPayment)}` : '',
+      transaction.status === 'pending' ? `VALOR PENDENTE: ${formatCurrency(transaction.amount - (transaction.downPayment || 0))}` : '',
+      '',
+      'Obrigado pela preferência!',
+      'Doçuras da Fran',
+    ];
+
+    return receiptLines.filter(line => line !== '').join('\n');
+  }, [transaction, customer]);
+
+
   if (!transaction) {
     return null;
   }
-
-  const saleDate = transaction.timestamp?.toDate ? format(transaction.timestamp.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
-  const orderNumber = transaction.id.slice(-6).toUpperCase();
-
-  const receiptLines = [
-    'receipt',
-    '************************',
-    '      COMPROVANTE       ',
-    '************************',
-    `Pedido: #${orderNumber}`,
-    `Data: ${saleDate}`,
-    customer ? `Cliente: ${customer.name}` : '',
-    '',
-    '--- Itens ---',
-    ...(cart?.map(item => `${item.quantity}x ${item.name} - ${formatCurrency(item.price * item.quantity)}`) || [transaction.description]),
-    '',
-    '--- Totais ---',
-    `Subtotal: ${formatCurrency(transaction.amount - (transaction.deliveryFee || 0) + (transaction.discount || 0))}`,
-    transaction.discount ? `Desconto: -${formatCurrency(transaction.discount)}` : '',
-    transaction.deliveryFee ? `Taxa de Entrega: ${formatCurrency(transaction.deliveryFee)}` : '',
-    `TOTAL: ${formatCurrency(transaction.amount)}`,
-    '',
-    transaction.downPayment ? `Entrada: ${formatCurrency(transaction.downPayment)}` : '',
-    transaction.status === 'pending' ? `VALOR PENDENTE: ${formatCurrency(transaction.amount - (transaction.downPayment || 0))}` : '',
-    '',
-    'Obrigado pela preferência!',
-    'Doçuras da Fran',
-  ];
-
-  const receiptText = receiptLines.filter(line => line !== '').join('\n');
+  
+  const receiptText = receiptDetails || '';
 
   const handleShare = async () => {
     const shareData = {

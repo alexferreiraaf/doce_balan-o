@@ -253,16 +253,12 @@ export function POSClient() {
 
   const handleSheetOpenChange = (open: boolean) => {
     setShowFinalizeSheet(open);
-    if (!open) {
-      // Clear cart after sale is finalized/cancelled
-      setCart([]);
-    }
   }
 
   const handleSaleFinalized = (transaction: Transaction, customer?: Customer) => {
-    setCart([]);
     setShowFinalizeSheet(false);
     setLastSale({transaction, customer});
+    setCart([]); // Clear cart after sale is finalized
   }
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -315,7 +311,6 @@ export function POSClient() {
                 <SaleReceiptDialog
                     transaction={lastSale.transaction}
                     customer={lastSale.customer}
-                    cart={cart}
                     isOpen={!!lastSale}
                     onOpenChange={(open) => { if (!open) setLastSale(null); }}
                 />
@@ -357,7 +352,6 @@ export function POSClient() {
           <SaleReceiptDialog
               transaction={lastSale.transaction}
               customer={lastSale.customer}
-              cart={cart}
               isOpen={!!lastSale}
               onOpenChange={(open) => { if (!open) setLastSale(null); }}
           />
