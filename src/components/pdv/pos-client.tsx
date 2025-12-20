@@ -126,7 +126,7 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                 className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden"
                 onClick={() => onProductClick(product)}
               >
-                <div className="w-full h-40 bg-muted flex items-center justify-center overflow-hidden">
+                <div className="w-full h-48 bg-muted flex items-center justify-center overflow-hidden">
                     {product.imageUrl ? (
                         <Image 
                             src={product.imageUrl} 
