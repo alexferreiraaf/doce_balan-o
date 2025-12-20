@@ -1,4 +1,7 @@
 'use client';
+import { useRef } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   Dialog,
   DialogContent,
@@ -8,15 +11,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/utils';
-import type { Transaction, Customer, Product } from '@/app/lib/types';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import type { Transaction, Customer } from '@/app/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Share2 } from 'lucide-react';
-import { useMemo } from 'react';
-import { useProducts } from '@/app/lib/hooks/use-products';
-import { useTransactions } from '@/app/lib/hooks/use-transactions';
+import { Share2, FileDown } from 'lucide-react';
+import { ReceiptTemplate } from './receipt-template';
 
 
 interface SaleReceiptDialogProps {
@@ -26,23 +24,6 @@ interface SaleReceiptDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Helper to parse cart items from the transaction description
-const parseCartFromDescription = (description: string, allProducts: Product[]): { name: string; quantity: number, price: number }[] => {
-    // Example description: "1x Bolo de Chocolate, 2x Torta de Limão"
-    if (!description.includes('x ')) return [];
-    
-    return description.split(', ').map(part => {
-        const match = part.match(/(\d+)x (.*)/);
-        if (match) {
-            const quantity = parseInt(match[1], 10);
-            const name = match[2].replace(/ \(.*/, ''); // Remove additional descriptions like '(Entrada...)'
-            const product = allProducts.find(p => p.name === name);
-            return { quantity, name, price: product?.price || 0 };
-        }
-        return null;
-    }).filter((item): item is { name: string; quantity: number, price: number } => item !== null);
-};
-
 
 export function SaleReceiptDialog({
   transaction,
@@ -51,107 +32,113 @@ export function SaleReceiptDialog({
   onOpenChange,
 }: SaleReceiptDialogProps) {
   const { toast } = useToast();
-  const { products } = useProducts();
-  const { transactions: allTransactions } = useTransactions();
-
-  const receiptDetails = useMemo(() => {
-    if (!transaction) return null;
-
-    const saleDate = transaction.dateMs ? format(new Date(transaction.dateMs), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
-    
-    // Use total transaction count as the order number
-    const orderNumber = (allTransactions.length + 1).toString().padStart(4, '0');
-
-    // Reconstruct cart from description
-    const parsedItems = parseCartFromDescription(transaction.description, products);
-    const subtotal = parsedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    const receiptLines = [
-      'receipt',
-      '***************************',
-      '      COMPROVANTE DE VENDA       ',
-      '***************************',
-      `Pedido: #${orderNumber}`,
-      `Data: ${saleDate}`,
-      customer ? `Cliente: ${customer.name}` : '',
-      '',
-      '--- Itens ---',
-      ...parsedItems.map(item => `${item.quantity}x ${item.name} (${formatCurrency(item.price)})`),
-      '',
-      '--- Totais ---',
-      `Subtotal: ${formatCurrency(subtotal)}`,
-      transaction.discount ? `Desconto: -${formatCurrency(transaction.discount)}` : '',
-      transaction.deliveryFee ? `Taxa de Entrega: ${formatCurrency(transaction.deliveryFee)}` : '',
-      `TOTAL: ${formatCurrency(transaction.amount)}`,
-      '',
-      transaction.downPayment && transaction.downPayment > 0 ? `Entrada: ${formatCurrency(transaction.downPayment)}` : '',
-      transaction.status === 'pending' ? `VALOR PENDENTE: ${formatCurrency(transaction.amount - (transaction.downPayment || 0))}` : '',
-      '',
-      'Obrigado pela preferência!',
-      'Doçuras da Fran',
-    ];
-
-    return receiptLines.filter(line => line !== '').join('\n');
-  }, [transaction, customer, products, allTransactions]);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
 
   if (!transaction) {
     return null;
   }
-  
-  const receiptText = receiptDetails || '';
+
+  const generatePdf = async (): Promise<Blob> => {
+    const input = receiptRef.current;
+    if (!input) {
+        throw new Error("Receipt element not found");
+    }
+    const canvas = await html2canvas(input, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    
+    // A4 size: 210mm x 297mm. A receipt is much smaller.
+    // Typical receipt width is 80mm. Let's use that.
+    // The height will be proportional.
+    const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+    });
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    return pdf.output('blob');
+  };
 
   const handleShare = async () => {
-    const shareData = {
-      title: 'Comprovante de Venda',
-      text: receiptText.replace('receipt\n',''),
-    };
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
+      const pdfBlob = await generatePdf();
+      const pdfFile = new File([pdfBlob], `comprovante-doçuras-da-fran.pdf`, { type: 'application/pdf' });
+
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          title: 'Comprovante de Venda',
+          text: `Segue o comprovante da sua compra na Doçuras da Fran.`,
+          files: [pdfFile],
+        });
         toast({
           title: 'Compartilhado!',
           description: 'O comprovante foi enviado com sucesso.',
         });
       } else {
-        await navigator.clipboard.writeText(shareData.text);
-        toast({
-          title: 'Copiado!',
-          description: 'O comprovante foi copiado para a área de transferência.',
-        });
+        throw new Error("Navigator.share not supported for files.");
       }
     } catch (err) {
-       console.error("Share/Copy failed", err);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível compartilhar ou copiar o comprovante.',
-      });
+       console.error("Share failed", err);
+       // As a fallback, download the file
+       handleDownload();
     }
   };
+
+  const handleDownload = async () => {
+     try {
+        const pdfBlob = await generatePdf();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(pdfBlob);
+        link.download = `comprovante-doçuras-da-fran.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({
+            title: 'Download iniciado!',
+            description: 'Seu comprovante está sendo baixado.',
+        });
+     } catch (err) {
+        console.error("Download failed", err);
+        toast({
+            variant: 'destructive',
+            title: 'Erro',
+            description: 'Não foi possível gerar o PDF para download.',
+        });
+     }
+  }
+
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Venda Finalizada com Sucesso!</DialogTitle>
+          <DialogTitle>Venda Finalizada!</DialogTitle>
           <DialogDescription>
-            Aqui está o comprovante da venda. Você pode compartilhá-lo com seu cliente.
+            Abaixo está o comprovante da venda. Você pode compartilhá-lo com seu cliente.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <div className="bg-muted p-4 rounded-lg font-mono text-sm whitespace-pre-wrap max-h-80 overflow-y-auto">
-            {receiptText.replace('receipt\n','')}
+          <div className="bg-muted p-4 rounded-lg max-h-80 overflow-y-auto">
+             <ReceiptTemplate ref={receiptRef} transaction={transaction} customer={customer} />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className='gap-2 sm:gap-0'>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
-          <Button onClick={handleShare}>
-            <Share2 className="mr-2 h-4 w-4" />
-            Compartilhar
-          </Button>
+          {canShare ? (
+            <Button onClick={handleShare}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Compartilhar
+            </Button>
+          ) : (
+            <Button onClick={handleDownload}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Baixar PDF
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
