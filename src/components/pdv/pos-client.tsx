@@ -49,25 +49,28 @@ function ProductFilters({
             onChange={(e) => onSearchTermChange(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mb-2">
-            <Button
-              variant={selectedCategory === 'all' ? 'default' : 'outline'}
-              className={cn("rounded-full h-11", selectedCategory !== 'all' && 'bg-card')}
-              onClick={() => onSelectCategory('all')}
-            >
-              Todos
-            </Button>
-            {categories.map((category) => (
+        <ScrollArea className="sm:max-w-xl">
+          <div className="flex items-center gap-2 pb-2">
               <Button
-                key={category.id}
-                variant={selectedCategory === category.id ? 'default' : 'outline'}
-                className={cn("rounded-full h-11", selectedCategory !== category.id && 'bg-card')}
-                onClick={() => onSelectCategory(category.id)}
+                variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                className={cn("rounded-full h-11 whitespace-nowrap", selectedCategory !== 'all' && 'bg-card')}
+                onClick={() => onSelectCategory('all')}
               >
-                {category.name}
+                Todos
               </Button>
-            ))}
-        </div>
+              {categories.map((category) => (
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.id ? 'default' : 'outline'}
+                  className={cn("rounded-full h-11 whitespace-nowrap", selectedCategory !== category.id && 'bg-card')}
+                  onClick={() => onSelectCategory(category.id)}
+                >
+                  {category.name}
+                </Button>
+              ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
     </Card>
   );
