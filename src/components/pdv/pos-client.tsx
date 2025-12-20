@@ -29,21 +29,6 @@ interface ProductFiltersProps {
   onSearchTermChange: (term: string) => void;
 }
 
-// Function to construct the URL for the resized image
-const getResizedImageUrl = (originalUrl: string) => {
-  if (!originalUrl.includes('firebasestorage.googleapis.com')) {
-    return originalUrl;
-  }
-  const resizedImageSuffix = '_200x200.webp';
-  const url = new URL(originalUrl);
-  // Decode the path to handle encoded characters like %2F for /
-  const path = decodeURIComponent(url.pathname);
-  // Re-encode and append the suffix before the query parameters
-  const newPath = path.replace(/(\.jpg|\.jpeg|\.png|\.webp)/i, `${resizedImageSuffix}$1`);
-  url.pathname = newPath;
-  return url.toString();
-};
-
 function ProductFilters({
   categories,
   selectedCategory,
@@ -143,16 +128,11 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                 <div className="w-full h-32 bg-muted flex items-center justify-center overflow-hidden">
                     {product.imageUrl ? (
                         <Image 
-                            src={getResizedImageUrl(product.imageUrl)} 
+                            src={product.imageUrl} 
                             alt={product.name} 
                             width={150} 
                             height={150} 
                             className="object-cover w-full h-full" 
-                            onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.onerror = null; // prevents infinite loop
-                                target.src = product.imageUrl || '';
-                            }}
                         />
                     ) : (
                         <Package className="w-12 h-12 text-muted-foreground" />
