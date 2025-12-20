@@ -38,8 +38,6 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
-import { SaleReceiptDialog } from '../pdv/sale-receipt-dialog';
-import { Timestamp } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -77,11 +75,12 @@ interface CartItem extends Product {
 
 interface TransactionFormProps {
     setSheetOpen: (open: boolean) => void;
+    onSaleFinalized?: (transaction: Transaction, customer?: Customer) => void;
     cart?: CartItem[];
     cartTotal?: number;
 }
 
-export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFormProps) {
+export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal }: TransactionFormProps) {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -90,8 +89,6 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, startSuggestionTransition] = useTransition();
-  const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
-  const [showReceipt, setShowReceipt] = useState(false);
 
   const { products, loading: productsLoading } = useProducts();
   const { customers, loading: customersLoading } = useCustomers();
@@ -218,15 +215,9 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
         .then((docRef) => {
             toast({ title: 'Sucesso!', description: 'Lançamento adicionado.' });
             
-            // For income, show receipt
-            if (data.type === 'income') {
-              const finalTransaction: Transaction = {
-                ...transactionData,
-                id: docRef.id,
-                timestamp: Timestamp.now() // Use client-side timestamp for immediate display
-              };
-              setLastTransaction(finalTransaction);
-              setShowReceipt(true);
+            if (data.type === 'income' && onSaleFinalized) {
+              const customer = customers.find(c => c.id === data.customerId);
+              onSaleFinalized({ ...transactionData, id: docRef.id } as Transaction, customer);
             }
 
             form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0});
@@ -266,8 +257,6 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
   };
 
   const isPOSSale = !!cart;
-
-  const selectedCustomer = customers.find(c => c.id === form.watch('customerId'));
 
   return (
     <>
@@ -631,15 +620,6 @@ export function TransactionForm({ setSheetOpen, cart, cartTotal }: TransactionFo
 
         </form>
       </Form>
-      {lastTransaction && (
-          <SaleReceiptDialog
-              transaction={lastTransaction}
-              customer={selectedCustomer}
-              cart={cart}
-              isOpen={showReceipt}
-              onOpenChange={setShowReceipt}
-          />
-      )}
     </>
   );
 }

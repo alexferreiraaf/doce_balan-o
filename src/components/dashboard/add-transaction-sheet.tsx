@@ -11,7 +11,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { TransactionForm } from './transaction-form';
-import type { Product } from '@/app/lib/types';
+import type { Product, Transaction, Customer } from '@/app/lib/types';
 
 interface CartItem extends Product {
   quantity: number;
@@ -23,9 +23,10 @@ interface AddTransactionSheetProps {
   onOpenChange?: (open: boolean) => void;
   cart?: CartItem[];
   cartTotal?: number;
+  onSaleFinalized?: (transaction: Transaction, customer?: Customer) => void;
 }
 
-export function AddTransactionSheet({ isMobile = false, open: controlledOpen, onOpenChange: setControlledOpen, cart, cartTotal }: AddTransactionSheetProps) {
+export function AddTransactionSheet({ isMobile = false, open: controlledOpen, onOpenChange: setControlledOpen, cart, cartTotal, onSaleFinalized }: AddTransactionSheetProps) {
   const [internalOpen, setInternalOpen] = useState(false);
 
   const open = controlledOpen ?? internalOpen;
@@ -60,7 +61,7 @@ export function AddTransactionSheet({ isMobile = false, open: controlledOpen, on
           </SheetDescription>
         </SheetHeader>
         <div className="py-6">
-          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} />
+          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} onSaleFinalized={onSaleFinalized} />
         </div>
       </SheetContent>
       </Sheet>
@@ -83,7 +84,7 @@ export function AddTransactionSheet({ isMobile = false, open: controlledOpen, on
           </SheetDescription>
         </SheetHeader>
         <div className="py-6">
-          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} />
+          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} onSaleFinalized={onSaleFinalized} />
         </div>
       </SheetContent>
     </Sheet>

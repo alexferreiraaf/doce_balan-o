@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import type { Product, ProductCategory } from '@/app/lib/types';
+import type { Product, ProductCategory, Transaction, Customer } from '@/app/lib/types';
 import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '../ui/badge';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
+import { SaleReceiptDialog } from './sale-receipt-dialog';
 
 interface CartItem extends Product {
   quantity: number;
@@ -203,6 +204,7 @@ export function POSClient() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showFinalizeSheet, setShowFinalizeSheet] = useState(false);
+  const [lastSale, setLastSale] = useState<{transaction: Transaction, customer?: Customer} | null>(null);
   const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState('products');
 
@@ -257,6 +259,12 @@ export function POSClient() {
     }
   }
 
+  const handleSaleFinalized = (transaction: Transaction, customer?: Customer) => {
+    setCart([]);
+    setShowFinalizeSheet(false);
+    setLastSale({transaction, customer});
+  }
+
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const loading = productsLoading || categoriesLoading;
@@ -301,7 +309,17 @@ export function POSClient() {
                 onOpenChange={handleSheetOpenChange}
                 cart={cart}
                 cartTotal={total}
+                onSaleFinalized={handleSaleFinalized}
             />
+            {lastSale && (
+                <SaleReceiptDialog
+                    transaction={lastSale.transaction}
+                    customer={lastSale.customer}
+                    cart={cart}
+                    isOpen={!!lastSale}
+                    onOpenChange={(open) => { if (!open) setLastSale(null); }}
+                />
+            )}
         </>
       )
   }
@@ -332,7 +350,18 @@ export function POSClient() {
         onOpenChange={handleSheetOpenChange}
         cart={cart}
         cartTotal={total}
+        onSaleFinalized={handleSaleFinalized}
       />
+
+       {lastSale && (
+          <SaleReceiptDialog
+              transaction={lastSale.transaction}
+              customer={lastSale.customer}
+              cart={cart}
+              isOpen={!!lastSale}
+              onOpenChange={(open) => { if (!open) setLastSale(null); }}
+          />
+      )}
     </div>
   );
 }
