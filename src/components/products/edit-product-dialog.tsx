@@ -62,7 +62,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
   const { categories, loading: categoriesLoading } = useProductCategories();
 
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(product.imageUrl || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
 
   const form = useForm<ProductFormValues>({
@@ -89,12 +89,12 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
   }
 
 
-  // Effect to reset image preview when dialog opens/closes
+  // Effect to reset form state when dialog opens
   useEffect(() => {
     if (open) {
       resetFormState();
     }
-  }, [open]);
+  }, [open, product]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
