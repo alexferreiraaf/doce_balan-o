@@ -87,8 +87,8 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
                 <div className="text-right col-span-3">Total</div>
             </div>
             {parsedItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-1">
-                    <div className="col-span-5 truncate">{item.name}</div>
+                <div key={index} className="grid grid-cols-12 gap-1 items-start">
+                    <div className="col-span-5">{item.name}</div>
                     <div className="col-span-1">{item.quantity}</div>
                     <div className="text-right col-span-3">{formatCurrency(item.price)}</div>
                     <div className="text-right col-span-3">{formatCurrency(item.price * item.quantity)}</div>
