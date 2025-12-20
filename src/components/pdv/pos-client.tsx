@@ -35,18 +35,21 @@ function getResizedImageUrl(originalUrl?: string, size = '200x200') {
     }
     try {
         const url = new URL(originalUrl);
-        const pathParts = url.pathname.split('/');
-        const originalFilename = decodeURIComponent(pathParts.pop() || '');
-        const extensionIndex = originalFilename.lastIndexOf('.');
-        if (extensionIndex === -1) return originalUrl; // No extension found
+        const path = decodeURIComponent(url.pathname);
+        const lastSlash = path.lastIndexOf('/');
+        const filenameWithToken = path.substring(lastSlash + 1);
+        const filename = filenameWithToken.split('?')[0];
+        
+        const extensionIndex = filename.lastIndexOf('.');
+        if (extensionIndex === -1) return originalUrl;
 
-        const filename = originalFilename.substring(0, extensionIndex);
-        const extension = originalFilename.substring(extensionIndex);
+        const baseName = filename.substring(0, extensionIndex);
+        const extension = filename.substring(extensionIndex);
         
-        const resizedFilename = `${filename}_${size}${extension}`;
+        const resizedFilename = `${baseName}_${size}${extension}`;
         
-        pathParts.push(encodeURIComponent(resizedFilename));
-        url.pathname = pathParts.join('/');
+        url.pathname = path.replace(filename, resizedFilename);
+        
         return url.toString();
     } catch (e) {
         console.error("Failed to parse or modify image URL:", e);
