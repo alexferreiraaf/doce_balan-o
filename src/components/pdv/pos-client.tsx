@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { Product, ProductCategory, Transaction, Customer } from '@/app/lib/types';
