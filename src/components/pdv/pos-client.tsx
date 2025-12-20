@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { Product, ProductCategory, Transaction, Customer } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff } from 'lucide-react';
+import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Input } from '../ui/input';
@@ -149,7 +149,7 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
     );
 }
 
-function CartView({ cart, onUpdateQuantity, onFinalize, total }: { cart: CartItem[], onUpdateQuantity: (id: string, qty: number) => void, onFinalize: () => void, total: number}) {
+function CartView({ cart, onUpdateQuantity, onFinalize, total, onAddMore }: { cart: CartItem[], onUpdateQuantity: (id: string, qty: number) => void, onFinalize: () => void, total: number, onAddMore: () => void}) {
      return (
         <Card className="flex flex-col max-h-full">
           <div className="p-4 border-b flex-shrink-0">
@@ -185,6 +185,12 @@ function CartView({ cart, onUpdateQuantity, onFinalize, total }: { cart: CartIte
             </div>
           </ScrollArea>
           <div className="p-4 mt-auto border-t space-y-3 flex-shrink-0">
+             {cart.length > 0 && (
+                <Button variant="outline" className="w-full" onClick={onAddMore}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar mais produtos
+                </Button>
+             )}
              <div className="flex justify-between items-center text-xl font-bold">
                 <span>Total:</span>
                 <span>{formatCurrency(total)}</span>
@@ -261,6 +267,12 @@ export function POSClient() {
     setCart([]); // Clear cart after sale is finalized
   }
 
+  const handleAddMore = () => {
+      if (isMobile) {
+          setMobileTab('products');
+      }
+  }
+
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const loading = productsLoading || categoriesLoading;
@@ -297,7 +309,7 @@ export function POSClient() {
                     </div>
                 </TabsContent>
                 <TabsContent value="cart" className="flex-grow p-4 overflow-hidden">
-                    <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
+                    <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} onAddMore={handleAddMore} />
                 </TabsContent>
             </Tabs>
             <AddTransactionSheet
@@ -337,7 +349,7 @@ export function POSClient() {
 
       {/* Sale Summary */}
       <div className="lg:col-span-1">
-        <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
+        <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} onAddMore={handleAddMore} />
       </div>
 
       <AddTransactionSheet
