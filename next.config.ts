@@ -64,6 +64,18 @@ const nextConfig: NextConfig = {
         hostname: 'www.receitasja.com.br',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.confeitariarosinha.com.br',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
