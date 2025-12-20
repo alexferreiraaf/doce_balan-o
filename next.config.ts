@@ -36,8 +36,14 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'https' ,
         hostname: 'photos.app.goo.gl',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'encrypted-tbn0.gstatic.com',
         port: '',
         pathname: '/**',
       },
