@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Share2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useProducts } from '@/app/lib/hooks/use-products';
+import { useTransactions } from '@/app/lib/hooks/use-transactions';
 
 
 interface SaleReceiptDialogProps {
@@ -34,7 +35,7 @@ const parseCartFromDescription = (description: string, allProducts: Product[]): 
         const match = part.match(/(\d+)x (.*)/);
         if (match) {
             const quantity = parseInt(match[1], 10);
-            const name = match[2];
+            const name = match[2].replace(/ \(.*/, ''); // Remove additional descriptions like '(Entrada...)'
             const product = allProducts.find(p => p.name === name);
             return { quantity, name, price: product?.price || 0 };
         }
@@ -51,16 +52,19 @@ export function SaleReceiptDialog({
 }: SaleReceiptDialogProps) {
   const { toast } = useToast();
   const { products } = useProducts();
+  const { transactions: allTransactions } = useTransactions();
 
   const receiptDetails = useMemo(() => {
     if (!transaction) return null;
 
     const saleDate = transaction.dateMs ? format(new Date(transaction.dateMs), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
-    const orderNumber = transaction.id.slice(-6).toUpperCase();
+    
+    // Use total transaction count as the order number
+    const orderNumber = (allTransactions.length + 1).toString().padStart(4, '0');
 
     // Reconstruct cart from description
     const parsedItems = parseCartFromDescription(transaction.description, products);
-    const subtotal = transaction.amount - (transaction.deliveryFee || 0) + (transaction.discount || 0);
+    const subtotal = parsedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     const receiptLines = [
       'receipt',
@@ -88,7 +92,7 @@ export function SaleReceiptDialog({
     ];
 
     return receiptLines.filter(line => line !== '').join('\n');
-  }, [transaction, customer, products]);
+  }, [transaction, customer, products, allTransactions]);
 
 
   if (!transaction) {
