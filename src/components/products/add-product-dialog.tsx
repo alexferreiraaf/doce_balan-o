@@ -108,7 +108,7 @@ export function AddProductDialog() {
       },
       () => {
         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          form.setValue('imageUrl', downloadURL);
+          form.setValue('imageUrl', downloadURL, { shouldValidate: true });
           setUploadProgress(100);
         });
       }
@@ -118,7 +118,11 @@ export function AddProductDialog() {
   const handleUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const url = event.target.value;
     form.setValue('imageUrl', url);
-    setImagePreview(url || null);
+    if(url){
+      setImagePreview(url);
+    } else {
+      setImagePreview(null);
+    }
   };
   
   const clearImage = () => {
@@ -219,18 +223,18 @@ export function AddProductDialog() {
                 <div className="flex items-center gap-2">
                     <FormControl>
                         <Input 
-                            placeholder="https://exemplo.com/imagem.jpg" 
+                            placeholder="Cole a URL ou faça upload" 
                             onChange={handleUrlChange}
                             value={form.watch('imageUrl')}
                             className="flex-grow"
-                            disabled={uploadProgress !== null}
+                            disabled={uploadProgress !== null && uploadProgress < 100}
                         />
                     </FormControl>
                     <Button type="button" variant="outline" asChild className="relative overflow-hidden cursor-pointer" disabled={!!form.watch('imageUrl')}>
                         <div>
                             <Upload className="mr-2 h-4 w-4" />
                             <span>Upload</span>
-                            <Input id="file-upload" type="file" className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" />
+                            <Input id="file-upload" type="file" className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileChange} accept="image/png, image/jpeg, image/webp" disabled={isAuthLoading} />
                         </div>
                     </Button>
                 </div>
@@ -248,7 +252,13 @@ export function AddProductDialog() {
                         </Button>
                     </div>
                  )}
-                <FormMessage />
+                <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                        <FormMessage />
+                    )}
+                />
             </FormItem>
             
             <FormField
