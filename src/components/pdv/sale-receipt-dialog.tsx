@@ -42,12 +42,14 @@ export function SaleReceiptDialog({
   }
 
   const saleDate = transaction.timestamp?.toDate ? format(transaction.timestamp.toDate(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
+  const orderNumber = transaction.id.slice(-6).toUpperCase();
 
   const receiptLines = [
     'receipt',
     '************************',
     '      COMPROVANTE       ',
     '************************',
+    `Pedido: #${orderNumber}`,
     `Data: ${saleDate}`,
     customer ? `Cliente: ${customer.name}` : '',
     '',
@@ -55,6 +57,7 @@ export function SaleReceiptDialog({
     ...(cart?.map(item => `${item.quantity}x ${item.name} - ${formatCurrency(item.price * item.quantity)}`) || [transaction.description]),
     '',
     '--- Totais ---',
+    `Subtotal: ${formatCurrency(transaction.amount - (transaction.deliveryFee || 0) + (transaction.discount || 0))}`,
     transaction.discount ? `Desconto: -${formatCurrency(transaction.discount)}` : '',
     transaction.deliveryFee ? `Taxa de Entrega: ${formatCurrency(transaction.deliveryFee)}` : '',
     `TOTAL: ${formatCurrency(transaction.amount)}`,
