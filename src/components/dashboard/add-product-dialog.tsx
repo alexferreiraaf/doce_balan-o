@@ -4,8 +4,9 @@ import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, PlusCircle, Tag } from 'lucide-react';
+import { Loader2, PlusCircle, Tag, Upload } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { Button } from '@/components/ui/button';
 import {
@@ -34,12 +35,13 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
+import { Progress } from '../ui/progress';
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
   categoryId: z.string().optional(),
-  imageUrl: z.string().url('Por favor, insira uma URL de imagem válida.').optional().or(z.literal('')),
+  imageUrl: z.string().optional(),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -51,6 +53,8 @@ export function AddProductDialog() {
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const { categories, loading: categoriesLoading } = useProductCategories();
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -62,19 +66,59 @@ export function AddProductDialog() {
     },
   });
 
-  const onSubmit = (data: ProductFormValues) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setFile(event.target.files[0]);
+    }
+  };
+
+  const onSubmit = async (data: ProductFormValues) => {
     if (!user || !firestore) {
       toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
       return;
     }
 
-    startTransition(() => {
+    startTransition(async () => {
+      let imageUrl = '';
+      const storage = getStorage();
+
+      if (file) {
+        setUploadProgress(0);
+        const storageRef = ref(storage, `product-images/${user.uid}/${Date.now()}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        try {
+          imageUrl = await new Promise((resolve, reject) => {
+            uploadTask.on('state_changed',
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(progress);
+              },
+              (error) => {
+                console.error("Upload failed:", error);
+                reject(error);
+              },
+              async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+              }
+            );
+          });
+        } catch (error) {
+          toast({ variant: 'destructive', title: 'Erro no Upload', description: 'Não foi possível enviar a imagem.' });
+          setUploadProgress(null);
+          return;
+        }
+      }
+
+      setUploadProgress(null);
+
       const collectionPath = `artifacts/${APP_ID}/products`;
       const productData = {
         name: data.name,
         price: data.price,
         categoryId: data.categoryId || '',
-        imageUrl: data.imageUrl || '',
+        imageUrl: imageUrl,
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -83,6 +127,7 @@ export function AddProductDialog() {
         .then(() => {
           toast({ title: 'Sucesso!', description: 'Produto adicionado.' });
           form.reset();
+          setFile(null);
           setOpen(false);
         })
         .catch((error) => {
@@ -142,19 +187,25 @@ export function AddProductDialog() {
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL da Imagem (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://exemplo.com/imagem.png" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <FormItem>
+                <FormLabel>Imagem do Produto</FormLabel>
+                <FormControl>
+                    <div className="flex items-center gap-4">
+                        <Input id="picture" type="file" onChange={handleFileChange} className="hidden"/>
+                        <label htmlFor="picture" className='flex-grow'>
+                            <Button type="button" asChild>
+                                <span className="w-full cursor-pointer">
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    {file ? 'Trocar arquivo' : 'Escolher arquivo'}
+                                </span>
+                            </Button>
+                        </label>
+                    </div>
+                </FormControl>
+                {file && <p className='text-sm text-muted-foreground mt-2'>Arquivo: {file.name}</p>}
+                {uploadProgress !== null && <Progress value={uploadProgress} className="w-full mt-2" />}
+                <FormMessage />
+            </FormItem>
             <FormField
               control={form.control}
               name="categoryId"
@@ -186,9 +237,9 @@ export function AddProductDialog() {
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
                 </Button>
-                <Button type="submit" disabled={isPending || isAuthLoading}>
-                {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Produto
+                <Button type="submit" disabled={isPending || isAuthLoading || uploadProgress !== null}>
+                {(isPending || isAuthLoading || uploadProgress !== null) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {uploadProgress !== null ? 'Enviando...' : 'Salvar Produto'}
                 </Button>
             </DialogFooter>
           </form>
