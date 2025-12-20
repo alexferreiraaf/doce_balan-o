@@ -139,7 +139,7 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                         <Package className="w-12 h-12 text-muted-foreground" />
                     )}
                 </div>
-                <div className="p-3 flex flex-col justify-between h-full flex-grow">
+                <div className="p-3 flex flex-col justify-between flex-grow">
                   <h3 className="font-semibold text-card-foreground leading-tight">{product.name}</h3>
                   <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
                 </div>
