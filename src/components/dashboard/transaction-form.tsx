@@ -138,17 +138,35 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
   // Effect to calculate total amount for income
   useEffect(() => {
-    if (typeValue === 'income' && !cart) {
-        const product = products.find((p) => p.id === productIdValue);
+    const subscription = form.watch((value, { name }) => {
+      if (
+        value.type === 'income' &&
+        !cart &&
+        ['productId', 'quantity', 'discount', 'deliveryFee', 'additionalValue'].includes(name as string)
+      ) {
+        const product = products.find((p) => p.id === value.productId);
         const productPrice = product ? product.price : 0;
-        const productTotal = productPrice * Number(quantityValue || 0);
-        const discount = Number(discountValue || 0);
-        const deliveryFee = Number(deliveryFeeValue || 0);
-        const additional = Number(additionalValue || 0);
+        const productTotal = productPrice * Number(value.quantity || 0);
+        const discount = Number(value.discount || 0);
+        const deliveryFee = Number(value.deliveryFee || 0);
+        const additional = Number(value.additionalValue || 0);
         const totalAmount = productTotal - discount + deliveryFee + additional;
-        form.setValue('amount', totalAmount);
-    }
-  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, additionalValue, typeValue, products, form, cart]);
+        form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
+      } else if (
+        value.type === 'income' &&
+        cart &&
+        ['discount', 'deliveryFee'].includes(name as string)
+      ) {
+        const cartTotalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const discount = Number(value.discount || 0);
+        const deliveryFee = Number(value.deliveryFee || 0);
+        const totalAmount = cartTotalAmount - discount + deliveryFee;
+        form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, products, cart]);
+
 
   const onSubmit = (data: TransactionFormValues) => {
     if (!user || !firestore) {
@@ -519,7 +537,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   <FormItem>
                     <FormLabel>Valor Total</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} readOnly={isPOSSale} className="bg-muted font-bold" />
+                      <Input type="number" {...field} readOnly className="bg-muted font-bold" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

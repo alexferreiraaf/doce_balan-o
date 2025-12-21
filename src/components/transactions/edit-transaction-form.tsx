@@ -115,26 +115,27 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
   });
 
   const type = form.watch('type');
-  const productIdValue = form.watch('productId');
-  const quantityValue = form.watch('quantity');
-  const discountValue = form.watch('discount');
-  const deliveryFeeValue = form.watch('deliveryFee');
-  const additionalValue = form.watch('additionalValue');
   const hasDownPaymentValue = form.watch('hasDownPayment');
   
   // Effect to calculate total amount for income
   useEffect(() => {
-    if (type === 'income') {
-        const product = products.find((p) => p.id === productIdValue);
+    const subscription = form.watch((value, { name }) => {
+      if (
+        value.type === 'income' &&
+        ['productId', 'quantity', 'discount', 'deliveryFee', 'additionalValue'].includes(name as string)
+      ) {
+        const product = products.find((p) => p.id === value.productId);
         const productPrice = product ? product.price : 0;
-        const productTotal = productPrice * Number(quantityValue || 0);
-        const discount = Number(discountValue || 0);
-        const deliveryFee = Number(deliveryFeeValue || 0);
-        const additional = Number(additionalValue || 0);
+        const productTotal = productPrice * Number(value.quantity || 0);
+        const discount = Number(value.discount || 0);
+        const deliveryFee = Number(value.deliveryFee || 0);
+        const additional = Number(value.additionalValue || 0);
         const totalAmount = productTotal - discount + deliveryFee + additional;
-        form.setValue('amount', totalAmount);
-    }
-  }, [productIdValue, quantityValue, discountValue, deliveryFeeValue, additionalValue, type, products, form]);
+        form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, products]);
 
   // Effect to reset fields when product changes
   useEffect(() => {
