@@ -38,7 +38,7 @@ function ProductFilters({
   onSearchTermChange,
 }: ProductFiltersProps) {
   return (
-    <Card className="p-3 sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+    <Card className="p-3 sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex-shrink-0">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -337,7 +337,7 @@ export function POSClient() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-full">
       {/* Product Selection */}
-      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col">
+      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col gap-4">
         <ProductFilters
             categories={categories}
             selectedCategory={selectedCategory}
@@ -345,7 +345,7 @@ export function POSClient() {
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
         />
-        <ScrollArea className="flex-grow p-4">
+        <ScrollArea className="flex-grow px-4 pb-4">
           <ProductGrid products={filteredProducts} onProductClick={addToCart} />
         </ScrollArea>
       </div>
