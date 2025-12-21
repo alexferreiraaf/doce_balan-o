@@ -57,7 +57,7 @@ const formSchema = z.object({
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
 }).refine(data => {
-    if (data.type === 'income' && !data.downPayment) {
+    if (data.type === 'income' && data.hasDownPayment !== 'yes') {
         return !!data.paymentMethod;
     }
     return true;
@@ -112,11 +112,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
   const descriptionValue = form.watch('description');
   const typeValue = form.watch('type');
-  const productIdValue = form.watch('productId');
-  const quantityValue = form.watch('quantity');
-  const discountValue = form.watch('discount');
-  const deliveryFeeValue = form.watch('deliveryFee');
-  const additionalValue = form.watch('additionalValue');
   const hasDownPaymentValue = form.watch('hasDownPayment');
 
   // Effect for category suggestion (for expenses)
@@ -155,12 +150,13 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       } else if (
         value.type === 'income' &&
         cart &&
-        ['discount', 'deliveryFee'].includes(name as string)
+        ['discount', 'deliveryFee', 'additionalValue'].includes(name as string)
       ) {
         const cartTotalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const discount = Number(value.discount || 0);
         const deliveryFee = Number(value.deliveryFee || 0);
-        const totalAmount = cartTotalAmount - discount + deliveryFee;
+        const additional = Number(value.additionalValue || 0);
+        const totalAmount = cartTotalAmount - discount + deliveryFee + additional;
         form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
       }
     });
@@ -187,14 +183,15 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
              return;
         }
         transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
-        if(data.additionalDescription) {
-            transactionDescription += ` (+ ${data.additionalDescription})`
-        }
       } else if (data.type === 'income' && cart) {
         transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
       } else {
         // For expenses, use the description from the form directly.
         transactionDescription = data.description || 'Despesa sem descrição';
+      }
+
+      if(data.type === 'income' && data.additionalDescription) {
+        transactionDescription += ` (+ ${data.additionalDescription})`
       }
 
       if (downPaymentValue > 0) {
@@ -219,7 +216,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
-        additionalDescription: data.additionalDescription || '',
+        additionalDescription: data.type === 'expense' ? data.additionalDescription || '' : data.additionalDescription || '',
         additionalValue: data.additionalValue || 0,
         downPayment: downPaymentValue,
         paymentMethod: paymentMethod,
@@ -335,6 +332,19 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="additionalDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações (Opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Ex: Gasto referente a compra de..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </>
           ) : (
             <div className="space-y-4">
@@ -423,36 +433,36 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                       </FormItem>
                   )}
               />
-              {!isPOSSale && (
-                  <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                          control={form.control}
-                          name="additionalDescription"
-                          render={({ field }) => (
-                              <FormItem>
-                              <FormLabel>Adicional (Desc.)</FormLabel>
-                              <FormControl>
-                                  <Input placeholder="Ex: Mais Nutella" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                              </FormItem>
-                          )}
-                          />
-                      <FormField
-                          control={form.control}
-                          name="additionalValue"
-                          render={({ field }) => (
-                              <FormItem>
-                              <FormLabel>Valor Adicional (R$)</FormLabel>
-                              <FormControl>
-                                  <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                              </FormItem>
-                          )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                      control={form.control}
+                      name="additionalDescription"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Adicional (Desc.)</FormLabel>
+                          <FormControl>
+                              <Input placeholder="Ex: Mais Nutella" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
                       />
-                  </div>
-              )}
+                  <FormField
+                      control={form.control}
+                      name="additionalValue"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Valor Adicional (R$)</FormLabel>
+                          <FormControl>
+                              <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+              </div>
+              
               
               <div className="grid grid-cols-2 gap-4">
                   <FormField

@@ -35,6 +35,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { AddProductDialog } from '../dashboard/add-product-dialog';
 import { AddCustomerDialog } from '../dashboard/add-customer-dialog';
+import { Textarea } from '../ui/textarea';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -53,7 +54,7 @@ const formSchema = z.object({
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
 }).refine(data => {
-    if (data.type === 'income' && !data.downPayment) {
+    if (data.type === 'income' && data.hasDownPayment !== 'yes') {
         return !!data.paymentMethod;
     }
     return true;
@@ -166,12 +167,14 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
         if(data.additionalDescription) {
             transactionDescription += ` (+ ${data.additionalDescription})`
         }
-        if (downPaymentValue > 0) {
-            transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
-        }
       } else {
         transactionDescription = data.description || 'Despesa sem descrição';
       }
+        
+      if (downPaymentValue > 0) {
+        transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
+      }
+
 
       let paymentMethod = data.paymentMethod || null;
       let status: 'paid' | 'pending' = 'paid';
@@ -190,7 +193,7 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
-        additionalDescription: data.additionalDescription || '',
+        additionalDescription: data.type === 'expense' ? data.additionalDescription || '' : data.additionalDescription || '',
         additionalValue: data.additionalValue || 0,
         downPayment: downPaymentValue,
         paymentMethod: paymentMethod,
@@ -253,6 +256,19 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
                   <FormLabel>Valor (R$)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="additionalDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Ex: Gasto referente a compra de..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
