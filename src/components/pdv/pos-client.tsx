@@ -337,7 +337,7 @@ export function POSClient() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-full">
       {/* Product Selection */}
-      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col gap-4">
+      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col gap-4 h-full">
         <ProductFilters
             categories={categories}
             selectedCategory={selectedCategory}
