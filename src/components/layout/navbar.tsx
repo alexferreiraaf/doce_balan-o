@@ -157,7 +157,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
             {!isUserLoading && !isPOSPage && (
                 <div className="hidden sm:block">
-                    <AddTransactionSheet />
+                    {/* O botão para desktop está agora dentro do TransactionsClient */}
                 </div>
             )}
             <ThemeToggle />
