@@ -116,7 +116,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
       </div>
       
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="details">
             <User className="w-4 h-4 mr-2" />
             Detalhes
@@ -124,10 +124,6 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
           <TabsTrigger value="history">
             <ShoppingCart className="w-4 h-4 mr-2" />
             Histórico
-          </TabsTrigger>
-           <TabsTrigger value="receipts">
-            <FileText className="w-4 h-4 mr-2" />
-            Comprovantes
           </TabsTrigger>
         </TabsList>
 
@@ -162,19 +158,6 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
             <div className="mt-4">
                 <TransactionList transactions={customerTransactions} title="Histórico de Compras" />
             </div>
-        </TabsContent>
-        
-        <TabsContent value="receipts">
-            <Card className="mt-4">
-                <CardHeader>
-                    <CardTitle>Comprovantes Salvos</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center py-12 text-muted-foreground">
-                    <WhiskIcon className="w-16 h-16 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold">Em breve!</h3>
-                    <p className="text-sm">A funcionalidade para armazenar e visualizar os PDFs dos comprovantes estará disponível aqui.</p>
-                </CardContent>
-            </Card>
         </TabsContent>
       </Tabs>
     </div>
