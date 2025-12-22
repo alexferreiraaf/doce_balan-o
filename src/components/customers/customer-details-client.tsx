@@ -13,7 +13,7 @@ import { TransactionList } from '../transactions/transaction-list';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
-import { WhiskIcon } from '../icons/whisk-icon';
+import type { Transaction } from '@/app/lib/types';
 
 interface CustomerDetailsClientProps {
   customerId: string;
@@ -29,7 +29,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
   }, [transactions, customerId]);
 
   const receipts = useMemo(() => {
-    return customerTransactions.filter(t => t.receiptUrl);
+    return customerTransactions.filter((t): t is Transaction & { receiptUrl: string } => !!t.receiptUrl);
   }, [customerTransactions]);
 
   const loading = customerLoading || transactionsLoading;
