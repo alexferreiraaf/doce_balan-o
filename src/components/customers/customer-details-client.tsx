@@ -2,7 +2,7 @@
 import { useCustomer } from '@/app/lib/hooks/use-customer';
 import Loading from '@/app/(main)/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { User, Home, Phone, ShoppingCart, ClipboardCopy, FileText } from 'lucide-react';
+import { User, Home, Phone, ShoppingCart, ClipboardCopy, FileText, Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { EditCustomerDialog } from './edit-customer-dialog';
@@ -27,6 +27,10 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
   const customerTransactions = useMemo(() => {
     return transactions.filter(t => t.customerId === customerId);
   }, [transactions, customerId]);
+
+  const receipts = useMemo(() => {
+    return customerTransactions.filter(t => t.receiptUrl);
+  }, [customerTransactions]);
 
   const loading = customerLoading || transactionsLoading;
 
@@ -116,7 +120,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
       </div>
       
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="details">
             <User className="w-4 h-4 mr-2" />
             Detalhes
@@ -124,6 +128,10 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
           <TabsTrigger value="history">
             <ShoppingCart className="w-4 h-4 mr-2" />
             Histórico
+          </TabsTrigger>
+          <TabsTrigger value="receipts">
+            <FileText className="w-4 h-4 mr-2" />
+            Comprovantes
           </TabsTrigger>
         </TabsList>
 
@@ -158,6 +166,38 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
             <div className="mt-4">
                 <TransactionList transactions={customerTransactions} title="Histórico de Compras" />
             </div>
+        </TabsContent>
+
+        <TabsContent value="receipts">
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle>Comprovantes Salvos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {receipts.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">Nenhum comprovante salvo para este cliente.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {receipts.map((receipt) => (
+                      <li key={receipt.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{receipt.description}</span>
+                           <span className="text-xs text-muted-foreground">
+                            {format(new Date(receipt.dateMs), 'dd/MM/yyyy')}
+                           </span>
+                        </div>
+                        <Button asChild variant="outline" size="sm">
+                          <a href={receipt.receiptUrl} target="_blank" rel="noopener noreferrer">
+                            <Download className="mr-2 h-4 w-4" />
+                            Ver Comprovante
+                          </a>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
         </TabsContent>
       </Tabs>
     </div>

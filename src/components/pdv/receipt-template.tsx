@@ -22,7 +22,7 @@ const parseCartFromDescription = (description: string, allProducts: Product[]): 
         const match = part.match(/(\d+)x (.*)/);
         if (match) {
             const quantity = parseInt(match[1], 10);
-            const name = match[2].replace(/ \(.*/, ''); 
+            const name = match[2].replace(/ \(.*/, '').replace(/\(\+.*/, '').trim();
             const product = allProducts.find(p => p.name === name);
             return { quantity, name, price: product?.price || 0 };
         }
@@ -58,10 +58,10 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
 
     return (
       <div ref={ref} className="bg-white text-black p-6 font-mono text-xs w-[302px] mx-auto">
-        <div className="text-center mb-4 text-[#D94686]">
-            <WhiskIcon className="w-12 h-12 mx-auto" />
-            <h1 className="text-lg font-bold">Doçuras da Fran</h1>
-            <p>Comprovante de Venda</p>
+        <div className="text-center mb-4">
+            <WhiskIcon className="w-12 h-12 mx-auto" fill="#D94686" />
+            <h1 className="text-lg font-bold" style={{color: "#D94686"}}>Doçuras da Fran</h1>
+            <p style={{color: "#000"}}>Comprovante de Venda</p>
         </div>
         <hr className="border-dashed border-black my-2" />
         <div className="flex justify-between">
@@ -95,28 +95,41 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
                 </div>
             ))}
         </div>
+        
+        {((transaction.additionalDescription && transaction.additionalValue) || (transaction.deliveryFee && transaction.deliveryFee > 0) || (transaction.discount && transaction.discount > 0)) && (
+            <>
+                <hr className="border-dashed border-black my-2" />
+                <div className="space-y-1">
+                    <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(subtotal)}</span>
+                    </div>
+                     {transaction.additionalDescription && transaction.additionalValue && (
+                        <div className="flex justify-between">
+                            <span>{transaction.additionalDescription}:</span>
+                            <span>{formatCurrency(transaction.additionalValue)}</span>
+                        </div>
+                    )}
+                    {transaction.deliveryFee && transaction.deliveryFee > 0 && (
+                        <div className="flex justify-between">
+                            <span>Taxa de Entrega:</span>
+                            <span>{formatCurrency(transaction.deliveryFee)}</span>
+                        </div>
+                    )}
+                    {transaction.discount && transaction.discount > 0 && (
+                        <div className="flex justify-between">
+                            <span>Desconto:</span>
+                            <span>-{formatCurrency(transaction.discount)}</span>
+                        </div>
+                    )}
+                </div>
+            </>
+        )}
+       
         <hr className="border-dashed border-black my-2" />
-        <div className="space-y-1">
-            <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{formatCurrency(subtotal)}</span>
-            </div>
-            {transaction.discount && transaction.discount > 0 && (
-                <div className="flex justify-between">
-                    <span>Desconto:</span>
-                    <span>-{formatCurrency(transaction.discount)}</span>
-                </div>
-            )}
-            {transaction.deliveryFee && transaction.deliveryFee > 0 && (
-                <div className="flex justify-between">
-                    <span>Taxa de Entrega:</span>
-                    <span>{formatCurrency(transaction.deliveryFee)}</span>
-                </div>
-            )}
-            <div className="flex justify-between font-bold text-sm pt-1">
-                <span>TOTAL:</span>
-                <span>{formatCurrency(transaction.amount)}</span>
-            </div>
+        <div className="flex justify-between font-bold text-sm pt-1">
+            <span>TOTAL:</span>
+            <span>{formatCurrency(transaction.amount)}</span>
         </div>
 
         {(transaction.downPayment && transaction.downPayment > 0) || transaction.status === 'pending' ? (

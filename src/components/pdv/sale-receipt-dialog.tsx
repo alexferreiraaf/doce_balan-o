@@ -1,5 +1,5 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import {
@@ -15,6 +15,10 @@ import type { Transaction, Customer } from '@/app/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Share2, FileDown } from 'lucide-react';
 import { ReceiptTemplate } from './receipt-template';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { APP_ID } from '@/app/lib/constants';
 
 
 interface SaleReceiptDialogProps {
@@ -33,23 +37,18 @@ export function SaleReceiptDialog({
 }: SaleReceiptDialogProps) {
   const { toast } = useToast();
   const receiptRef = useRef<HTMLDivElement>(null);
-
-
-  if (!transaction) {
-    return null;
-  }
+  const storage = getStorage();
+  const firestore = useFirestore();
+  const { user } = useUser();
 
   const generatePdf = async (): Promise<Blob> => {
     const input = receiptRef.current;
     if (!input) {
         throw new Error("Receipt element not found");
     }
-    const canvas = await html2canvas(input, { scale: 2 });
+    const canvas = await html2canvas(input, { scale: 2, backgroundColor: '#ffffff' });
     const imgData = canvas.toDataURL('image/png');
     
-    // A4 size: 210mm x 297mm. A receipt is much smaller.
-    // Typical receipt width is 80mm. Let's use that.
-    // The height will be proportional.
     const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'px',
@@ -59,6 +58,54 @@ export function SaleReceiptDialog({
     pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
     return pdf.output('blob');
   };
+
+  const uploadReceipt = async (pdfBlob: Blob, transactionId: string) => {
+    if (!user) return;
+    const receiptStorageRef = storageRef(storage, `receipts/${user.uid}/${transactionId}.pdf`);
+    await uploadBytes(receiptStorageRef, pdfBlob);
+    const downloadUrl = await getDownloadURL(receiptStorageRef);
+    return downloadUrl;
+  }
+
+  const updateTransactionWithReceipt = async (transactionId: string, receiptUrl: string) => {
+      if (!user || !firestore) return;
+      const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
+      await updateDoc(transactionRef, { receiptUrl });
+  }
+
+  useEffect(() => {
+    if (isOpen && transaction && transaction.customerId && !transaction.receiptUrl) {
+      const saveReceipt = async () => {
+        try {
+          // A small delay to ensure the component is fully rendered
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const pdfBlob = await generatePdf();
+          const url = await uploadReceipt(pdfBlob, transaction.id);
+          if (url) {
+            await updateTransactionWithReceipt(transaction.id, url);
+             toast({
+                title: 'Comprovante Salvo',
+                description: 'O comprovante foi salvo no histórico do cliente.',
+            });
+          }
+        } catch (error) {
+          console.error("Failed to save receipt:", error);
+           toast({
+            variant: 'destructive',
+            title: 'Erro ao Salvar Comprovante',
+            description: 'Não foi possível salvar o comprovante automaticamente.',
+          });
+        }
+      };
+      saveReceipt();
+    }
+  }, [isOpen, transaction]);
+
+
+  if (!transaction) {
+    return null;
+  }
+
 
   const handleShare = async () => {
     try {
@@ -80,7 +127,6 @@ export function SaleReceiptDialog({
       }
     } catch (err) {
        console.error("Share failed", err);
-       // As a fallback, download the file
        handleDownload();
     }
   };
@@ -121,7 +167,9 @@ export function SaleReceiptDialog({
         </DialogHeader>
         <div className="py-4">
           <div className="bg-muted p-4 rounded-lg max-h-80 overflow-y-auto">
-             <ReceiptTemplate ref={receiptRef} transaction={transaction} customer={customer} />
+             <div className="bg-white">
+                <ReceiptTemplate ref={receiptRef} transaction={transaction} customer={customer} />
+             </div>
           </div>
         </div>
         <DialogFooter className='gap-2 sm:gap-0'>
