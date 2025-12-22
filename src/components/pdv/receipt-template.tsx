@@ -58,8 +58,8 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
 
     return (
       <div ref={ref} className="bg-white text-black p-6 font-mono text-xs w-[302px] mx-auto">
-        <div className="text-center mb-4" style={{ color: '#D94686' }}>
-            <WhiskIcon className="w-12 h-12 mx-auto" fill="#D94686" />
+        <div className="text-center mb-4 text-[#D94686]">
+            <WhiskIcon className="w-12 h-12 mx-auto" />
             <h1 className="text-lg font-bold">Doçuras da Fran</h1>
             <p>Comprovante de Venda</p>
         </div>
