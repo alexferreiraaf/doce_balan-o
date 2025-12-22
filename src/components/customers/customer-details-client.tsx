@@ -29,6 +29,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
   }, [transactions, customerId]);
 
   const receipts = useMemo(() => {
+    // Correctly type assertion for transactions with receiptUrl
     return customerTransactions.filter((t): t is Transaction & { receiptUrl: string } => !!t.receiptUrl);
   }, [customerTransactions]);
 

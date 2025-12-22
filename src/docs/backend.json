@@ -88,6 +88,10 @@
         "dateMs": {
           "type": "number",
           "description": "Timestamp in milliseconds for easier filtering and sorting."
+        },
+        "receiptUrl": {
+            "type": "string",
+            "description": "URL of the saved receipt in Firebase Storage."
         }
       },
       "required": [
