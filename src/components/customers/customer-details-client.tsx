@@ -49,7 +49,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
     let total = 0;
     const transactionLines = customerTransactions.map(t => {
       total += t.amount;
-      const transactionDate = t.timestamp?.toDate ? format(t.timestamp.toDate(), 'dd/MM/yyyy') : 'Data inválida';
+      const transactionDate = t.dateMs ? format(new Date(t.dateMs), 'dd/MM/yyyy') : 'Data inválida';
       return `${transactionDate} - ${t.description}: ${formatCurrency(t.amount)}`;
     }).join('\n');
     

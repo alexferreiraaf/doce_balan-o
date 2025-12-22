@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useEffect } from 'react';
+import { useRef, forwardRef, useImperativeHandle } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import {
@@ -15,10 +15,6 @@ import type { Transaction, Customer } from '@/app/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Share2, FileDown } from 'lucide-react';
 import { ReceiptTemplate } from './receipt-template';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
-import { APP_ID } from '@/app/lib/constants';
 
 
 interface SaleReceiptDialogProps {
@@ -28,18 +24,19 @@ interface SaleReceiptDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+export interface SaleReceiptDialogRef {
+  generatePdf: () => Promise<Blob>;
+}
 
-export function SaleReceiptDialog({
+
+export const SaleReceiptDialog = forwardRef<SaleReceiptDialogRef, SaleReceiptDialogProps>(({
   transaction,
   customer,
   isOpen,
   onOpenChange,
-}: SaleReceiptDialogProps) {
+}, ref) => {
   const { toast } = useToast();
   const receiptRef = useRef<HTMLDivElement>(null);
-  const storage = getStorage();
-  const firestore = useFirestore();
-  const { user } = useUser();
 
   const generatePdf = async (): Promise<Blob> => {
     const input = receiptRef.current;
@@ -59,53 +56,14 @@ export function SaleReceiptDialog({
     return pdf.output('blob');
   };
 
-  const uploadReceipt = async (pdfBlob: Blob, transactionId: string) => {
-    if (!user) return;
-    const receiptStorageRef = storageRef(storage, `receipts/${user.uid}/${transactionId}.pdf`);
-    await uploadBytes(receiptStorageRef, pdfBlob);
-    const downloadUrl = await getDownloadURL(receiptStorageRef);
-    return downloadUrl;
-  }
-
-  const updateTransactionWithReceipt = async (transactionId: string, receiptUrl: string) => {
-      if (!user || !firestore) return;
-      const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
-      await updateDoc(transactionRef, { receiptUrl });
-  }
-
-  useEffect(() => {
-    if (isOpen && transaction && transaction.customerId && !transaction.receiptUrl) {
-      const saveReceipt = async () => {
-        try {
-          // A small delay to ensure the component is fully rendered
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const pdfBlob = await generatePdf();
-          const url = await uploadReceipt(pdfBlob, transaction.id);
-          if (url) {
-            await updateTransactionWithReceipt(transaction.id, url);
-             toast({
-                title: 'Comprovante Salvo',
-                description: 'O comprovante foi salvo no histórico do cliente.',
-            });
-          }
-        } catch (error) {
-          console.error("Failed to save receipt:", error);
-           toast({
-            variant: 'destructive',
-            title: 'Erro ao Salvar Comprovante',
-            description: 'Não foi possível salvar o comprovante automaticamente.',
-          });
-        }
-      };
-      saveReceipt();
-    }
-  }, [isOpen, transaction]);
+  useImperativeHandle(ref, () => ({
+    generatePdf,
+  }));
 
 
   if (!transaction) {
     return null;
   }
-
 
   const handleShare = async () => {
     try {
@@ -191,4 +149,6 @@ export function SaleReceiptDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+SaleReceiptDialog.displayName = "SaleReceiptDialog";

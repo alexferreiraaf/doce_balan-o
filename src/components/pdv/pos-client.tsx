@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { Card } from '@/components/ui/card';
@@ -16,7 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '../ui/badge';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
-import { SaleReceiptDialog } from './sale-receipt-dialog';
+import { SaleReceiptDialog, type SaleReceiptDialogRef } from './sale-receipt-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser } from '@/firebase';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
+import { APP_ID } from '@/app/lib/constants';
 
 interface CartItem extends Product {
   quantity: number;
@@ -214,8 +219,13 @@ export function POSClient() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showFinalizeSheet, setShowFinalizeSheet] = useState(false);
   const [lastSale, setLastSale] = useState<{transaction: Transaction, customer?: Customer} | null>(null);
+  const receiptDialogRef = useRef<SaleReceiptDialogRef>(null);
   const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState('products');
+  const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const storage = getStorage();
 
   const filteredProducts = useMemo(() => {
     return products
@@ -264,9 +274,37 @@ export function POSClient() {
     setShowFinalizeSheet(open);
   }
 
-  const handleSaleFinalized = (transaction: Transaction, customer?: Customer) => {
+  const handleSaleFinalized = async (transaction: Transaction, customer?: Customer) => {
     setShowFinalizeSheet(false);
     setLastSale({transaction, customer});
+    
+    // Save receipt if there's a customer
+    if (customer && user) {
+        try {
+            const pdfBlob = await receiptDialogRef.current?.generatePdf();
+            if (pdfBlob) {
+                const receiptStorageRef = storageRef(storage, `receipts/${user.uid}/${transaction.id}.pdf`);
+                await uploadBytes(receiptStorageRef, pdfBlob);
+                const downloadUrl = await getDownloadURL(receiptStorageRef);
+                
+                const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transaction.id}`);
+                await updateDoc(transactionRef, { receiptUrl: downloadUrl });
+
+                toast({
+                    title: 'Comprovante Salvo',
+                    description: 'O comprovante foi salvo no histórico do cliente.',
+                });
+            }
+        } catch (error) {
+            console.error("Failed to save receipt:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao Salvar Comprovante',
+                description: 'Não foi possível salvar o comprovante automaticamente.',
+            });
+        }
+    }
+    
     setCart([]); // Clear cart after sale is finalized
   }
 
@@ -324,6 +362,7 @@ export function POSClient() {
             />
             {lastSale && (
                 <SaleReceiptDialog
+                    ref={receiptDialogRef}
                     transaction={lastSale.transaction}
                     customer={lastSale.customer}
                     isOpen={!!lastSale}
@@ -367,6 +406,7 @@ export function POSClient() {
 
        {lastSale && (
           <SaleReceiptDialog
+              ref={receiptDialogRef}
               transaction={lastSale.transaction}
               customer={lastSale.customer}
               isOpen={!!lastSale}
