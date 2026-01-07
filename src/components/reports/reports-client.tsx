@@ -1,6 +1,6 @@
 'use client';
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
-import Loading from '@/app/(main)/loading';
+import Loading from '@/app/(admin)/loading-component';
 import { SummaryReport } from './summary-report';
 import { useMemo, useState } from 'react';
 import { addDays, format, addMonths, subMonths } from 'date-fns';

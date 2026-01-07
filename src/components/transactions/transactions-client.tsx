@@ -4,7 +4,7 @@ import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown } f
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
-import Loading from '@/app/(main)/loading';
+import Loading from '@/app/(admin)/loading-component';
 import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';

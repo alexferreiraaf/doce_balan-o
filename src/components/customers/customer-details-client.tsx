@@ -1,6 +1,6 @@
 'use client';
 import { useCustomer } from '@/app/lib/hooks/use-customer';
-import Loading from '@/app/(main)/loading';
+import Loading from '@/app/(admin)/loading-component';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { User, Home, Phone, ShoppingCart, ClipboardCopy, FileText, Download } from 'lucide-react';
 import { Button } from '../ui/button';

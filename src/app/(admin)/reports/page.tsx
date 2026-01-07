@@ -1,6 +1,6 @@
 import { ReportsClient } from "@/components/reports/reports-client";
 import { Suspense } from "react";
-import Loading from "../loading";
+import Loading from "@/app/(admin)/loading-component";
 
 export default function ReportsPage() {
   return (

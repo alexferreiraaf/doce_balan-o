@@ -1,6 +1,6 @@
 import { POSClient } from "@/components/pdv/pos-client";
 import { Suspense } from "react";
-import Loading from "@/app/(admin)/loading";
+import Loading from "@/app/(admin)/loading-component";
 
 export default function POSPage() {
   return (

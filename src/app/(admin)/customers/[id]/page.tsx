@@ -1,6 +1,6 @@
 import { CustomerDetailsClient } from "@/components/customers/customer-details-client";
 import { Suspense } from "react";
-import Loading from "../../loading";
+import Loading from "@/app/(admin)/loading-component";
 
 export default function CustomerDetailsPage({ params }: { params: { id: string } }) {
   return (

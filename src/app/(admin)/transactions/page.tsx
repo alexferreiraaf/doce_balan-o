@@ -1,6 +1,6 @@
 import { TransactionsClient } from "@/components/transactions/transactions-client";
 import { Suspense } from "react";
-import Loading from "../loading";
+import Loading from "@/app/(admin)/loading-component";
 
 export default function TransactionsPage() {
   return (

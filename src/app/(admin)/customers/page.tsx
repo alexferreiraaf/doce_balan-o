@@ -1,6 +1,6 @@
 import { CustomersClient } from "@/components/customers/customers-client";
 import { Suspense } from "react";
-import Loading from "../loading";
+import Loading from "@/app/(admin)/loading-component";
 
 export default function CustomersPage() {
   return (

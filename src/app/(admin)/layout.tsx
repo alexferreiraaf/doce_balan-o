@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
-import Loading from '@/app/(admin)/loading';
+import Loading from './loading-component';
 import { Navbar } from '@/components/layout/navbar';
 import { cn } from '@/lib/utils';
 
