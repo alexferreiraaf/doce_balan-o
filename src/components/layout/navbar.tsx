@@ -24,7 +24,7 @@ import { ThemeToggle } from './theme-toggle';
 
 
 const navLinks = [
-  { href: '/', label: 'PDV', icon: Home },
+  { href: '/pdv', label: 'PDV', icon: ShoppingCart },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Lançamentos', icon: List },
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
@@ -33,7 +33,7 @@ const navLinks = [
 ];
 
 const mobileNavLinks = [
-  { href: '/', label: 'PDV', icon: Home },
+  { href: '/pdv', label: 'PDV', icon: ShoppingCart },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
@@ -123,13 +123,13 @@ export function Navbar() {
     );
   }
 
-  const isPOSPage = pathname === '/';
+  const isPOSPage = pathname === '/pdv';
 
   return (
     <header className="bg-primary shadow-lg sticky top-0 z-40">
       <nav className="max-w-7xl mx-auto flex justify-between items-center p-4">
         <Link href="/" className="flex items-center space-x-2 text-primary-foreground">
-          <WhiskIcon className="transform -rotate-12" width={40} height={40} />
+          <WhiskIcon className="transform -rotate-12" width={40} height={40} fill="#FFFFFF" />
           <span className="text-xl sm:text-2xl font-extrabold tracking-tight">Doçuras da Fran</span>
         </Link>
         
