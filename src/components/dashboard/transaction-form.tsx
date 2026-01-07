@@ -68,8 +68,9 @@ const formSchema = z.object({
   
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
+  fromStorefront: z.boolean().optional(),
 }).refine(data => {
-    if (data.type === 'income' && data.hasDownPayment !== 'yes') {
+    if (data.type === 'income' && data.hasDownPayment !== 'yes' && !data.fromStorefront) {
         return !!data.paymentMethod;
     }
     return true;
@@ -815,7 +816,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 )}
               />
               
-              {hasDownPaymentValue !== 'yes' && (
+              {hasDownPaymentValue !== 'yes' && !fromStorefront && (
                 <FormField
                   control={form.control}
                   name="paymentMethod"
