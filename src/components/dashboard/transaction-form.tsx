@@ -236,7 +236,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         }
     } catch (error) {
         toast({ variant: 'destructive', title: 'Erro ao buscar CEP', description: 'Não foi possível buscar o endereço. Tente novamente.' });
-        console.error("CEP search error:", error);
     } finally {
         setIsFetchingCep(false);
     }
@@ -244,8 +243,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
 
   const onSubmit = async (data: TransactionFormValues) => {
-    // For storefront, user will be anonymous, so we need a target user to save the transaction to.
-    const targetUserId = fromStorefront ? process.env.NEXT_PUBLIC_STOREFRONT_USER_ID : user?.uid;
+    const targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID || user?.uid;
 
     if (!targetUserId || !firestore) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Tente novamente mais tarde.' });
@@ -253,7 +251,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     }
 
     startTransition(async () => {
-      const collectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
+      const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
       
       let transactionDescription = data.description || '';
       const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
@@ -268,7 +266,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       } else if (data.type === 'income' && cart) {
         transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
       } else {
-        // For expenses, use the description from the form directly.
         transactionDescription = data.description || 'Despesa sem descrição';
       }
 
@@ -283,7 +280,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       if (fromStorefront && data.deliveryType) {
         transactionDescription += ` - ${data.deliveryType === 'delivery' ? 'Entrega' : 'Retirada'}`;
       }
-
 
       let paymentMethod = data.paymentMethod || null;
       let status: 'paid' | 'pending' = 'paid';
@@ -303,34 +299,33 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       let newCustomer: Customer | undefined;
       
       if (fromStorefront && data.customerName) {
-         const customerData: Omit<Customer, 'id'> = {
-            name: data.customerName,
-            whatsapp: data.customerWhatsapp || '',
-            cep: data.customerCep || '',
-            street: data.customerStreet || '',
-            number: data.customerNumber || '',
-            complement: data.customerComplement || '',
-            neighborhood: data.customerNeighborhood || '',
-            city: data.customerCity || '',
-            state: data.customerState || '',
+        const customerCollectionPath = `artifacts/${APP_ID}/customers`;
+        const customerData: Omit<Customer, 'id'> = {
+          name: data.customerName,
+          whatsapp: data.customerWhatsapp || '',
+          cep: data.customerCep || '',
+          street: data.customerStreet || '',
+          number: data.customerNumber || '',
+          complement: data.customerComplement || '',
+          neighborhood: data.customerNeighborhood || '',
+          city: data.customerCity || '',
+          state: data.customerState || '',
         };
+        const customerCollection = collection(firestore, customerCollectionPath);
 
         try {
-            const customerCollection = collection(firestore, `artifacts/${APP_ID}/customers`);
-            const docRef = await addDoc(customerCollection, customerData);
-            customerId = docRef.id;
-            newCustomer = { id: docRef.id, ...customerData };
+          const docRef = await addDoc(customerCollection, customerData);
+          customerId = docRef.id;
+          newCustomer = { id: docRef.id, ...customerData };
         } catch (error) {
-             console.error('Error adding new customer from storefront: ', error);
-             toast({
-                variant: 'destructive',
-                title: 'Erro ao Salvar Cliente',
-                description: 'Não foi possível salvar os seus dados. Tente novamente.',
-            });
-            return; // Stop transaction submission
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: customerCollectionPath,
+              operation: 'create',
+              requestResourceData: customerData,
+          }));
+          return;
         }
       }
-
 
       const transactionData = {
         userId: targetUserId,
@@ -349,8 +344,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         timestamp: serverTimestamp(),
         dateMs: Date.now(),
       };
+      const transactionCollection = collection(firestore, transactionCollectionPath);
 
-      addDoc(collection(firestore, collectionPath), transactionData)
+      addDoc(transactionCollection, transactionData)
         .then((docRef) => {
             toast({ title: 'Sucesso!', description: fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
             
@@ -361,21 +357,15 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: fromStorefront ? 'pickup' : undefined});
             setSheetOpen(false);
         })
-        .catch((error) => {
-            console.error('Error adding transaction: ', error);
+        .catch(() => {
             errorEmitter.emit(
                 'permission-error',
                 new FirestorePermissionError({
-                path: collectionPath,
+                path: transactionCollectionPath,
                 operation: 'create',
                 requestResourceData: transactionData,
                 })
             );
-            toast({
-                variant: 'destructive',
-                title: 'Erro ao Adicionar Lançamento',
-                description: 'Verifique suas permissões ou tente novamente.',
-            });
         });
     });
   };
@@ -917,3 +907,5 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     </>
   );
 }
+
+    
