@@ -78,9 +78,10 @@ interface TransactionFormProps {
     onSaleFinalized?: (transaction: Transaction, customer?: Customer) => void;
     cart?: CartItem[];
     cartTotal?: number;
+    fromStorefront?: boolean;
 }
 
-export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal }: TransactionFormProps) {
+export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal, fromStorefront = false }: TransactionFormProps) {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -165,13 +166,16 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
 
   const onSubmit = (data: TransactionFormValues) => {
-    if (!user || !firestore) {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Usuário não autenticado.' });
-      return;
+    // For storefront, user will be anonymous, so we need a target user to save the transaction to.
+    const targetUserId = fromStorefront ? process.env.NEXT_PUBLIC_STOREFRONT_USER_ID : user?.uid;
+
+    if (!targetUserId || !firestore) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Tente novamente mais tarde.' });
+        return;
     }
 
     startTransition(() => {
-      const collectionPath = `artifacts/${APP_ID}/users/${user.uid}/transactions`;
+      const collectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
       
       let transactionDescription = data.description || '';
       const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
@@ -208,11 +212,15 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         status = 'pending';
       }
 
+      if (fromStorefront) {
+          status = 'pending';
+      }
+
       const transactionData = {
-        userId: user.uid,
+        userId: targetUserId,
         type: data.type,
         description: transactionDescription,
-        category: data.category,
+        category: fromStorefront ? 'Venda Online' : data.category,
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
@@ -493,36 +501,38 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   />
               </div>
 
-              <FormField
-                control={form.control}
-                name="hasDownPayment"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Houve valor de entrada?</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="grid grid-cols-2 gap-4"
-                      >
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <RadioGroupItem value="yes" id="dp-yes" />
-                          </FormControl>
-                          <FormLabel htmlFor="dp-yes" className="font-normal cursor-pointer">Sim</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2">
-                          <FormControl>
-                            <RadioGroupItem value="no" id="dp-no" />
-                          </FormControl>
-                          <FormLabel htmlFor="dp-no" className="font-normal cursor-pointer">Não</FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!fromStorefront && (
+                <FormField
+                    control={form.control}
+                    name="hasDownPayment"
+                    render={({ field }) => (
+                    <FormItem className="space-y-3">
+                        <FormLabel>Houve valor de entrada?</FormLabel>
+                        <FormControl>
+                        <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="grid grid-cols-2 gap-4"
+                        >
+                            <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                                <RadioGroupItem value="yes" id="dp-yes" />
+                            </FormControl>
+                            <FormLabel htmlFor="dp-yes" className="font-normal cursor-pointer">Sim</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2">
+                            <FormControl>
+                                <RadioGroupItem value="no" id="dp-no" />
+                            </FormControl>
+                            <FormLabel htmlFor="dp-no" className="font-normal cursor-pointer">Não</FormLabel>
+                            </FormItem>
+                        </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
 
               {hasDownPaymentValue === 'yes' && (
                 <FormField
@@ -585,12 +595,14 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                             </FormControl>
                             <FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-2">
-                            <FormControl>
-                              <RadioGroupItem value="fiado" id="fiado" />
-                            </FormControl>
-                            <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
-                          </FormItem>
+                          {!fromStorefront && (
+                            <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                <RadioGroupItem value="fiado" id="fiado" />
+                                </FormControl>
+                                <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
+                            </FormItem>
+                          )}
                         </RadioGroup>
                       </FormControl>
                       <FormMessage />
@@ -602,6 +614,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             </div>
           )}
 
+        {!fromStorefront && (
           <FormField
             control={form.control}
             name="category"
@@ -635,6 +648,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               </FormItem>
             )}
           />
+        )}
           
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 space-y-2 space-y-reverse sm:space-y-0">
               <Button type="button" variant="outline" onClick={() => setSheetOpen(false)} className="w-full sm:w-auto">

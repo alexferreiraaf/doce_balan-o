@@ -24,9 +24,10 @@ interface AddTransactionSheetProps {
   cart?: CartItem[];
   cartTotal?: number;
   onSaleFinalized?: (transaction: Transaction, customer?: Customer) => void;
+  fromStorefront?: boolean;
 }
 
-export function AddTransactionSheet({ isMobile = false, open: controlledOpen, onOpenChange: setControlledOpen, cart, cartTotal, onSaleFinalized }: AddTransactionSheetProps) {
+export function AddTransactionSheet({ isMobile = false, open: controlledOpen, onOpenChange: setControlledOpen, cart, cartTotal, onSaleFinalized, fromStorefront = false }: AddTransactionSheetProps) {
   const [internalOpen, setInternalOpen] = useState(false);
 
   const open = controlledOpen ?? internalOpen;
@@ -61,21 +62,41 @@ export function AddTransactionSheet({ isMobile = false, open: controlledOpen, on
           </SheetDescription>
         </SheetHeader>
         <div className="py-6">
-          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} onSaleFinalized={onSaleFinalized} />
+          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} onSaleFinalized={onSaleFinalized} fromStorefront={fromStorefront} />
         </div>
       </SheetContent>
       </Sheet>
     );
   }
 
+  // This is the trigger for the Admin panel
+  if (!fromStorefront) {
+    return (
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetTrigger asChild>
+          <Button className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold shadow-lg transition duration-300 transform hover:scale-105">
+            <Plus className="w-5 h-5 mr-1" />
+            Novo Lançamento
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="bg-background w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-2xl font-bold text-primary">{title}</SheetTitle>
+            <SheetDescription>
+              {description}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="py-6">
+            <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} onSaleFinalized={onSaleFinalized} />
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+  
+  // This is the content for the Storefront checkout
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger asChild>
-        <Button className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold shadow-lg transition duration-300 transform hover:scale-105">
-          <Plus className="w-5 h-5 mr-1" />
-          Novo Lançamento
-        </Button>
-      </SheetTrigger>
+     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="bg-background w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-2xl font-bold text-primary">{title}</SheetTitle>
@@ -84,9 +105,9 @@ export function AddTransactionSheet({ isMobile = false, open: controlledOpen, on
           </SheetDescription>
         </SheetHeader>
         <div className="py-6">
-          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} onSaleFinalized={onSaleFinalized} />
+          <TransactionForm setSheetOpen={handleOpenChange} cart={cart} cartTotal={cartTotal} onSaleFinalized={onSaleFinalized} fromStorefront={fromStorefront}/>
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

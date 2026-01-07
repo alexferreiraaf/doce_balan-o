@@ -2,7 +2,7 @@
 
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
-import type { Product, ProductCategory } from '@/app/lib/types';
+import type { Product, ProductCategory, Transaction, Customer } from '@/app/lib/types';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
@@ -12,6 +12,8 @@ import { formatCurrency } from '@/lib/utils';
 import { WhiskIcon } from '../icons/whisk-icon';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '../ui/sheet';
 import { ScrollArea } from '../ui/scroll-area';
+import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
+import { useToast } from '@/hooks/use-toast';
 
 interface GroupedProducts {
   [categoryName: string]: Product[];
@@ -26,6 +28,8 @@ export function StorefrontClient() {
   const { categories, loading: categoriesLoading } = useProductCategories();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const { toast } = useToast();
 
   const loading = productsLoading || categoriesLoading;
 
@@ -92,6 +96,21 @@ export function StorefrontClient() {
       );
     });
   };
+
+  const handleFinalizeClick = () => {
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  }
+
+  const handleSaleFinalized = (transaction: Transaction, customer?: Customer) => {
+    setIsCheckoutOpen(false);
+    setCart([]);
+    toast({
+      title: "Pedido Recebido!",
+      description: "Seu pedido foi enviado. Entraremos em contato em breve para confirmar.",
+    });
+  };
+
 
   if (loading) {
     return null; // The loading skeleton is handled by Suspense
@@ -214,7 +233,7 @@ export function StorefrontClient() {
                     <span>Total</span>
                     <span>{formatCurrency(cartTotal)}</span>
                   </div>
-                  <Button size="lg" className="w-full h-12 text-lg">
+                  <Button size="lg" className="w-full h-12 text-lg" onClick={handleFinalizeClick}>
                     Finalizar Pedido
                   </Button>
                 </div>
@@ -229,6 +248,15 @@ export function StorefrontClient() {
           )}
         </SheetContent>
       </Sheet>
+
+      <AddTransactionSheet 
+        open={isCheckoutOpen}
+        onOpenChange={setIsCheckoutOpen}
+        cart={cart}
+        cartTotal={cartTotal}
+        onSaleFinalized={handleSaleFinalized}
+        fromStorefront
+      />
 
     </div>
   );
