@@ -243,7 +243,13 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
 
   const onSubmit = async (data: TransactionFormValues) => {
-    const targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID || user?.uid;
+    let targetUserId: string | undefined;
+
+    if (fromStorefront) {
+      targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
+    } else {
+      targetUserId = user?.uid;
+    }
 
     if (!targetUserId || !firestore) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Tente novamente mais tarde.' });
@@ -344,6 +350,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         timestamp: serverTimestamp(),
         dateMs: Date.now(),
       };
+      
       const transactionCollection = collection(firestore, transactionCollectionPath);
 
       addDoc(transactionCollection, transactionData)
