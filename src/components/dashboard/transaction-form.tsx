@@ -139,6 +139,15 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       downPayment: 0,
       category: cart ? INCOME_CATEGORIES[0] : undefined,
       deliveryType: fromStorefront ? 'pickup' : undefined,
+      customerName: '',
+      customerWhatsapp: '',
+      customerCep: '',
+      customerStreet: '',
+      customerNumber: '',
+      customerComplement: '',
+      customerNeighborhood: '',
+      customerCity: '',
+      customerState: '',
     },
   });
 
