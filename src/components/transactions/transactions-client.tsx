@@ -93,7 +93,7 @@ export function TransactionsClient() {
                       <div>
                           <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
                               <Clock className="w-5 h-5 mr-2 text-amber-600" />
-                              Vendas a Prazo (Pendentes)
+                              Pedidos Pendentes (Loja e Fiado)
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">Total pendente: <span className="font-bold">{formatCurrency(totalFiadoValue)}</span></p>
                       </div>
