@@ -1,6 +1,6 @@
 'use client';
 import { useProducts } from '@/app/lib/hooks/use-products';
-import Loading from '@/app/(main)/loading';
+import Loading from '@/app/(admin)/loading-component';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddProductDialog } from './add-product-dialog';
