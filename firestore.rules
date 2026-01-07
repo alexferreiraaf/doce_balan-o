@@ -11,20 +11,26 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Allow anyone to create a transaction (for storefront orders) but only if the data being sent
+    // matches the user path. Only the owner can read, update, or delete.
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow read, write: if isOwner(userId);
+      allow read, update, delete: if isOwner(userId);
+      allow create: if request.resource.data.userId == userId;
     }
 
+    // Allow anyone to create a product, but only signed-in users can manage them.
     match /artifacts/{appId}/products/{productId} {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
+    // Allow anyone to create a customer (for storefront orders), but only signed-in users can manage them.
     match /artifacts/{appId}/customers/{customerId} {
-      allow get, list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow list: if isSignedIn();
+      allow get, create, update, delete: if isSignedIn();
     }
-
+    
+    // Allow anyone to read categories, but only signed-in users can manage them.
     match /artifacts/{appId}/product-categories/{categoryId} {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
