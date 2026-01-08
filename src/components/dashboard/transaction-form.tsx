@@ -16,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input, InputWithCopy } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -42,6 +42,7 @@ import { useOptionals } from '@/app/lib/hooks/use-optionals';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Checkbox } from '../ui/checkbox';
 import { ScrollArea } from '../ui/scroll-area';
+import { useSettings } from '@/app/lib/hooks/use-settings';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -96,6 +97,14 @@ const formSchema = z.object({
 }, {
     message: 'O CEP é obrigatório para entrega.',
     path: ['customerCep'],
+}).refine(data => {
+    if (data.fromStorefront && !data.paymentMethod) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Por favor, selecione a forma de pagamento.',
+    path: ['paymentMethod'],
 });
 
 
@@ -127,6 +136,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const { products, loading: productsLoading } = useProducts();
   const { customers, loading: customersLoading } = useCustomers();
   const { optionals, loading: optionalsLoading } = useOptionals();
+  const { settings, loading: settingsLoading } = useSettings();
   const [selectedOptionals, setSelectedOptionals] = useState<Optional[]>([]);
 
   const form = useForm<TransactionFormValues>({
@@ -163,6 +173,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const deliveryTypeValue = form.watch('deliveryType');
   const customerCity = form.watch('customerCity');
   const customerState = form.watch('customerState');
+  const paymentMethodValue = form.watch('paymentMethod');
 
   const productId = form.watch('productId');
   const quantity = form.watch('quantity');
@@ -187,29 +198,27 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
   // Effect to calculate total amount for income
   useEffect(() => {
-    if (typeValue === 'income') {
-        const product = products.find((p) => p.id === productId);
-        const productPrice = product ? product.price : 0;
-        const baseTotal = cartTotal ?? (productPrice * Number(quantity || 0));
-        
-        const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + opt.price, 0);
-        const currentDeliveryFee = Number(deliveryFee || 0);
-        
-        const totalAmount = baseTotal + optionalsTotal + currentDeliveryFee;
-        
-        if (form.getValues('amount') !== totalAmount) {
-            form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
-        }
-        
-        const optionalsDescription = selectedOptionals.map(o => o.name).join(', ');
-        if (form.getValues('additionalDescription') !== optionalsDescription) {
-            form.setValue('additionalDescription', optionalsDescription);
-        }
-        if (form.getValues('additionalValue') !== optionalsTotal) {
-            form.setValue('additionalValue', optionalsTotal);
-        }
+    const product = products.find((p) => p.id === productId);
+    const productPrice = product ? product.price : 0;
+    const baseTotal = cartTotal ?? (productPrice * Number(quantity || 0));
+    
+    const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + opt.price, 0);
+    const currentDeliveryFee = Number(deliveryFee || 0);
+    
+    const totalAmount = baseTotal + optionalsTotal + currentDeliveryFee;
+    
+    if (form.getValues('amount') !== totalAmount) {
+        form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
     }
-  }, [typeValue, productId, quantity, deliveryFee, selectedOptionals, products, cartTotal, form]);
+    
+    const optionalsDescription = selectedOptionals.map(o => o.name).join(', ');
+    if (form.getValues('additionalDescription') !== optionalsDescription) {
+        form.setValue('additionalDescription', optionalsDescription);
+    }
+    if (form.getValues('additionalValue') !== optionalsTotal) {
+        form.setValue('additionalValue', optionalsTotal);
+    }
+  }, [productId, quantity, deliveryFee, selectedOptionals, products, cartTotal, form]);
 
   useEffect(() => {
     if (deliveryTypeValue === 'pickup') {
@@ -348,7 +357,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
             if (fromStorefront) {
                 status = 'pending';
-                paymentMethod = null; // Payment for storefront orders is handled offline
+                // Payment method is kept as what the user selected
             }
 
             const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
@@ -801,55 +810,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     )}
                 />
 
-              {!fromStorefront && (
-                <FormField
-                    control={form.control}
-                    name="hasDownPayment"
-                    render={({ field }) => (
-                    <FormItem className="space-y-3">
-                        <FormLabel>Houve valor de entrada?</FormLabel>
-                        <FormControl>
-                        <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="grid grid-cols-2 gap-4"
-                        >
-                            <FormItem className="flex items-center space-x-2">
-                            <FormControl>
-                                <RadioGroupItem value="yes" id="dp-yes" />
-                            </FormControl>
-                            <FormLabel htmlFor="dp-yes" className="font-normal cursor-pointer">Sim</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-2">
-                            <FormControl>
-                                <RadioGroupItem value="no" id="dp-no" />
-                            </FormControl>
-                            <FormLabel htmlFor="dp-no" className="font-normal cursor-pointer">Não</FormLabel>
-                            </FormItem>
-                        </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              )}
-
-              {hasDownPaymentValue === 'yes' && (
-                <FormField
-                  control={form.control}
-                  name="downPayment"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valor de Entrada (R$)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
               <FormField
                 control={form.control}
                 name="amount"
@@ -864,7 +824,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 )}
               />
               
-              {hasDownPaymentValue !== 'yes' && !fromStorefront && (
+              {fromStorefront ? (
                 <FormField
                   control={form.control}
                   name="paymentMethod"
@@ -879,38 +839,120 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                         >
                           <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <RadioGroupItem value="pix" id="pix" />
+                              <RadioGroupItem value="pix" id="pix-store" />
                             </FormControl>
-                            <FormLabel htmlFor="pix" className="font-normal cursor-pointer">PIX</FormLabel>
+                            <FormLabel htmlFor="pix-store" className="font-normal cursor-pointer">PIX</FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <RadioGroupItem value="dinheiro" id="dinheiro" />
+                              <RadioGroupItem value="dinheiro" id="dinheiro-store" />
                             </FormControl>
-                            <FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel>
+                            <FormLabel htmlFor="dinheiro-store" className="font-normal cursor-pointer">Dinheiro (na entrega)</FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-2">
                             <FormControl>
-                              <RadioGroupItem value="cartao" id="cartao" />
+                              <RadioGroupItem value="cartao" id="cartao-store" />
                             </FormControl>
-                            <FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
+                            <FormLabel htmlFor="cartao-store" className="font-normal cursor-pointer">Cartão (na entrega)</FormLabel>
                           </FormItem>
-                          {!fromStorefront && (
-                            <FormItem className="flex items-center space-x-2">
-                                <FormControl>
-                                <RadioGroupItem value="fiado" id="fiado" />
-                                </FormControl>
-                                <FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
-                            </FormItem>
-                          )}
                         </RadioGroup>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
+              ) : ( // Admin Panel Payment Options
+                <>
+                  <FormField
+                      control={form.control}
+                      name="hasDownPayment"
+                      render={({ field }) => (
+                      <FormItem className="space-y-3">
+                          <FormLabel>Houve valor de entrada?</FormLabel>
+                          <FormControl>
+                          <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="grid grid-cols-2 gap-4"
+                          >
+                              <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                  <RadioGroupItem value="yes" id="dp-yes" />
+                              </FormControl>
+                              <FormLabel htmlFor="dp-yes" className="font-normal cursor-pointer">Sim</FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                  <RadioGroupItem value="no" id="dp-no" />
+                              </FormControl>
+                              <FormLabel htmlFor="dp-no" className="font-normal cursor-pointer">Não</FormLabel>
+                              </FormItem>
+                          </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
 
+                  {hasDownPaymentValue === 'yes' ? (
+                      <FormField
+                          control={form.control}
+                          name="downPayment"
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Valor de Entrada (R$)</FormLabel>
+                              <FormControl>
+                                  <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  ) : (
+                      <FormField
+                          control={form.control}
+                          name="paymentMethod"
+                          render={({ field }) => (
+                              <FormItem className="space-y-3">
+                              <FormLabel>Forma de Pagamento</FormLabel>
+                              <FormControl>
+                                  <RadioGroup
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                  className="grid grid-cols-2 gap-4"
+                                  >
+                                      <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="pix" id="pix" /></FormControl><FormLabel htmlFor="pix" className="font-normal cursor-pointer">PIX</FormLabel></FormItem>
+                                      <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="dinheiro" id="dinheiro" /></FormControl><FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel></FormItem>
+                                      <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="cartao" id="cartao" /></FormControl><FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel></FormItem>
+                                      <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="fiado" id="fiado" /></FormControl><FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel></FormItem>
+                                  </RadioGroup>
+                              </FormControl>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  )}
+                </>
+              )}
+                {fromStorefront && paymentMethodValue === 'pix' && (
+                    <div className="space-y-2 pt-2">
+                        <FormLabel>Pagamento via PIX</FormLabel>
+                        {settingsLoading ? (
+                             <p className="text-sm text-muted-foreground">Carregando chave PIX...</p>
+                        ) : settings?.pixKey ? (
+                            <>
+                            <p className="text-sm text-muted-foreground">
+                                Use a chave abaixo para fazer o pagamento e envie o comprovante para nosso WhatsApp.
+                            </p>
+                            <InputWithCopy value={settings.pixKey} />
+                            </>
+                        ) : (
+                            <p className="text-sm text-amber-700 bg-amber-100 p-3 rounded-md">
+                                A chave PIX não foi configurada pelo administrador da loja. Por favor, entre em contato para combinar o pagamento.
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
           )}
 
@@ -954,9 +996,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               <Button type="button" variant="outline" onClick={() => setSheetOpen(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending || isAuthLoading || isFetchingCep} className="w-full sm:w-auto">
+              <Button type="submit" disabled={isPending || isAuthLoading || isFetchingCep || (fromStorefront && paymentMethodValue === 'pix' && !settings?.pixKey) } className="w-full sm:w-auto">
                 {(isPending || isAuthLoading || isFetchingCep) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isPOSSale ? 'Finalizar Venda' : 'Adicionar Lançamento'}
+                {isPOSSale || fromStorefront ? 'Finalizar Venda' : 'Adicionar Lançamento'}
               </Button>
           </div>
 

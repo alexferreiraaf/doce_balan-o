@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, FileText } from 'lucide-react';
+import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, FileText, CreditCard, Coins } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -26,6 +26,13 @@ import { TransactionList } from '../transactions/transaction-list';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from '../transactions/edit-transaction-sheet';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
+
+const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
+    pix: { text: 'PIX', icon: Landmark },
+    dinheiro: { text: 'Dinheiro', icon: Coins },
+    cartao: { text: 'Cartão', icon: CreditCard },
+    fiado: { text: 'Fiado', icon: User },
+};
 
 export function StoreOrdersClient() {
   const { transactions, loading: transactionsLoading } = useTransactions();
@@ -54,14 +61,14 @@ export function StoreOrdersClient() {
     };
   }, [transactions]);
 
-  const handleMarkAsPaid = (transactionId: string, paymentMethod: PaymentMethod) => {
+  const handleMarkAsPaid = (transactionId: string) => {
     if (isUserLoading || !user || !firestore) {
         toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado." });
         return;
     }
 
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
-    const updateData = { status: 'paid', paymentMethod: paymentMethod };
+    const updateData = { status: 'paid' };
     
     updateDoc(transactionRef, updateData)
       .catch((error) => {
@@ -106,15 +113,14 @@ export function StoreOrdersClient() {
                   <ul className="space-y-3">
                   {storeOrdersPending.map((t) => {
                       const customerName = customers.find(c => c.id === t.customerId)?.name;
-                      const remainingAmount = t.amount - (t.downPayment || 0);
-                      const hasDownPayment = (t.downPayment || 0) > 0;
+                      const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
                       return (
                       <li
                         key={t.id}
                         className="flex flex-col sm:flex-row items-start sm:items-center p-3 rounded-lg bg-amber-100/60 gap-2"
                       >
                       <div className="flex-grow flex flex-col gap-2 w-full">
-                          <span className="font-semibold text-card-foreground">{t.description.replace(/ \(Entrada de R\$\d+,\d+\)/, '')}</span>
+                          <span className="font-semibold text-card-foreground">{t.description}</span>
                           <div className='flex items-center gap-2 flex-wrap'>
                               {customerName && (
                                   <Badge variant="outline" className="text-xs border-primary/50">
@@ -122,42 +128,28 @@ export function StoreOrdersClient() {
                                       {customerName}
                                   </Badge>
                               )}
-                              {hasDownPayment && (
-                                  <>
-                                  <Badge variant="secondary" className="text-xs">
-                                      <Banknote className="w-3 h-3 mr-1" />
-                                      Total: {formatCurrency(t.amount)}
-                                    </Badge>
-                                    <Badge variant="outline" className="text-xs bg-green-200 text-green-800 border-green-300">
-                                      <CircleArrowDown className="w-3 h-3 mr-1" />
-                                      Entrada: {formatCurrency(t.downPayment!)}
-                                    </Badge>
-                                  </>
+                              {paymentInfo && (
+                                <Badge variant="outline" className="text-xs">
+                                  <paymentInfo.icon className="w-3 h-3 mr-1" />
+                                  {paymentInfo.text}
+                                </Badge>
                               )}
                               <Badge variant="destructive" className="text-xs">
                                   <Clock className="w-3 h-3 mr-1" />
-                                  Pendente: {formatCurrency(remainingAmount)}
+                                  Pendente: {formatCurrency(t.amount)}
                               </Badge>
                           </div>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                          <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                  <Button
-                                      size="sm" 
-                                      className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
-                                      disabled={isUserLoading}
-                                  >
-                                      <CheckCircle className="w-4 h-4 mr-2" />
-                                      Marcar como Pago
-                                  </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
-                              </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button
+                                size="sm" 
+                                className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
+                                disabled={isUserLoading}
+                                onClick={() => handleMarkAsPaid(t.id)}
+                            >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Marcar como Pago
+                            </Button>
                           <EditTransactionSheet transaction={t} />
                           <DeleteTransactionButton transactionId={t.id} />
                       </div>

@@ -55,3 +55,7 @@ export interface Optional {
   name: string;
   price: number;
 }
+
+export interface AppSettings {
+  pixKey?: string;
+}

@@ -41,5 +41,11 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
+
+    // Settings can be read by anyone (for PIX key) but only managed by signed-in users.
+    match /artifacts/{appId}/settings/app {
+      allow get: if true;
+      allow write: if isSignedIn();
+    }
   }
 }

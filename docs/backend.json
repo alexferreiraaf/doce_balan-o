@@ -253,6 +253,18 @@
         "name",
         "price"
       ]
+    },
+    "AppSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "App Settings",
+      "type": "object",
+      "description": "Represents global application settings.",
+      "properties": {
+        "pixKey": {
+          "type": "string",
+          "description": "The PIX key for receiving payments."
+        }
+      }
     }
   },
   "auth": {
@@ -363,6 +375,22 @@
             {
               "name": "optionalId",
               "description": "The unique identifier of the optional."
+            }
+          ]
+        }
+      },
+      {
+        "path": "artifacts/{appId}/settings/app",
+        "definition": {
+          "entityName": "AppSettings",
+          "schema": {
+            "$ref": "#/backend/entities/AppSettings"
+          },
+          "description": "Stores global application settings in a single document.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the application."
             }
           ]
         }
