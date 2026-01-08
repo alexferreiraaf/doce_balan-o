@@ -1,11 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import Loading from './loading-component';
 import { Navbar } from '@/components/layout/navbar';
 import { cn } from '@/lib/utils';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { APP_ID } from '@/app/lib/constants';
+import type { Transaction } from '@/app/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminLayout({
   children,
@@ -15,6 +19,16 @@ export default function AdminLayout({
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notifiedOrderIds, setNotifiedOrderIds] = useState<Set<string>>(new Set());
+
+  // Initialize Audio object on the client
+  useEffect(() => {
+    audioRef.current = new Audio('https://cdn.freesound.org/previews/219/219244_4101325-lq.mp3');
+    audioRef.current.load();
+  }, []);
 
   useEffect(() => {
     if (isUserLoading) {
@@ -25,6 +39,45 @@ export default function AdminLayout({
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
+
+  const pendingOrdersQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(
+      collection(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions`),
+      where('status', '==', 'pending')
+    );
+  }, [firestore, user]);
+
+  useEffect(() => {
+    if (!pendingOrdersQuery) return;
+
+    const unsubscribe = onSnapshot(pendingOrdersQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const newOrder = change.doc.data() as Transaction;
+          const orderId = change.doc.id;
+
+          if (!notifiedOrderIds.has(orderId)) {
+            // Play sound
+            audioRef.current?.play().catch(e => console.error("Error playing audio:", e));
+            
+            // Show toast
+            toast({
+              title: '🎉 Novo Pedido Recebido!',
+              description: `Pedido de ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
+              duration: 10000, // 10 seconds
+            });
+
+            // Add to notified set
+            setNotifiedOrderIds(prev => new Set(prev).add(orderId));
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [pendingOrdersQuery, toast, notifiedOrderIds]);
+
 
   // Exibe o loading enquanto o estado de autenticação está sendo verificado.
   if (isUserLoading || !user) {
