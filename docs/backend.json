@@ -149,6 +149,14 @@
         "imageUrl": {
           "type": "string",
           "description": "URL for the product image."
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Whether the product is featured in the storefront."
+        },
+        "salesCount": {
+          "type": "number",
+          "description": "How many times the product has been sold."
         }
       },
       "required": [

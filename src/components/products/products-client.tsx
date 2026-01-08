@@ -1,10 +1,10 @@
 'use client';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import Loading from '@/app/(admin)/loading-component';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddProductDialog } from './add-product-dialog';
-import { Package, Tag, ImageOff } from 'lucide-react';
+import { Package, Tag, ImageOff, Star } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
   Table,
@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/table";
 import { DeleteProductButton } from './delete-product-button';
 import { EditProductDialog } from './edit-product-dialog';
-import type { Product, ProductCategory } from '@/app/lib/types';
+import type { Product } from '@/app/lib/types';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { AddProductCategoryDialog } from './add-product-category-dialog';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 interface GroupedProducts {
   [categoryName: string]: Product[];
@@ -109,7 +110,8 @@ export function ProductsClient() {
                                 {groupedProducts[categoryName].map((product) => (
                                     <TableRow key={product.id}>
                                     <TableCell>
-                                      <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                                      <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden relative">
+                                        {product.isFeatured && <Star className="absolute top-1 right-1 w-4 h-4 text-yellow-400 fill-yellow-400"/>}
                                         {product.imageUrl ? (
                                            <Image 
                                              src={product.imageUrl} 

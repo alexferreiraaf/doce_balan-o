@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Package, Bike, X, Plus, ChevronsUpDown } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
 import axios from 'axios';
 
 import { Button } from '@/components/ui/button';
@@ -98,7 +98,7 @@ const formSchema = z.object({
     message: 'O CEP é obrigatório para entrega.',
     path: ['customerCep'],
 }).refine(data => {
-    if (data.fromStorefront && !data.paymentMethod) {
+    if (fromStorefront && !data.paymentMethod) {
         return false;
     }
     return true;
@@ -295,7 +295,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         let newCustomer: Customer | undefined;
 
         try {
-            // 1. Create customer if needed (only for storefront)
+             // 1. Create or find customer
             if (fromStorefront && data.customerName) {
                 const customerCollectionPath = `artifacts/${APP_ID}/customers`;
                 const customerData: Omit<Customer, 'id'> = {
@@ -320,6 +320,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             let transactionDescription = data.description || '';
             const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
 
+            let productsInSale: {id: string, quantity: number}[] = [];
+
             if (data.type === 'income' && !cart) {
                 const product = products.find(p => p.id === data.productId);
                 if (!product || !data.quantity) {
@@ -327,8 +329,10 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     return;
                 }
                 transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
+                productsInSale.push({id: product.id, quantity: data.quantity});
             } else if (data.type === 'income' && cart) {
                 transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
+                productsInSale = cart.map(item => ({id: item.id, quantity: item.quantity}));
             } else {
                 transactionDescription = data.description || 'Despesa sem descrição';
             }
@@ -357,7 +361,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
             if (fromStorefront) {
                 status = 'pending';
-                // Payment method is kept as what the user selected
             }
 
             const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
@@ -375,22 +378,40 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
-                customerId: customerId, // Associate customer with transaction
+                customerId: customerId,
                 dateMs: Date.now(),
             };
-
-            // 3. Create transaction document
+            
+            // 3. Create transaction and update product sales counts in a batch
+            const batch = writeBatch(firestore);
+            
+            // Add new transaction to the batch
             const transactionCollection = collection(firestore, transactionCollectionPath);
             const finalTransactionData = { ...transactionData, timestamp: serverTimestamp() };
+            const newTransactionRef = doc(transactionCollection);
+            batch.set(newTransactionRef, finalTransactionData);
+            
+            // Update sales count for each product in the sale
+            if (productsInSale.length > 0) {
+                for (const item of productsInSale) {
+                    const productRef = doc(firestore, `artifacts/${APP_ID}/products`, item.id);
+                    const productDoc = await getDoc(productRef);
+                    if (productDoc.exists()) {
+                        const currentSales = productDoc.data().salesCount || 0;
+                        batch.update(productRef, { salesCount: currentSales + item.quantity });
+                    }
+                }
+            }
 
-            const docRef = await addDoc(transactionCollection, finalTransactionData);
+            // Commit the batch
+            await batch.commit();
             
             toast({ title: 'Sucesso!', description: fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
             
             if (data.type === 'income' && onSaleFinalized) {
                 const createdTransaction: Transaction = {
                     ...transactionData,
-                    id: docRef.id,
+                    id: newTransactionRef.id,
                     timestamp: {
                       toDate: () => new Date(),
                       toMillis: () => Date.now(),
@@ -407,8 +428,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
         } catch (error) {
             console.error('Error in onSubmit:', error);
-             // This can be a generic error for the entire transaction process.
-             // Specific Firestore errors are better caught inside their respective blocks.
              toast({ variant: 'destructive', title: 'Erro Crítico', description: 'Não foi possível completar a operação. Verifique suas permissões.' });
              errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: 'customer/transaction creation',

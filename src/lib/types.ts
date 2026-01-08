@@ -30,6 +30,8 @@ export interface Product {
   price: number;
   categoryId?: string;
   imageUrl?: string;
+  isFeatured?: boolean;
+  salesCount?: number;
 }
 
 export interface Customer {

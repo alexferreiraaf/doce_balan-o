@@ -2,11 +2,11 @@
 
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
-import type { Product, ProductCategory, Transaction, Customer } from '@/app/lib/types';
+import type { Product } from '@/app/lib/types';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
-import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus } from 'lucide-react';
+import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
 import { WhiskIcon } from '../icons/whisk-icon';
@@ -15,6 +15,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Carousel, CarouselContent, CarouselItem } from '../ui/carousel';
 
 interface CartItem extends Product {
   quantity: number;
@@ -31,13 +32,29 @@ export function StorefrontClient() {
 
   const loading = productsLoading || categoriesLoading;
 
+  const { featuredProducts, bestSellerThreshold, regularProducts } = useMemo(() => {
+    if (products.length === 0) {
+      return { featuredProducts: [], bestSellerThreshold: 0, regularProducts: [] };
+    }
+
+    const featured = products.filter(p => p.isFeatured).slice(0, 4);
+
+    const salesCounts = products.map(p => p.salesCount || 0).sort((a, b) => b - a);
+    const threshold = salesCounts.length > 3 ? salesCounts[2] : 0;
+    
+    return { 
+      featuredProducts: featured,
+      bestSellerThreshold: threshold,
+      regularProducts: products, // All products for the main grid
+    };
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     if (selectedCategoryId === 'all') {
-      return products;
+      return regularProducts;
     }
-    return products.filter(p => p.categoryId === selectedCategoryId);
-  }, [products, selectedCategoryId]);
-  
+    return regularProducts.filter(p => p.categoryId === selectedCategoryId);
+  }, [regularProducts, selectedCategoryId]);
 
   const cartTotal = useMemo(() => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
@@ -75,7 +92,7 @@ export function StorefrontClient() {
     setIsCheckoutOpen(true);
   }
 
-  const handleSaleFinalized = (transaction: Transaction, customer?: Customer) => {
+  const handleSaleFinalized = () => {
     setIsCheckoutOpen(false);
     setCart([]);
     toast({
@@ -84,13 +101,45 @@ export function StorefrontClient() {
     });
   };
 
-
   if (loading) {
     return null; // The loading skeleton is handled by Suspense
   }
 
+  const ProductCard = ({ product }: { product: Product }) => {
+    const isBestSeller = (product.salesCount || 0) > 0 && (product.salesCount || 0) >= bestSellerThreshold;
+    return (
+       <Card className="overflow-hidden flex flex-col group h-full">
+            <CardHeader className="p-0">
+                <div className="aspect-square bg-muted flex items-center justify-center relative">
+                {isBestSeller && (
+                    <div className="absolute top-2 left-2 z-10 bg-black/70 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-orange-400"/>
+                        Mais Pedido
+                    </div>
+                )}
+                {product.imageUrl ? (
+                    <Image src={product.imageUrl} alt={product.name} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform duration-300" />
+                ) : (
+                    <Package className="w-16 h-16 text-muted-foreground" />
+                )}
+                </div>
+            </CardHeader>
+            <CardContent className="p-4 flex flex-col flex-grow">
+                <h3 className="font-semibold text-lg flex-grow">{product.name}</h3>
+                <div className="flex justify-between items-end mt-4">
+                <p className="text-xl font-bold text-primary">{formatCurrency(product.price)}</p>
+                <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)}>
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Pedir
+                </Button>
+                </div>
+            </CardContent>
+        </Card>
+    )
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
             <WhiskIcon className="w-16 h-16 text-primary" />
@@ -108,47 +157,47 @@ export function StorefrontClient() {
             <p className="mt-2 text-muted-foreground">Volte em breve para ver nossas delícias!</p>
         </div>
       ) : (
-        <div className="space-y-6">
-            <div className="max-w-xs">
-                 <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Filtrar por categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Todas as categorias</SelectItem>
-                        {categories.map(category => (
-                            <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+        <div className="space-y-12">
+            {featuredProducts.length > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-bold tracking-tight">✨ Destaques da Casa</h2>
+                    <Carousel opts={{ align: "start", loop: true }} className="w-full">
+                        <CarouselContent>
+                            {featuredProducts.map((product) => (
+                                <CarouselItem key={product.id} className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                                    <div className="p-1 h-full">
+                                        <ProductCard product={product} />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                    </Carousel>
+                </div>
+            )}
           
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map(product => (
-                <Card key={product.id} className="overflow-hidden flex flex-col group">
-                <CardHeader className="p-0">
-                    <div className="aspect-square bg-muted flex items-center justify-center relative">
-                    {product.imageUrl ? (
-                        <Image src={product.imageUrl} alt={product.name} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                        <Package className="w-16 h-16 text-muted-foreground" />
-                    )}
-                    </div>
-                </CardHeader>
-                <CardContent className="p-4 flex flex-col flex-grow">
-                    <h3 className="font-semibold text-lg flex-grow">{product.name}</h3>
-                    <div className="flex justify-between items-end mt-4">
-                    <p className="text-xl font-bold text-primary">{formatCurrency(product.price)}</p>
-                    <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)}>
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Pedir
-                    </Button>
-                    </div>
-                </CardContent>
-                </Card>
-            ))}
+            <div className='space-y-6'>
+                <h2 className="text-2xl font-bold tracking-tight">Todos os Produtos</h2>
+                <div className="max-w-xs">
+                    <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Filtrar por categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas as categorias</SelectItem>
+                            {categories.map(category => (
+                                <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {filteredProducts.map(product => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
+                </div>
             </div>
         </div>
       )}

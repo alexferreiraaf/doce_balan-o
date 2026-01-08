@@ -35,6 +35,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
+import { Switch } from '../ui/switch';
 
 const MAX_FILE_SIZE_MB = 1;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -45,6 +46,7 @@ const formSchema = z.object({
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
   categoryId: z.string().optional(),
   imageUrl: z.string().optional(),
+  isFeatured: z.boolean().default(false),
   imageFile: z.any()
     .refine((file) => !file || file.size <= MAX_FILE_SIZE_BYTES, `O tamanho máximo da imagem é ${MAX_FILE_SIZE_MB}MB.`)
     .refine((file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type), 'Formato de arquivo não suportado (aceito: JPG, PNG, WEBP).')
@@ -78,6 +80,7 @@ export function AddProductDialog() {
       price: 0,
       categoryId: '',
       imageUrl: '',
+      isFeatured: false,
     },
   });
 
@@ -132,6 +135,8 @@ export function AddProductDialog() {
         price: data.price,
         categoryId: data.categoryId || '',
         imageUrl: imageUrl || '',
+        isFeatured: data.isFeatured,
+        salesCount: 0,
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -252,6 +257,24 @@ export function AddProductDialog() {
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isFeatured"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Destacar produto na loja</FormLabel>
+                    <FormMessage />
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
