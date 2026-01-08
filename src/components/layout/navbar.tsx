@@ -31,7 +31,6 @@ const navLinks = [
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
   { href: '/products', label: 'Produtos', icon: Package },
   { href: '/customers', label: 'Clientes', icon: Users },
-  { href: '/delivery', label: 'Entregas', icon: Bike },
 ];
 
 const mobileNavLinks = [
@@ -42,7 +41,6 @@ const mobileNavLinks = [
 const registrationLinks = [
     { href: '/products', label: 'Produtos', icon: Package },
     { href: '/customers', label: 'Clientes', icon: Users },
-    { href: '/delivery', label: 'Entregas', icon: Bike },
 ];
 
 export function Navbar() {
