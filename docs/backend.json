@@ -228,6 +228,31 @@
         "id",
         "name"
       ]
+    },
+    "DeliveryZone": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Delivery Zone",
+        "type": "object",
+        "description": "Represents a delivery zone with a specific fee.",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Unique identifier for the delivery zone."
+            },
+            "name": {
+                "type": "string",
+                "description": "Name of the zone, typically a neighborhood."
+            },
+            "fee": {
+                "type": "number",
+                "description": "Delivery fee for this zone."
+            }
+        },
+        "required": [
+            "id",
+            "name",
+            "fee"
+        ]
     }
   },
   "auth": {
@@ -321,8 +346,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "artifacts/{appId}/delivery-zones/{zoneId}",
+        "definition": {
+          "entityName": "DeliveryZone",
+          "schema": {
+            "$ref": "#/backend/entities/DeliveryZone"
+          },
+          "description": "Stores delivery zones and their fees, accessible to all users.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the Controle da Doçuras application."
+            },
+            {
+              "name": "zoneId",
+              "description": "The unique identifier of the delivery zone."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories."
+    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added new collections for product categories and delivery zones."
   }
 }

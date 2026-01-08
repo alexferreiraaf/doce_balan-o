@@ -35,5 +35,11 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
+
+    // Allow anyone to read delivery zones, but only signed-in users can manage them.
+    match /artifacts/{appId}/delivery-zones/{zoneId} {
+        allow get, list: if true;
+        allow create, update, delete: if isSignedIn();
+    }
   }
 }

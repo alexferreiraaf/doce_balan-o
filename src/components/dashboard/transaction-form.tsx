@@ -38,6 +38,7 @@ import type { Product, Transaction, Customer } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
+import { useDeliveryZones } from '@/app/lib/hooks/use-delivery-zones';
 
 
 const formSchema = z.object({
@@ -123,6 +124,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
   const { products, loading: productsLoading } = useProducts();
   const { customers, loading: customersLoading } = useCustomers();
+  const { deliveryZones } = useDeliveryZones();
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -156,6 +158,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const typeValue = form.watch('type');
   const hasDownPaymentValue = form.watch('hasDownPayment');
   const deliveryTypeValue = form.watch('deliveryType');
+  const customerNeighborhoodValue = form.watch('customerNeighborhood');
 
   // Effect for category suggestion (for expenses)
   useEffect(() => {
@@ -211,6 +214,21 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       form.setValue('deliveryFee', 0);
     }
   }, [deliveryTypeValue, form]);
+  
+    // Auto-set delivery fee based on neighborhood
+  useEffect(() => {
+    if (deliveryTypeValue === 'delivery' && customerNeighborhoodValue) {
+      const zone = deliveryZones.find(
+        (z) => z.name.toLowerCase() === customerNeighborhoodValue.toLowerCase()
+      );
+      if (zone) {
+        form.setValue('deliveryFee', zone.fee);
+      } else {
+        // Optionally, reset if neighborhood is not a configured zone
+        // form.setValue('deliveryFee', 0);
+      }
+    }
+  }, [customerNeighborhoodValue, deliveryTypeValue, deliveryZones, form]);
 
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const cep = e.target.value.replace(/\D/g, '');

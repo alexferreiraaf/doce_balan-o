@@ -21,6 +21,7 @@ export interface Transaction {
   customerId?: string;
   timestamp: Timestamp;
   dateMs: number;
+  receiptUrl?: string;
 }
 
 export interface Product {
@@ -47,4 +48,10 @@ export interface Customer {
 export interface ProductCategory {
   id: string;
   name: string;
+}
+
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  fee: number;
 }

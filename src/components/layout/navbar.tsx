@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -31,6 +31,7 @@ const navLinks = [
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
   { href: '/products', label: 'Produtos', icon: Package },
   { href: '/customers', label: 'Clientes', icon: Users },
+  { href: '/delivery', label: 'Entregas', icon: Bike },
 ];
 
 const mobileNavLinks = [
@@ -41,6 +42,7 @@ const mobileNavLinks = [
 const registrationLinks = [
     { href: '/products', label: 'Produtos', icon: Package },
     { href: '/customers', label: 'Clientes', icon: Users },
+    { href: '/delivery', label: 'Entregas', icon: Bike },
 ];
 
 export function Navbar() {
