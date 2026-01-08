@@ -279,8 +279,42 @@
         "phone": {
           "type": "string",
           "description": "The store's contact phone or WhatsApp number."
+        },
+        "openingHours": {
+            "type": "object",
+            "description": "The store's opening hours.",
+            "properties": {
+                "sunday": { "$ref": "#/entities/OpeningHours" },
+                "monday": { "$ref": "#/entities/OpeningHours" },
+                "tuesday": { "$ref": "#/entities/OpeningHours" },
+                "wednesday": { "$ref": "#/entities/OpeningHours" },
+                "thursday": { "$ref": "#/entities/OpeningHours" },
+                "friday": { "$ref": "#/entities/OpeningHours" },
+                "saturday": { "$ref": "#/entities/OpeningHours" }
+            }
         }
       }
+    },
+    "OpeningHours": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Opening Hours",
+        "type": "object",
+        "description": "Represents the opening hours for a specific day.",
+        "properties": {
+            "enabled": {
+                "type": "boolean",
+                "description": "Whether the store is open on this day."
+            },
+            "open": {
+                "type": "string",
+                "description": "The opening time in HH:mm format."
+            },
+            "close": {
+                "type": "string",
+                "description": "The closing time in HH:mm format."
+            }
+        },
+        "required": ["enabled", "open", "close"]
     }
   },
   "auth": {

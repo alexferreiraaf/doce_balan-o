@@ -2,35 +2,81 @@
 
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
-import type { Product } from '@/app/lib/types';
+import type { AppSettings, DayOfWeek, Product } from '@/app/lib/types';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
-import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame } from 'lucide-react';
+import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
 import { WhiskIcon } from '../icons/whisk-icon';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from '../ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '../ui/sheet';
 import { ScrollArea } from '../ui/scroll-area';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Carousel, CarouselContent, CarouselItem } from '../ui/carousel';
+import { useSettings } from '@/app/lib/hooks/use-settings';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface CartItem extends Product {
   quantity: number;
 }
 
+const weekDayMap: Record<number, DayOfWeek> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday',
+};
+
+const getStoreStatus = (settings?: AppSettings): { isOpen: boolean; message: string } => {
+  if (!settings?.openingHours) {
+    return { isOpen: true, message: '' }; // Default to open if not configured
+  }
+
+  const now = new Date();
+  const currentDay = weekDayMap[now.getDay()];
+  const todaySettings = settings.openingHours[currentDay];
+
+  if (!todaySettings || !todaySettings.enabled) {
+    return { isOpen: false, message: 'Hoje estamos fechados.' };
+  }
+
+  const [openHour, openMinute] = todaySettings.open.split(':').map(Number);
+  const [closeHour, closeMinute] = todaySettings.close.split(':').map(Number);
+  
+  const openTime = new Date();
+  openTime.setHours(openHour, openMinute, 0, 0);
+
+  const closeTime = new Date();
+  closeTime.setHours(closeHour, closeMinute, 0, 0);
+
+  if (now >= openTime && now < closeTime) {
+    return { isOpen: true, message: '' };
+  } else if (now < openTime) {
+    return { isOpen: false, message: `Abrimos hoje às ${todaySettings.open}.` };
+  } else {
+     return { isOpen: false, message: `Fechamos hoje às ${todaySettings.close}.` };
+  }
+};
+
+
 export function StorefrontClient() {
   const { products, loading: productsLoading } = useProducts();
   const { categories, loading: categoriesLoading } = useProductCategories();
+  const { settings, loading: settingsLoading } = useSettings();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { toast } = useToast();
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
 
-  const loading = productsLoading || categoriesLoading;
+  const loading = productsLoading || categoriesLoading || settingsLoading;
+  const storeStatus = getStoreStatus(settings);
 
   const { featuredProducts, bestSellerThreshold, regularProducts } = useMemo(() => {
     if (products.length === 0) {
@@ -65,6 +111,15 @@ export function StorefrontClient() {
   }, [cart]);
 
   const handleAddToCart = (product: Product) => {
+    if (!storeStatus.isOpen) {
+       toast({
+        variant: 'destructive',
+        title: 'Loja Fechada!',
+        description: storeStatus.message,
+      });
+      return;
+    }
+
     setCart(currentCart => {
       const existingItem = currentCart.find(item => item.id === product.id);
       if (existingItem) {
@@ -88,6 +143,14 @@ export function StorefrontClient() {
   };
 
   const handleFinalizeClick = () => {
+    if (!storeStatus.isOpen) {
+      toast({
+        variant: 'destructive',
+        title: 'Loja Fechada!',
+        description: storeStatus.message,
+      });
+      return;
+    }
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   }
@@ -149,6 +212,16 @@ export function StorefrontClient() {
             </div>
         </div>
       </header>
+
+      {!storeStatus.isOpen && (
+        <Alert variant="destructive">
+          <Clock className="h-4 w-4" />
+          <AlertTitle>Loja Fechada</AlertTitle>
+          <AlertDescription>
+            {storeStatus.message}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {products.length === 0 ? (
         <div className="text-center py-20">
@@ -263,9 +336,10 @@ export function StorefrontClient() {
                     <span>Total</span>
                     <span>{formatCurrency(cartTotal)}</span>
                   </div>
-                  <Button size="lg" className="w-full h-12 text-lg" onClick={handleFinalizeClick}>
-                    Finalizar Pedido
+                  <Button size="lg" className="w-full h-12 text-lg" onClick={handleFinalizeClick} disabled={!storeStatus.isOpen}>
+                     {storeStatus.isOpen ? 'Finalizar Pedido' : 'Loja Fechada'}
                   </Button>
+                   {!storeStatus.isOpen && <p className="text-center text-sm text-destructive">{storeStatus.message}</p>}
                 </div>
               </SheetFooter>
             </>

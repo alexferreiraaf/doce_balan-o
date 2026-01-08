@@ -25,14 +25,41 @@ import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import Loading from '@/app/(admin)/loading-component';
 import { Textarea } from '../ui/textarea';
+import type { DayOfWeek } from '@/app/lib/types';
+import { Switch } from '../ui/switch';
+
+const openingHoursSchema = z.object({
+  enabled: z.boolean(),
+  open: z.string(),
+  close: z.string(),
+});
 
 const settingsFormSchema = z.object({
   pixKey: z.string().optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
+  openingHours: z.object({
+    sunday: openingHoursSchema,
+    monday: openingHoursSchema,
+    tuesday: openingHoursSchema,
+    wednesday: openingHoursSchema,
+    thursday: openingHoursSchema,
+    friday: openingHoursSchema,
+    saturday: openingHoursSchema,
+  }).optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
+
+const weekDays: { key: DayOfWeek, label: string }[] = [
+    { key: 'sunday', label: 'Domingo' },
+    { key: 'monday', label: 'Segunda-feira' },
+    { key: 'tuesday', label: 'Terça-feira' },
+    { key: 'wednesday', label: 'Quarta-feira' },
+    { key: 'thursday', label: 'Quinta-feira' },
+    { key: 'friday', label: 'Sexta-feira' },
+    { key: 'saturday', label: 'Sábado' },
+];
 
 export function SettingsClient() {
   const { settings, loading, updateSettings, isUpdating } = useSettings();
@@ -44,6 +71,15 @@ export function SettingsClient() {
       pixKey: settings?.pixKey || '',
       address: settings?.address || '',
       phone: settings?.phone || '',
+      openingHours: settings?.openingHours || {
+        sunday: { enabled: true, open: '09:00', close: '18:00' },
+        monday: { enabled: true, open: '09:00', close: '18:00' },
+        tuesday: { enabled: true, open: '09:00', close: '18:00' },
+        wednesday: { enabled: true, open: '09:00', close: '18:00' },
+        thursday: { enabled: true, open: '09:00', close: '18:00' },
+        friday: { enabled: true, open: '09:00', close: '18:00' },
+        saturday: { enabled: true, open: '10:00', close: '20:00' },
+      }
     },
   });
 
@@ -66,16 +102,16 @@ export function SettingsClient() {
         Configurações da Loja
       </h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Dados da Loja</CardTitle>
-          <CardDescription>
-            Gerencie as informações públicas e de pagamento da sua loja.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Dados da Loja</CardTitle>
+              <CardDescription>
+                Gerencie as informações públicas e de pagamento da sua loja.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <FormField
                 control={form.control}
                 name="pixKey"
@@ -125,16 +161,72 @@ export function SettingsClient() {
                   </FormItem>
                 )}
               />
-              <div className="flex justify-end">
-                <Button type="submit" disabled={isUpdating}>
-                  {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar Configurações
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Horário de Funcionamento</CardTitle>
+              <CardDescription>
+                Defina os dias e horários em que sua loja aceita pedidos online.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {weekDays.map(day => {
+                const isDayEnabled = form.watch(`openingHours.${day.key}.enabled`);
+                return (
+                  <div key={day.key} className="grid grid-cols-3 items-center gap-4 p-3 rounded-md bg-muted/50">
+                    <FormField
+                      control={form.control}
+                      name={`openingHours.${day.key}.enabled`}
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-4 col-span-3 sm:col-span-1">
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <FormLabel className={!isDayEnabled ? 'text-muted-foreground' : ''}>{day.label}</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex items-center gap-2 col-span-3 sm:col-span-2">
+                       <FormField
+                          control={form.control}
+                          name={`openingHours.${day.key}.open`}
+                          render={({ field }) => (
+                            <FormItem className="w-full">
+                              <FormControl>
+                                <Input type="time" {...field} disabled={!isDayEnabled} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                         <span className={!isDayEnabled ? 'text-muted-foreground' : ''}>até</span>
+                        <FormField
+                          control={form.control}
+                          name={`openingHours.${day.key}.close`}
+                          render={({ field }) => (
+                            <FormItem className="w-full">
+                              <FormControl>
+                                <Input type="time" {...field} disabled={!isDayEnabled} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar Configurações
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
