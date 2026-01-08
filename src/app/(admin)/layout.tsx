@@ -24,6 +24,7 @@ export default function AdminLayout({
   const { toast } = useToast();
   const [notifiedOrderIds, setNotifiedOrderIds] = useState<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   useEffect(() => {
     if (isUserLoading) {
@@ -33,6 +34,12 @@ export default function AdminLayout({
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    const listener = () => setHasInteracted(true);
+    window.addEventListener('click', listener);
+    return () => window.removeEventListener('click', listener);
+  }, []);
 
   const pendingOrdersQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -59,11 +66,11 @@ export default function AdminLayout({
               duration: 10000, 
             });
 
-            audioRef.current?.play().catch(error => {
-                // Audio playback failed, we'll ignore this as browsers often block it.
-                // The visual notification is the most important part.
-                console.warn("Audio playback was blocked by the browser:", error);
-            });
+            if (hasInteracted) {
+                audioRef.current?.play().catch(error => {
+                    console.warn("Audio playback failed:", error);
+                });
+            }
 
             setNotifiedOrderIds(prev => new Set(prev).add(orderId));
           }
@@ -72,7 +79,7 @@ export default function AdminLayout({
     });
 
     return () => unsubscribe();
-  }, [pendingOrdersQuery, toast, notifiedOrderIds]);
+  }, [pendingOrdersQuery, toast, notifiedOrderIds, hasInteracted]);
 
 
   if (isUserLoading || !user) {

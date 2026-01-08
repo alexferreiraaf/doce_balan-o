@@ -3,7 +3,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Package, Truck, Bike } from 'lucide-react';
+import { Loader2, Package, Bike } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import axios from 'axios';
 
@@ -242,149 +242,139 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   };
 
 
-  const onSubmit = async (data: TransactionFormValues) => {
+  const onSubmit = (data: TransactionFormValues) => {
     startTransition(async () => {
-      let targetUserId: string | undefined;
+        let targetUserId: string | undefined;
 
-      if (data.fromStorefront) {
-          targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
-           if (!targetUserId) {
-              toast({ variant: 'destructive', title: 'Erro de Configuração', description: 'O ID da loja não está configurado. Contate o suporte.' });
-              console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set.");
-              return;
-           }
-      } else {
-          targetUserId = user?.uid;
-      }
-      
-      if (!targetUserId || !firestore) {
-          toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Usuário ou conexão inválidos.' });
-          return;
-      }
-      
-      let customerId: string | undefined;
-      let newCustomer: Customer | undefined;
+        if (fromStorefront) {
+            targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
+            if (!targetUserId) {
+                toast({ variant: 'destructive', title: 'Erro de Configuração', description: 'O ID da loja não está configurado. Contate o suporte.' });
+                console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set.");
+                return;
+            }
+        } else {
+            targetUserId = user?.uid;
+        }
+        
+        if (!targetUserId || !firestore) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Usuário ou conexão inválidos.' });
+            return;
+        }
 
-      // 1. Create customer if it's a storefront order with a customer name
-      if (data.fromStorefront && data.customerName) {
-        const customerCollectionPath = `artifacts/${APP_ID}/customers`;
-        const customerData: Omit<Customer, 'id'> = {
-          name: data.customerName,
-          whatsapp: data.customerWhatsapp || '',
-          cep: data.customerCep || '',
-          street: data.customerStreet || '',
-          number: data.customerNumber || '',
-          complement: data.customerComplement || '',
-          neighborhood: data.customerNeighborhood || '',
-          city: data.customerCity || '',
-          state: data.customerState || '',
-        };
-        const customerCollection = collection(firestore, customerCollectionPath);
+        let customerId: string | undefined;
+        let newCustomer: Customer | undefined;
 
         try {
-          const docRef = await addDoc(customerCollection, customerData);
-          customerId = docRef.id;
-          newCustomer = { id: docRef.id, ...customerData };
-        } catch (error) {
-          console.error('Error creating customer:', error);
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: customerCollectionPath,
-              operation: 'create',
-              requestResourceData: customerData,
-          }));
-          return; // Stop execution if customer creation fails
-        }
-      }
-      
-      // 2. Prepare transaction data
-      const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
-      
-      let transactionDescription = data.description || '';
-      const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
-
-      if (data.type === 'income' && !cart) {
-        const product = products.find(p => p.id === data.productId);
-        if (!product || !data.quantity) {
-             toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um produto e quantidade.' });
-             return;
-        }
-        transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
-      } else if (data.type === 'income' && cart) {
-        transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
-      } else {
-        transactionDescription = data.description || 'Despesa sem descrição';
-      }
-
-      if(data.type === 'income' && data.additionalDescription) {
-        transactionDescription += ` (+ ${data.additionalDescription})`
-      }
-
-      if (downPaymentValue > 0) {
-        transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
-      }
-      
-      if (data.fromStorefront && data.deliveryType) {
-        transactionDescription += ` - ${data.deliveryType === 'delivery' ? 'Entrega' : 'Retirada'}`;
-      }
-
-      let paymentMethod = data.paymentMethod || null;
-      let status: 'paid' | 'pending' = 'paid';
-
-      if (downPaymentValue > 0) {
-        paymentMethod = 'fiado';
-        status = 'pending';
-      } else if (data.paymentMethod === 'fiado') {
-        status = 'pending';
-      }
-
-      if (data.fromStorefront) {
-          status = 'pending';
-          paymentMethod = null; // Payment is handled externally for storefront orders initially
-      }
-
-      const transactionData = {
-        userId: targetUserId,
-        type: data.type,
-        description: transactionDescription,
-        category: data.category || (data.fromStorefront ? 'Venda Online' : 'Venda'),
-        amount: data.amount,
-        discount: data.discount || 0,
-        deliveryFee: data.deliveryFee || 0,
-        additionalDescription: data.additionalDescription || '',
-        additionalValue: data.additionalValue || 0,
-        downPayment: downPaymentValue,
-        paymentMethod: paymentMethod,
-        status: status,
-        customerId: customerId, // Use the newly created customerId for storefront orders
-        timestamp: serverTimestamp(),
-        dateMs: Date.now(),
-      };
-      
-      // 3. Create transaction document
-      const transactionCollection = collection(firestore, transactionCollectionPath);
-
-      addDoc(transactionCollection, transactionData)
-        .then((docRef) => {
-            toast({ title: 'Sucesso!', description: data.fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
+            // 1. Create or find customer ID
+            if (fromStorefront && data.customerName) {
+                const customerCollectionPath = `artifacts/${APP_ID}/customers`;
+                const customerData: Omit<Customer, 'id'> = {
+                    name: data.customerName,
+                    whatsapp: data.customerWhatsapp || '',
+                    cep: data.customerCep || '',
+                    street: data.customerStreet || '',
+                    number: data.customerNumber || '',
+                    complement: data.customerComplement || '',
+                    neighborhood: data.customerNeighborhood || '',
+                    city: data.customerCity || '',
+                    state: data.customerState || '',
+                };
+                
+                const customerCollection = collection(firestore, customerCollectionPath);
+                const docRef = await addDoc(customerCollection, customerData);
+                customerId = docRef.id;
+                newCustomer = { id: customerId, ...customerData };
+            }
             
-            if (data.type === 'income' && onSaleFinalized) {
-              onSaleFinalized({ ...transactionData, id: docRef.id } as Transaction, newCustomer);
+            // 2. Prepare transaction data
+            let transactionDescription = data.description || '';
+            const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
+
+            if (data.type === 'income' && !cart) {
+                const product = products.find(p => p.id === data.productId);
+                if (!product || !data.quantity) {
+                    toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um produto e quantidade.' });
+                    return;
+                }
+                transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
+            } else if (data.type === 'income' && cart) {
+                transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
+            } else {
+                transactionDescription = data.description || 'Despesa sem descrição';
             }
 
-            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: data.fromStorefront ? 'pickup' : undefined});
+            if(data.type === 'income' && data.additionalDescription) {
+                transactionDescription += ` (+ ${data.additionalDescription})`
+            }
+
+            if (downPaymentValue > 0) {
+                transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
+            }
+            
+            if (fromStorefront && data.deliveryType) {
+                transactionDescription += ` - ${data.deliveryType === 'delivery' ? 'Entrega' : 'Retirada'}`;
+            }
+
+            let paymentMethod = data.paymentMethod || null;
+            let status: 'paid' | 'pending' = 'paid';
+
+            if (downPaymentValue > 0) {
+                paymentMethod = 'fiado';
+                status = 'pending';
+            } else if (data.paymentMethod === 'fiado') {
+                status = 'pending';
+            }
+
+            if (fromStorefront) {
+                status = 'pending';
+                paymentMethod = null;
+            }
+
+            const transactionData: Omit<Transaction, 'id' | 'timestamp'> = {
+                userId: targetUserId,
+                type: data.type,
+                description: transactionDescription,
+                category: fromStorefront ? 'Venda Online' : data.category,
+                amount: data.amount,
+                discount: data.discount || 0,
+                deliveryFee: data.deliveryFee || 0,
+                additionalDescription: data.additionalDescription || '',
+                additionalValue: data.additionalValue || 0,
+                downPayment: downPaymentValue,
+                paymentMethod: paymentMethod,
+                status: status,
+                customerId: customerId,
+                dateMs: Date.now(),
+            };
+
+            // 3. Create transaction document
+            const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
+            const transactionCollection = collection(firestore, transactionCollectionPath);
+            const finalTransactionData = { ...transactionData, timestamp: serverTimestamp() };
+
+            const docRef = await addDoc(transactionCollection, finalTransactionData);
+            
+            toast({ title: 'Sucesso!', description: fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
+            
+            if (data.type === 'income' && onSaleFinalized) {
+                const createdTransaction = { ...finalTransactionData, id: docRef.id, timestamp: new Date() } as unknown as Transaction;
+                onSaleFinalized(createdTransaction, newCustomer);
+            }
+
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: fromStorefront ? 'pickup' : undefined});
             setSheetOpen(false);
-        })
-        .catch((error) => {
-            console.error('Error adding transaction:', error);
-            errorEmitter.emit(
-                'permission-error',
-                new FirestorePermissionError({
-                path: transactionCollectionPath,
+
+        } catch (error) {
+            console.error('Error in onSubmit:', error);
+            // This is a generic catch. The specific error from addDoc for customer/transaction will be more precise.
+            // But we can emit a general error here if needed.
+             errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: 'unknown',
                 operation: 'create',
-                requestResourceData: transactionData,
-                })
-            );
-        });
+                requestResourceData: {data},
+            }));
+        }
     });
   };
 
