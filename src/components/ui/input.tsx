@@ -56,4 +56,5 @@ const InputWithCopy = React.forwardRef<HTMLInputElement, React.ComponentProps<"i
 );
 InputWithCopy.displayName = "InputWithCopy";
 
+export * from './masked-input';
 export { Input, InputWithCopy }

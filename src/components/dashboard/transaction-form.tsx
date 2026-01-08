@@ -16,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input, InputWithCopy } from '@/components/ui/input';
+import { Input, InputWithCopy, CepInput, PhoneInput, CurrencyInput } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -240,15 +240,15 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     }
   }, [customerCity, customerState, deliveryTypeValue, form]);
   
-  const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const cep = e.target.value.replace(/\D/g, '');
-    if (cep.length !== 8) {
+  const handleCepBlur = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
         return;
     }
 
     setIsFetchingCep(true);
     try {
-        const { data } = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+        const { data } = await axios.get(`https://viacep.com.br/ws/${cleanCep}/json/`);
         if (data.erro) {
             toast({ variant: 'destructive', title: 'CEP não encontrado' });
             form.setValue('customerStreet', '');
@@ -518,7 +518,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   <FormItem>
                     <FormLabel>Valor (R$)</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                      <CurrencyInput placeholder="R$ 0,00" {...field} onValueChange={(value) => field.onChange(value)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -653,7 +653,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                         <FormItem>
                         <FormLabel>WhatsApp</FormLabel>
                         <FormControl>
-                            <Input placeholder="(11) 99999-8888" {...field} />
+                          <PhoneInput placeholder="(11) 99999-8888" {...field} onValueChange={(value) => field.onChange(value)} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -670,7 +670,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                             <FormItem>
                             <FormLabel>CEP</FormLabel>
                             <FormControl>
-                                <Input placeholder="Digite o CEP para buscar" {...field} onBlur={handleCepBlur} />
+                              <CepInput placeholder="Digite o CEP para buscar" {...field} onBlur={(e) => handleCepBlur(e.target.value)} onValueChange={(value) => field.onChange(value)} />
                             </FormControl>
                             {isFetchingCep && <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Buscando endereço...</div>}
                             <FormMessage />
@@ -822,7 +822,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                         <FormItem>
                         <FormLabel>Taxa de Entrega (R$)</FormLabel>
                         <FormControl>
-                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                          <CurrencyInput placeholder="R$ 0,00" {...field} onValueChange={(value) => field.onChange(value)} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -836,7 +836,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   <FormItem>
                     <FormLabel>Valor Total</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} readOnly className="bg-muted font-bold" />
+                      <Input type="text" value={formatCurrency(field.value)} readOnly className="bg-muted font-bold" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -921,7 +921,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                               <FormItem>
                               <FormLabel>Valor de Entrada (R$)</FormLabel>
                               <FormControl>
-                                  <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                                <CurrencyInput placeholder="R$ 0,00" {...field} onValueChange={(value) => field.onChange(value)} />
                               </FormControl>
                               <FormMessage />
                               </FormItem>

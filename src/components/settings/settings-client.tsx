@@ -20,7 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input, PhoneInput } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import Loading from '@/app/(admin)/loading-component';
@@ -99,9 +99,10 @@ export function SettingsClient() {
                   <FormItem>
                     <FormLabel>Telefone / WhatsApp</FormLabel>
                     <FormControl>
-                      <Input
+                      <PhoneInput
                         placeholder="(XX) 9XXXX-XXXX"
                         {...field}
+                        onValueChange={(value) => field.onChange(value)}
                       />
                     </FormControl>
                     <FormMessage />

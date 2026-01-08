@@ -25,7 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input, CurrencyInput } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { APP_ID } from '@/app/lib/constants';
 import { useUser, useFirestore } from '@/firebase';
@@ -126,7 +126,7 @@ export function AddOptionalDialog() {
                 <FormItem>
                   <FormLabel>Preço (R$)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="5,00" {...field} />
+                    <CurrencyInput placeholder="R$ 5,00" {...field} onValueChange={(value) => field.onChange(value)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

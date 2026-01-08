@@ -26,7 +26,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Input, CepInput, PhoneInput } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { APP_ID } from '@/app/lib/constants';
 import { useUser, useFirestore } from '@/firebase';
@@ -75,15 +75,15 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
     },
   });
 
-  const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const cep = e.target.value.replace(/\D/g, '');
-    if (cep.length !== 8) {
+  const handleCepBlur = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
         return;
     }
 
     setIsFetchingCep(true);
     try {
-        const { data } = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+        const { data } = await axios.get(`https://viacep.com.br/ws/${cleanCep}/json/`);
         if (data.erro) {
             toast({ variant: 'destructive', title: 'CEP não encontrado' });
             form.setValue('street', '');
@@ -184,7 +184,7 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
                 <FormItem>
                 <FormLabel>WhatsApp (Opcional)</FormLabel>
                 <FormControl>
-                    <Input placeholder="Ex: (11) 99999-8888" {...field} />
+                  <PhoneInput placeholder="Ex: (11) 99999-8888" {...field} onValueChange={(value) => field.onChange(value)} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -197,7 +197,7 @@ export function EditCustomerDialog({ customer }: EditCustomerDialogProps) {
                 <FormItem>
                 <FormLabel>CEP</FormLabel>
                 <FormControl>
-                    <Input placeholder="Digite o CEP para buscar" {...field} onBlur={handleCepBlur} />
+                  <CepInput placeholder="Digite o CEP para buscar" {...field} onBlur={(e) => handleCepBlur(e.target.value)} onValueChange={(value) => field.onChange(value)} />
                 </FormControl>
                 {isFetchingCep && <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Buscando endereço...</div>}
                 <FormMessage />
