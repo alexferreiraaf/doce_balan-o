@@ -24,12 +24,6 @@ export default function AdminLayout({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notifiedOrderIds, setNotifiedOrderIds] = useState<Set<string>>(new Set());
 
-  // Initialize Audio object on the client
-  useEffect(() => {
-    audioRef.current = new Audio('https://cdn.freesound.org/previews/219/219244_4101325-lq.mp3');
-    audioRef.current.load();
-  }, []);
-
   useEffect(() => {
     if (isUserLoading) {
       return; // Aguarda o fim do carregamento
@@ -93,6 +87,7 @@ export default function AdminLayout({
       <main className="flex-grow pb-24 sm:pb-0 flex-1">
         {children}
       </main>
+      <audio ref={audioRef} src="https://cdn.freesound.org/previews/219/219244_4101325-lq.mp3" preload="auto" />
     </div>
   );
 }
