@@ -263,6 +263,14 @@
         "pixKey": {
           "type": "string",
           "description": "The PIX key for receiving payments."
+        },
+         "address": {
+          "type": "string",
+          "description": "The store's physical address."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The store's contact phone or WhatsApp number."
         }
       }
     }

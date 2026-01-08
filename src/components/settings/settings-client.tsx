@@ -24,9 +24,12 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import Loading from '@/app/(admin)/loading-component';
+import { Textarea } from '../ui/textarea';
 
 const settingsFormSchema = z.object({
   pixKey: z.string().optional(),
+  address: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsFormSchema>;
@@ -39,6 +42,8 @@ export function SettingsClient() {
     resolver: zodResolver(settingsFormSchema),
     values: {
       pixKey: settings?.pixKey || '',
+      address: settings?.address || '',
+      phone: settings?.phone || '',
     },
   });
 
@@ -63,9 +68,9 @@ export function SettingsClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Configurações de Pagamento</CardTitle>
+          <CardTitle>Dados da Loja</CardTitle>
           <CardDescription>
-            Gerencie as formas de pagamento da sua loja.
+            Gerencie as informações públicas e de pagamento da sua loja.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -80,6 +85,38 @@ export function SettingsClient() {
                     <FormControl>
                       <Input
                         placeholder="Digite sua chave PIX (celular, e-mail, CPF/CNPJ ou aleatória)"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone / WhatsApp</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="(XX) 9XXXX-XXXX"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Endereço da Loja</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Seu endereço completo para retirada de produtos"
                         {...field}
                       />
                     </FormControl>

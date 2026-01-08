@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike, PlusSquare, Settings } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike, PlusSquare, Settings, ChevronDown } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -18,33 +18,32 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from './theme-toggle';
 
 
-const navLinks = [
+const mainNavLinks = [
   { href: '/pdv', label: 'PDV', icon: ShoppingCart },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/store-orders', label: 'Pedidos da Loja', icon: FileText },
   { href: '/transactions', label: 'Lançamentos', icon: List },
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
-  { href: '/products', label: 'Produtos', icon: Package },
-  { href: '/customers', label: 'Clientes', icon: Users },
-  { href: '/optionals', label: 'Opcionais', icon: PlusSquare },
-  { href: '/settings', label: 'Configurações', icon: Settings },
-];
-
-const mobileNavLinks = [
-  { href: '/pdv', label: 'PDV', icon: ShoppingCart },
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
 const registrationLinks = [
     { href: '/products', label: 'Produtos', icon: Package },
     { href: '/customers', label: 'Clientes', icon: Users },
     { href: '/optionals', label: 'Opcionais', icon: PlusSquare },
-    { href: '/settings', label: 'Configurações', icon: Settings },
+];
+
+const mobileNavLinks = [
+  { href: '/pdv', label: 'PDV', icon: ShoppingCart },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
 export function Navbar() {
@@ -139,7 +138,7 @@ export function Navbar() {
         </Link>
         
         <div className="hidden sm:flex items-center space-x-1 bg-primary/80 p-1 rounded-full">
-          {navLinks.map(({ href, label, icon: Icon }) => (
+          {mainNavLinks.map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} passHref>
               <Button
                 variant="ghost"
@@ -157,15 +156,33 @@ export function Navbar() {
               </Button>
             </Link>
           ))}
+           <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3',
+                    registrationLinks.some(l => pathname.startsWith(l.href)) && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
+                  )}
+                >
+                  <Archive className="w-4 h-4 mr-2" />
+                  Cadastros
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {registrationLinks.map(({ href, label, icon: Icon }) => (
+                  <DropdownMenuItem key={href} onSelect={() => router.push(href)}>
+                    <Icon className="mr-2 h-4 w-4" />
+                    <span>{label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-2">
-             <Button variant="outline" size="sm" className="hidden sm:flex bg-primary-foreground/20 text-primary-foreground border-transparent hover:bg-primary-foreground/30" asChild>
-                <Link href="/loja" target="_blank" rel="noopener noreferrer">
-                    <Eye className="w-4 h-4 mr-2" />
-                    Ver Loja
-                </Link>
-            </Button>
             <ThemeToggle />
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -198,6 +215,10 @@ export function Navbar() {
                         <DropdownMenuItem onSelect={() => window.open('/loja', '_blank')}>
                            <Eye className="mr-2 h-4 w-4" />
                            Ver Loja
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onSelect={() => router.push('/settings')}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          Configurações da Loja
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleLogout}>

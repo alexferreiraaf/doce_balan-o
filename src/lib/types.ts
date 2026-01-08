@@ -58,4 +58,6 @@ export interface Optional {
 
 export interface AppSettings {
   pixKey?: string;
+  address?: string;
+  phone?: string;
 }
