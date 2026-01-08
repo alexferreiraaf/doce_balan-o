@@ -54,12 +54,10 @@ export default function AdminLayout({
 
     const unsubscribe = onSnapshot(pendingOrdersQuery, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const newOrder = change.doc.data() as Transaction;
-          const orderId = change.doc.id;
+        const newOrder = change.doc.data() as Transaction;
+        const orderId = change.doc.id;
 
-          if (!notifiedOrderIds.has(orderId)) {
-            
+        if (change.type === 'added' && !notifiedOrderIds.has(orderId)) {
             toast({
               title: '🎉 Novo Pedido Recebido!',
               description: `${newOrder.description}. Valor: ${formatCurrency(newOrder.amount)}`,
@@ -73,13 +71,14 @@ export default function AdminLayout({
             }
 
             setNotifiedOrderIds(prev => new Set(prev).add(orderId));
-          }
         }
       });
     });
 
     return () => unsubscribe();
-  }, [pendingOrdersQuery, toast, notifiedOrderIds, hasInteracted]);
+  // We remove notifiedOrderIds from dependencies to avoid re-subscribing on every new notification.
+  // The check `!notifiedOrderIds.has(orderId)` is sufficient.
+  }, [pendingOrdersQuery, toast, hasInteracted]);
 
 
   if (isUserLoading || !user) {
