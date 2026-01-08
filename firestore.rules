@@ -35,5 +35,11 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
+
+    // Allow anyone to read optionals, but only signed-in users can manage them.
+    match /artifacts/{appId}/optionals/{optionalId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn();
+    }
   }
 }

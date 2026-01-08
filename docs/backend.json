@@ -228,6 +228,31 @@
         "id",
         "name"
       ]
+    },
+    "Optional": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Optional",
+      "type": "object",
+      "description": "Represents an optional add-on for a product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the optional."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the optional."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the optional."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "price"
+      ]
     }
   },
   "auth": {
@@ -321,8 +346,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "artifacts/{appId}/optionals/{optionalId}",
+        "definition": {
+          "entityName": "Optional",
+          "schema": {
+            "$ref": "#/backend/entities/Optional"
+          },
+          "description": "Stores optional add-ons, accessible to all users.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the Controle da Doçuras application."
+            },
+            {
+              "name": "optionalId",
+              "description": "The unique identifier of the optional."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories."
+    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories and optionals."
   }
 }

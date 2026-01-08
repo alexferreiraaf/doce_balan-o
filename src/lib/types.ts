@@ -49,3 +49,9 @@ export interface ProductCategory {
   id: string;
   name: string;
 }
+
+export interface Optional {
+  id: string;
+  name: string;
+  price: number;
+}

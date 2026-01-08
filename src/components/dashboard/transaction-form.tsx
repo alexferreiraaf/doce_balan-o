@@ -3,7 +3,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Package, Bike } from 'lucide-react';
+import { Loader2, Package, Bike, X, Plus } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import axios from 'axios';
 
@@ -34,11 +34,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { AddProductDialog } from './add-product-dialog';
 import { formatCurrency } from '@/lib/utils';
-import type { Product, Transaction, Customer } from '@/app/lib/types';
+import type { Product, Transaction, Customer, Optional } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
-
+import { useOptionals } from '@/app/lib/hooks/use-optionals';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -48,7 +48,6 @@ const formSchema = z.object({
   // Fields for income type
   productId: z.string().optional(),
   quantity: z.coerce.number().optional(),
-  discount: z.coerce.number().optional(),
   deliveryFee: z.coerce.number().optional(),
   additionalDescription: z.string().optional(),
   additionalValue: z.coerce.number().optional(),
@@ -69,6 +68,7 @@ const formSchema = z.object({
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
   fromStorefront: z.boolean().optional(),
+  selectedOptionals: z.array(z.string()).optional(),
 }).refine(data => {
     if (data.type === 'income' && data.hasDownPayment !== 'yes' && !data.fromStorefront) {
         return !!data.paymentMethod;
@@ -123,6 +123,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
   const { products, loading: productsLoading } = useProducts();
   const { customers, loading: customersLoading } = useCustomers();
+  const { optionals, loading: optionalsLoading } = useOptionals();
+  const [selectedOptionals, setSelectedOptionals] = useState<Optional[]>([]);
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -132,7 +134,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       description: cart ? cart.map(item => `${item.quantity}x ${item.name}`).join(', ') : '',
       amount: cartTotal ?? 0,
       quantity: 1,
-      discount: 0,
       deliveryFee: 0,
       additionalDescription: '',
       additionalValue: 0,
@@ -149,6 +150,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       customerNeighborhood: '',
       customerCity: '',
       customerState: '',
+      selectedOptionals: [],
     },
   });
 
@@ -179,34 +181,25 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   // Effect to calculate total amount for income
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (
-        value.type === 'income' &&
-        !cart &&
-        ['productId', 'quantity', 'discount', 'deliveryFee', 'additionalValue'].includes(name as string)
-      ) {
+      if (value.type === 'income') {
         const product = products.find((p) => p.id === value.productId);
         const productPrice = product ? product.price : 0;
-        const productTotal = productPrice * Number(value.quantity || 0);
-        const discount = Number(value.discount || 0);
+        const baseTotal = cartTotal ?? (productPrice * Number(value.quantity || 0));
+        
+        const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + opt.price, 0);
         const deliveryFee = Number(value.deliveryFee || 0);
-        const additional = Number(value.additionalValue || 0);
-        const totalAmount = productTotal - discount + deliveryFee + additional;
+        
+        const totalAmount = baseTotal + optionalsTotal + deliveryFee;
+        
         form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
-      } else if (
-        value.type === 'income' &&
-        cart &&
-        ['discount', 'deliveryFee', 'additionalValue'].includes(name as string)
-      ) {
-        const cartTotalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const discount = Number(value.discount || 0);
-        const deliveryFee = Number(value.deliveryFee || 0);
-        const additional = Number(value.additionalValue || 0);
-        const totalAmount = cartTotalAmount - discount + deliveryFee + additional;
-        form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
+        
+        const optionalsDescription = selectedOptionals.map(o => o.name).join(', ');
+        form.setValue('additionalDescription', optionalsDescription);
+        form.setValue('additionalValue', optionalsTotal);
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, products, cart]);
+  }, [form, products, cartTotal, selectedOptionals]);
 
   useEffect(() => {
     if (deliveryTypeValue === 'pickup') {
@@ -321,8 +314,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 transactionDescription = data.description || 'Despesa sem descrição';
             }
 
-            if(data.type === 'income' && data.additionalDescription) {
-                transactionDescription += ` (+ ${data.additionalDescription})`
+            if (selectedOptionals.length > 0) {
+                transactionDescription += ` (+ ${selectedOptionals.map(o => o.name).join(', ')})`;
             }
 
             if (downPaymentValue > 0) {
@@ -356,10 +349,10 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 description: transactionDescription,
                 category: fromStorefront ? 'Venda Online' : data.category,
                 amount: data.amount,
-                discount: data.discount || 0,
+                discount: 0,
                 deliveryFee: data.deliveryFee || 0,
-                additionalDescription: data.additionalDescription || '',
-                additionalValue: data.additionalValue || 0,
+                additionalDescription: selectedOptionals.map(o => o.name).join(', ') || '',
+                additionalValue: selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
@@ -389,7 +382,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 onSaleFinalized(createdTransaction, newCustomer);
             }
 
-            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: fromStorefront ? 'pickup' : undefined});
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: fromStorefront ? 'pickup' : undefined});
+            setSelectedOptionals([]);
             setSheetOpen(false);
 
         } catch (error) {
@@ -411,14 +405,25 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     form.reset();
     form.setValue('type', newType);
     form.setValue('quantity', 1);
-    form.setValue('discount', 0);
     form.setValue('deliveryFee', 0);
     form.setValue('additionalDescription', '');
     form.setValue('additionalValue', 0);
     form.setValue('hasDownPayment', 'no');
     form.setValue('downPayment', 0);
     setSuggestions([]);
+    setSelectedOptionals([]);
   };
+
+  const handleOptionalToggle = (optional: Optional) => {
+    setSelectedOptionals(prev => {
+        const isSelected = prev.some(o => o.id === optional.id);
+        if (isSelected) {
+            return prev.filter(o => o.id !== optional.id);
+        } else {
+            return [...prev, optional];
+        }
+    });
+  }
 
   const isPOSSale = !!cart;
 
@@ -720,64 +725,44 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               )}
               
               
-              <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                      control={form.control}
-                      name="additionalDescription"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Adicional (Desc.)</FormLabel>
-                          <FormControl>
-                              <Input placeholder="Ex: Mais Nutella" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                  <FormField
-                      control={form.control}
-                      name="additionalValue"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Valor Adicional (R$)</FormLabel>
-                          <FormControl>
-                              <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
+              <div className="space-y-2">
+                <FormLabel>Opcionais</FormLabel>
+                {optionalsLoading ? (
+                    <p className="text-sm text-muted-foreground">Carregando opcionais...</p>
+                ) : (
+                    <div className="flex flex-wrap gap-2">
+                        {optionals.map(opt => (
+                            <Button 
+                                key={opt.id} 
+                                type="button"
+                                variant={selectedOptionals.some(o => o.id === opt.id) ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleOptionalToggle(opt)}
+                                className="flex gap-2"
+                            >
+                                <span>{opt.name}</span>
+                                <Badge variant="secondary">{formatCurrency(opt.price)}</Badge>
+                            </Button>
+                        ))}
+                    </div>
+                )}
+                 <FormMessage />
               </div>
               
               
-              <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                      control={form.control}
-                      name="discount"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Desconto (R$)</FormLabel>
-                          <FormControl>
-                              <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                  <FormField
-                      control={form.control}
-                      name="deliveryFee"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Taxa de Entrega (R$)</FormLabel>
-                          <FormControl>
-                              <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
-              </div>
+              <FormField
+                    control={form.control}
+                    name="deliveryFee"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Taxa de Entrega (R$)</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
               {!fromStorefront && (
                 <FormField
