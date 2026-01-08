@@ -43,6 +43,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Checkbox } from '../ui/checkbox';
 import { ScrollArea } from '../ui/scroll-area';
 import { useSettings } from '@/app/lib/hooks/use-settings';
+import { storefrontUserId } from '@/firebase/config';
+
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -275,7 +277,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         let targetUserId: string | undefined;
 
         if (data.fromStorefront) {
-            const storefrontUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
             if (!storefrontUserId) {
                 toast({ variant: 'destructive', title: 'Erro de Configuração', description: 'O ID da loja não está configurado. Contate o suporte.' });
                 console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set in .env or .env.local");
