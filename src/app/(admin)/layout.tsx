@@ -60,7 +60,9 @@ export default function AdminLayout({
             });
 
             audioRef.current?.play().catch(error => {
-                console.error("Audio playback failed:", error);
+                // Audio playback failed, we'll ignore this as browsers often block it.
+                // The visual notification is the most important part.
+                console.warn("Audio playback was blocked by the browser:", error);
             });
 
             setNotifiedOrderIds(prev => new Set(prev).add(orderId));
