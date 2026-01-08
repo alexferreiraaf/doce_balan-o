@@ -3,7 +3,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Package, Bike, X, Plus } from 'lucide-react';
+import { Loader2, Package, Bike, X, Plus, ChevronsUpDown } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import axios from 'axios';
 
@@ -39,6 +39,9 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
 import { useOptionals } from '@/app/lib/hooks/use-optionals';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Checkbox } from '../ui/checkbox';
+import { ScrollArea } from '../ui/scroll-area';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -734,25 +737,52 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               
               <div className="space-y-2">
                 <FormLabel>Opcionais</FormLabel>
-                {optionalsLoading ? (
-                    <p className="text-sm text-muted-foreground">Carregando opcionais...</p>
-                ) : (
-                    <div className="flex flex-wrap gap-2">
-                        {optionals.map(opt => (
-                            <Button 
-                                key={opt.id} 
-                                type="button"
-                                variant={selectedOptionals.some(o => o.id === opt.id) ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleOptionalToggle(opt)}
-                                className="flex gap-2"
-                            >
-                                <span>{opt.name}</span>
-                                <Badge variant="secondary">{formatCurrency(opt.price)}</Badge>
-                            </Button>
-                        ))}
-                    </div>
-                )}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                        >
+                            <span className="truncate">
+                                {selectedOptionals.length > 0 ? selectedOptionals.map(o => o.name).join(', ') : "Selecione os opcionais..."}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                         {optionalsLoading ? (
+                            <p className="text-sm text-center text-muted-foreground p-4">Carregando opcionais...</p>
+                        ) : (
+                            <ScrollArea className="max-h-60">
+                                <div className="p-4 space-y-2">
+                                {optionals.map(opt => (
+                                     <div key={opt.id} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={opt.id}
+                                            checked={selectedOptionals.some(o => o.id === opt.id)}
+                                            onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                    setSelectedOptionals(prev => [...prev, opt]);
+                                                } else {
+                                                    setSelectedOptionals(prev => prev.filter(o => o.id !== opt.id));
+                                                }
+                                            }}
+                                        />
+                                        <label
+                                            htmlFor={opt.id}
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex justify-between w-full"
+                                        >
+                                            <span>{opt.name}</span>
+                                            <span className='text-muted-foreground'>{formatCurrency(opt.price)}</span>
+                                        </label>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </PopoverContent>
+                </Popover>
                  <FormMessage />
               </div>
               
