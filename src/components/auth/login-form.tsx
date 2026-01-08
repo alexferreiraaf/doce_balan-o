@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -44,27 +44,6 @@ export function LoginForm() {
       password: '',
     },
   });
-
-  const handleAnonymousSignIn = () => {
-    startTransition(async () => {
-        try {
-            await signInAnonymously(auth);
-            toast({
-                title: 'Acesso anônimo',
-                description: 'Você está navegando como visitante.',
-            });
-            router.push('/');
-            router.refresh();
-        } catch (error) {
-            console.error("Anonymous sign-in failed: ", error);
-            toast({
-                variant: 'destructive',
-                title: 'Erro no Acesso Anônimo',
-                description: 'Não foi possível continuar. Tente novamente.',
-            });
-        }
-    });
-  };
 
   const onSubmit = (data: LoginFormValues) => {
     startTransition(async () => {
@@ -141,12 +120,6 @@ export function LoginForm() {
           <Link href="/signup" className="font-semibold text-primary hover:underline">
             Cadastre-se
           </Link>
-        </p>
-         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Ou{' '}
-          <button onClick={handleAnonymousSignIn} className="font-semibold text-primary hover:underline" disabled={isPending}>
-            continue como anônimo
-          </button>
         </p>
       </CardContent>
     </Card>

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Package, Bike } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import axios from 'axios';
 
 import { Button } from '@/components/ui/button';
@@ -138,7 +138,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       additionalValue: 0,
       hasDownPayment: 'no',
       downPayment: 0,
-      category: cart ? INCOME_CATEGORIES[0] : undefined,
+      category: cart ? 'Venda Online' : undefined,
       deliveryType: fromStorefront ? 'pickup' : undefined,
       customerName: '',
       customerWhatsapp: '',
@@ -250,7 +250,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
             if (!targetUserId) {
                 toast({ variant: 'destructive', title: 'Erro de Configuração', description: 'O ID da loja não está configurado. Contate o suporte.' });
-                console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set.");
+                console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set in .env.local");
                 return;
             }
         } else {
@@ -266,7 +266,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         let newCustomer: Customer | undefined;
 
         try {
-            // 1. Create or find customer ID
+            // 1. Create customer if needed (only for storefront)
             if (fromStorefront && data.customerName) {
                 const customerCollectionPath = `artifacts/${APP_ID}/customers`;
                 const customerData: Omit<Customer, 'id'> = {
@@ -328,9 +328,11 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
             if (fromStorefront) {
                 status = 'pending';
-                paymentMethod = null;
+                paymentMethod = null; // Payment for storefront orders is handled offline
             }
 
+            const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
+            
             const transactionData: Omit<Transaction, 'id' | 'timestamp'> = {
                 userId: targetUserId,
                 type: data.type,
@@ -344,12 +346,11 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
-                customerId: customerId,
+                customerId: customerId, // Associate customer with transaction
                 dateMs: Date.now(),
             };
 
             // 3. Create transaction document
-            const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
             const transactionCollection = collection(firestore, transactionCollectionPath);
             const finalTransactionData = { ...transactionData, timestamp: serverTimestamp() };
 
@@ -358,7 +359,16 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             toast({ title: 'Sucesso!', description: fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
             
             if (data.type === 'income' && onSaleFinalized) {
-                const createdTransaction = { ...finalTransactionData, id: docRef.id, timestamp: new Date() } as unknown as Transaction;
+                const createdTransaction: Transaction = {
+                    ...transactionData,
+                    id: docRef.id,
+                    timestamp: {
+                      toDate: () => new Date(),
+                      toMillis: () => Date.now(),
+                      nanoseconds: 0,
+                      seconds: Math.floor(Date.now() / 1000)
+                    },
+                  };
                 onSaleFinalized(createdTransaction, newCustomer);
             }
 
@@ -367,10 +377,11 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
         } catch (error) {
             console.error('Error in onSubmit:', error);
-            // This is a generic catch. The specific error from addDoc for customer/transaction will be more precise.
-            // But we can emit a general error here if needed.
+             // This can be a generic error for the entire transaction process.
+             // Specific Firestore errors are better caught inside their respective blocks.
+             toast({ variant: 'destructive', title: 'Erro Crítico', description: 'Não foi possível completar a operação. Verifique suas permissões.' });
              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: 'unknown',
+                path: 'customer/transaction creation',
                 operation: 'create',
                 requestResourceData: {data},
             }));
