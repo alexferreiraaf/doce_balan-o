@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Wallet, TrendingUp, TrendingDown, List } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, List, Info } from 'lucide-react';
 import Link from 'next/link';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { DangerZone } from './danger-zone';
 import { RecentTransactionsList } from './recent-transactions-list';
+import { InputWithCopy } from '../ui/input';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
@@ -65,6 +67,20 @@ export function DashboardClient() {
                 icon={TrendingDown}
                 />
             </div>
+            
+            {user?.uid && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Conecte sua loja ao seu painel!</AlertTitle>
+                <AlertDescription>
+                  Para que os pedidos da sua loja apareçam aqui, você precisa configurar seu ID de vendedor.
+                  Copie o ID abaixo e cole no arquivo chamado `.env` na raiz do seu projeto.
+                  <div className="mt-3">
+                    <InputWithCopy value={`NEXT_PUBLIC_STOREFRONT_USER_ID=${user.uid}`} readOnly/>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <Card>
                 <CardHeader>
@@ -86,11 +102,6 @@ export function DashboardClient() {
 
             <DangerZone transactions={transactions} />
             
-            {user && (
-                <p className="text-xs text-center text-muted-foreground pt-4">
-                ID da Confeiteira (Para Debug): {user.uid}
-                </p>
-            )}
         </div>
     </div>
     </>

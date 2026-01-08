@@ -203,7 +203,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     const baseTotal = cartTotal ?? (productPrice * Number(quantity || 0));
     
     const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + opt.price, 0);
-    const currentDeliveryFee = Number(deliveryFee || 0);
+    const currentDeliveryFee = deliveryTypeValue === 'delivery' ? Number(deliveryFee || 0) : 0;
     
     const totalAmount = baseTotal + optionalsTotal + currentDeliveryFee;
     
@@ -218,7 +218,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     if (form.getValues('additionalValue') !== optionalsTotal) {
         form.setValue('additionalValue', optionalsTotal);
     }
-  }, [productId, quantity, deliveryFee, selectedOptionals, products, cartTotal, form]);
+  }, [productId, quantity, deliveryFee, selectedOptionals, products, cartTotal, form, deliveryTypeValue]);
 
   useEffect(() => {
     if (deliveryTypeValue === 'pickup') {
@@ -274,7 +274,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     startTransition(async () => {
         let targetUserId: string | undefined;
 
-        if (fromStorefront) {
+        if (data.fromStorefront) {
             const storefrontUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
             if (!storefrontUserId) {
                 toast({ variant: 'destructive', title: 'Erro de Configuração', description: 'O ID da loja não está configurado. Contate o suporte.' });
@@ -296,7 +296,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
         try {
              // 1. Create or find customer
-            if (fromStorefront && data.customerName) {
+            if (data.fromStorefront && data.customerName) {
                 const customerCollectionPath = `artifacts/${APP_ID}/customers`;
                 const customerData: Omit<Customer, 'id'> = {
                     name: data.customerName,
@@ -345,7 +345,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
             }
             
-            if (fromStorefront && data.deliveryType) {
+            if (data.fromStorefront && data.deliveryType) {
                 transactionDescription += ` - ${data.deliveryType === 'delivery' ? 'Entrega' : 'Retirada'}`;
             }
 
@@ -359,7 +359,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 status = 'pending';
             }
 
-            if (fromStorefront) {
+            if (data.fromStorefront) {
                 status = 'pending';
             }
 
@@ -369,10 +369,10 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 userId: targetUserId,
                 type: data.type,
                 description: transactionDescription,
-                category: fromStorefront ? 'Venda Online' : data.category,
+                category: data.fromStorefront ? 'Venda Online' : data.category,
                 amount: data.amount,
                 discount: 0,
-                deliveryFee: data.deliveryFee || 0,
+                deliveryFee: data.deliveryType === 'delivery' ? (data.deliveryFee || 0) : 0,
                 additionalDescription: selectedOptionals.map(o => o.name).join(', ') || '',
                 additionalValue: selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
                 downPayment: downPaymentValue,
@@ -406,7 +406,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             // Commit the batch
             await batch.commit();
             
-            toast({ title: 'Sucesso!', description: fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
+            toast({ title: 'Sucesso!', description: data.fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
             
             if (data.type === 'income' && onSaleFinalized) {
                 const createdTransaction: Transaction = {
@@ -422,7 +422,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 onSaleFinalized(createdTransaction, newCustomer);
             }
 
-            form.reset({type: data.type, description: '', amount: 0, quantity: 1, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: fromStorefront ? 'pickup' : undefined});
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: data.fromStorefront ? 'pickup' : undefined});
             setSelectedOptionals([]);
             setSheetOpen(false);
 
@@ -469,7 +469,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     <>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {!isPOSSale && (
+          {!isPOSSale && !fromStorefront && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Button
                 type="button"
@@ -540,7 +540,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             </>
           ) : (
             <div className="space-y-4">
-              {!isPOSSale && (
+              {!isPOSSale && !fromStorefront && (
                 <>
                   <FormField
                     control={form.control}
@@ -584,7 +584,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   />
                 </>
               )} 
-              {isPOSSale && (
+              {(isPOSSale || fromStorefront) && (
                   <FormField
                   control={form.control}
                   name="description"
@@ -633,32 +633,36 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 />
               )}
               
-                <FormField
-                    control={form.control}
-                    name="customerName"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Nome do Cliente</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Seu nome completo" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="customerWhatsapp"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>WhatsApp</FormLabel>
-                        <FormControl>
-                          <PhoneInput placeholder="(11) 99999-8888" {...field} onValueChange={(value) => field.onChange(value)} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
+              {fromStorefront && (
+                <div className='space-y-4'>
+                    <FormField
+                        control={form.control}
+                        name="customerName"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nome do Cliente</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Seu nome completo" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="customerWhatsapp"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>WhatsApp</FormLabel>
+                            <FormControl>
+                              <PhoneInput placeholder="(11) 99999-8888" {...field} onValueChange={(value) => field.onChange(value)} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+              )}
             
               
               {deliveryTypeValue === 'delivery' && (
