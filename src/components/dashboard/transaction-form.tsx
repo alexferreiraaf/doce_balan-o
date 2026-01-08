@@ -98,7 +98,7 @@ const formSchema = z.object({
     message: 'O CEP é obrigatório para entrega.',
     path: ['customerCep'],
 }).refine(data => {
-    if (fromStorefront && !data.paymentMethod) {
+    if (data.fromStorefront && !data.paymentMethod) {
         return false;
     }
     return true;
