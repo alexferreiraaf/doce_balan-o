@@ -6,7 +6,7 @@ import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import Loading from './loading-component';
 import { Navbar } from '@/components/layout/navbar';
 import { cn } from '@/lib/utils';
-import { collection, query, where, onSnapshot }from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { APP_ID } from '@/app/lib/constants';
 import type { Transaction } from '@/app/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -24,8 +24,8 @@ export default function AdminLayout({
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [notifiedOrderIds] = useState(() => new Set<string>());
-
+  const [notifiedOrderIds, setNotifiedOrderIds] = useState<Set<string>>(new Set());
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     if (isUserLoading) {
@@ -53,10 +53,29 @@ export default function AdminLayout({
   useEffect(() => {
     if (!pendingOrdersQuery) return;
 
+    // 1. Initial fetch to populate existing pending orders without notifying
+    if (isInitialLoad.current) {
+      getDocs(pendingOrdersQuery).then(initialSnapshot => {
+        const initialIds = new Set<string>();
+        initialSnapshot.forEach(doc => {
+          initialIds.add(doc.id);
+        });
+        setNotifiedOrderIds(initialIds);
+        isInitialLoad.current = false;
+      });
+    }
+
+    // 2. Real-time listener for new pending orders
     const unsubscribe = onSnapshot(pendingOrdersQuery, (snapshot) => {
+      // Don't process changes on the very first snapshot if we just did an initial fetch
+      if (isInitialLoad.current) {
+        return;
+      }
+      
       snapshot.docChanges().forEach((change) => {
         const orderId = change.doc.id;
 
+        // Notify only for newly added documents that we haven't seen before
         if (change.type === 'added' && !notifiedOrderIds.has(orderId)) {
             const newOrder = change.doc.data() as Transaction;
             toast({
@@ -64,8 +83,9 @@ export default function AdminLayout({
               description: `${newOrder.description}. Valor: ${formatCurrency(newOrder.amount)}`,
               duration: 10000, 
             });
-
-            notifiedOrderIds.add(orderId);
+            
+            // Add to notified set to prevent re-notification
+            setNotifiedOrderIds(prevIds => new Set(prevIds).add(orderId));
 
             if (hasInteracted) {
                 audioRef.current?.play().catch(error => {
