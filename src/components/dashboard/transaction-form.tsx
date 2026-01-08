@@ -62,7 +62,7 @@ const formSchema = z.object({
   customerNumber: z.string().optional(),
   customerComplement: z.string().optional(),
   customerNeighborhood: z.string().optional(),
-  customerCity: zstring().optional(),
+  customerCity: z.string().optional(),
   customerState: z.string().optional(),
   
   hasDownPayment: z.enum(['yes', 'no']).optional(),
