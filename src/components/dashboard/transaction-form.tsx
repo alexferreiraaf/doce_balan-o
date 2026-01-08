@@ -243,26 +243,25 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
 
   const onSubmit = async (data: TransactionFormValues) => {
-    let targetUserId: string | undefined;
-
-    if (fromStorefront) {
-      targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
-    } else {
-      targetUserId = user?.uid;
-    }
-
-    if (!targetUserId || !firestore) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Tente novamente mais tarde.' });
-        return;
-    }
-
     startTransition(async () => {
+      let targetUserId: string | undefined;
+
+      if (data.fromStorefront) {
+          targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
+      } else {
+          targetUserId = user?.uid;
+      }
+      
+      if (!targetUserId || !firestore) {
+          toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Tente novamente mais tarde.' });
+          return;
+      }
       
       let customerId: string | undefined;
       let newCustomer: Customer | undefined;
 
       // 1. Create customer if it's a storefront order with a customer name
-      if (fromStorefront && data.customerName) {
+      if (data.fromStorefront && data.customerName) {
         const customerCollectionPath = `artifacts/${APP_ID}/customers`;
         const customerData: Omit<Customer, 'id'> = {
           name: data.customerName,
@@ -319,7 +318,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
       }
       
-      if (fromStorefront && data.deliveryType) {
+      if (data.fromStorefront && data.deliveryType) {
         transactionDescription += ` - ${data.deliveryType === 'delivery' ? 'Entrega' : 'Retirada'}`;
       }
 
@@ -333,7 +332,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         status = 'pending';
       }
 
-      if (fromStorefront) {
+      if (data.fromStorefront) {
           status = 'pending';
       }
 
@@ -341,7 +340,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         userId: targetUserId,
         type: data.type,
         description: transactionDescription,
-        category: fromStorefront ? 'Venda Online' : data.category,
+        category: data.fromStorefront ? 'Venda Online' : data.category,
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
@@ -360,13 +359,13 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
       addDoc(transactionCollection, transactionData)
         .then((docRef) => {
-            toast({ title: 'Sucesso!', description: fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
+            toast({ title: 'Sucesso!', description: data.fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
             
             if (data.type === 'income' && onSaleFinalized) {
               onSaleFinalized({ ...transactionData, id: docRef.id } as Transaction, newCustomer);
             }
 
-            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: fromStorefront ? 'pickup' : undefined});
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: data.fromStorefront ? 'pickup' : undefined});
             setSheetOpen(false);
         })
         .catch(() => {
