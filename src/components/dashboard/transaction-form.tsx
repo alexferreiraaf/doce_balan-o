@@ -257,6 +257,42 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     }
 
     startTransition(async () => {
+      
+      let customerId: string | undefined;
+      let newCustomer: Customer | undefined;
+
+      // 1. Create customer if it's a storefront order with a customer name
+      if (fromStorefront && data.customerName) {
+        const customerCollectionPath = `artifacts/${APP_ID}/customers`;
+        const customerData: Omit<Customer, 'id'> = {
+          name: data.customerName,
+          whatsapp: data.customerWhatsapp || '',
+          cep: data.customerCep || '',
+          street: data.customerStreet || '',
+          number: data.customerNumber || '',
+          complement: data.customerComplement || '',
+          neighborhood: data.customerNeighborhood || '',
+          city: data.customerCity || '',
+          state: data.customerState || '',
+        };
+        const customerCollection = collection(firestore, customerCollectionPath);
+
+        try {
+          const docRef = await addDoc(customerCollection, customerData);
+          customerId = docRef.id;
+          newCustomer = { id: docRef.id, ...customerData };
+        } catch (error) {
+          console.error('Error creating customer:', error);
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: customerCollectionPath,
+              operation: 'create',
+              requestResourceData: customerData,
+          }));
+          return; // Stop execution if customer creation fails
+        }
+      }
+      
+      // 2. Prepare transaction data
       const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
       
       let transactionDescription = data.description || '';
@@ -300,38 +336,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       if (fromStorefront) {
           status = 'pending';
       }
-      
-      let customerId: string | null = null;
-      let newCustomer: Customer | undefined;
-      
-      if (fromStorefront && data.customerName) {
-        const customerCollectionPath = `artifacts/${APP_ID}/customers`;
-        const customerData: Omit<Customer, 'id'> = {
-          name: data.customerName,
-          whatsapp: data.customerWhatsapp || '',
-          cep: data.customerCep || '',
-          street: data.customerStreet || '',
-          number: data.customerNumber || '',
-          complement: data.customerComplement || '',
-          neighborhood: data.customerNeighborhood || '',
-          city: data.customerCity || '',
-          state: data.customerState || '',
-        };
-        const customerCollection = collection(firestore, customerCollectionPath);
-
-        try {
-          const docRef = await addDoc(customerCollection, customerData);
-          customerId = docRef.id;
-          newCustomer = { id: docRef.id, ...customerData };
-        } catch (error) {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: customerCollectionPath,
-              operation: 'create',
-              requestResourceData: customerData,
-          }));
-          return;
-        }
-      }
 
       const transactionData = {
         userId: targetUserId,
@@ -346,11 +350,12 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         downPayment: downPaymentValue,
         paymentMethod: paymentMethod,
         status: status,
-        customerId: customerId,
+        customerId: customerId, // Use the newly created customerId
         timestamp: serverTimestamp(),
         dateMs: Date.now(),
       };
       
+      // 3. Create transaction document
       const transactionCollection = collection(firestore, transactionCollectionPath);
 
       addDoc(transactionCollection, transactionData)
