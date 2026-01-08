@@ -248,12 +248,17 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
       if (data.fromStorefront) {
           targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
+           if (!targetUserId) {
+              toast({ variant: 'destructive', title: 'Erro de Configuração', description: 'O ID da loja não está configurado. Contate o suporte.' });
+              console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set.");
+              return;
+           }
       } else {
           targetUserId = user?.uid;
       }
       
       if (!targetUserId || !firestore) {
-          toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Tente novamente mais tarde.' });
+          toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registrar o pedido. Usuário ou conexão inválidos.' });
           return;
       }
       
@@ -334,22 +339,23 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
       if (data.fromStorefront) {
           status = 'pending';
+          paymentMethod = null; // Payment is handled externally for storefront orders initially
       }
 
       const transactionData = {
         userId: targetUserId,
         type: data.type,
         description: transactionDescription,
-        category: data.category,
+        category: data.category || (data.fromStorefront ? 'Venda Online' : 'Venda'),
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
-        additionalDescription: data.type === 'expense' ? data.additionalDescription || '' : data.additionalDescription || '',
+        additionalDescription: data.additionalDescription || '',
         additionalValue: data.additionalValue || 0,
         downPayment: downPaymentValue,
         paymentMethod: paymentMethod,
         status: status,
-        customerId: customerId, // Use the newly created customerId
+        customerId: customerId, // Use the newly created customerId for storefront orders
         timestamp: serverTimestamp(),
         dateMs: Date.now(),
       };
