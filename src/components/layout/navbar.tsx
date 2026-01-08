@@ -155,14 +155,12 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-            <Link href="/loja" passHref legacyBehavior>
-                <a target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="sm" className="hidden sm:flex bg-primary-foreground/20 text-primary-foreground border-transparent hover:bg-primary-foreground/30">
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver Loja
-                    </Button>
-                </a>
-            </Link>
+             <Button variant="outline" size="sm" className="hidden sm:flex bg-primary-foreground/20 text-primary-foreground border-transparent hover:bg-primary-foreground/30" asChild>
+                <Link href="/loja" target="_blank" rel="noopener noreferrer">
+                    <Eye className="w-4 h-4 mr-2" />
+                    Ver Loja
+                </Link>
+            </Button>
             <ThemeToggle />
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -192,7 +190,7 @@ export function Navbar() {
                     <>
                         <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => router.push('/loja')}>
+                        <DropdownMenuItem onSelect={() => window.open('/loja', '_blank')}>
                            <Eye className="mr-2 h-4 w-4" />
                            Ver Loja
                         </DropdownMenuItem>
