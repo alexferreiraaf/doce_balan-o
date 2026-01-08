@@ -156,6 +156,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const typeValue = form.watch('type');
   const hasDownPaymentValue = form.watch('hasDownPayment');
   const deliveryTypeValue = form.watch('deliveryType');
+  const customerCity = form.watch('customerCity');
+  const customerState = form.watch('customerState');
 
   // Effect for category suggestion (for expenses)
   useEffect(() => {
@@ -212,6 +214,20 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     }
   }, [deliveryTypeValue, form]);
   
+  // Effect to set delivery fee based on city
+  useEffect(() => {
+    if (deliveryTypeValue === 'delivery') {
+      const city = customerCity?.trim().toLowerCase();
+      const state = customerState?.trim().toLowerCase();
+      
+      if (city === 'ourinhos' && state === 'sp') {
+        form.setValue('deliveryFee', 10);
+      } else {
+        form.setValue('deliveryFee', 0);
+      }
+    }
+  }, [customerCity, customerState, deliveryTypeValue, form]);
+  
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const cep = e.target.value.replace(/\D/g, '');
     if (cep.length !== 8) {
@@ -247,12 +263,13 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         let targetUserId: string | undefined;
 
         if (fromStorefront) {
-            targetUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
-            if (!targetUserId) {
+            const storefrontUserId = process.env.NEXT_PUBLIC_STOREFRONT_USER_ID;
+            if (!storefrontUserId) {
                 toast({ variant: 'destructive', title: 'Erro de Configuração', description: 'O ID da loja não está configurado. Contate o suporte.' });
-                console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set in .env.local");
+                console.error("NEXT_PUBLIC_STOREFRONT_USER_ID is not set in .env or .env.local");
                 return;
             }
+            targetUserId = storefrontUserId;
         } else {
             targetUserId = user?.uid;
         }
