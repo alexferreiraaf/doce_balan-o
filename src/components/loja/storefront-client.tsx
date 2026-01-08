@@ -14,10 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter
 import { ScrollArea } from '../ui/scroll-area';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 import { useToast } from '@/hooks/use-toast';
-
-interface GroupedProducts {
-  [categoryName: string]: Product[];
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface CartItem extends Product {
   quantity: number;
@@ -30,41 +27,17 @@ export function StorefrontClient() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { toast } = useToast();
+  const [selectedCategoryId, setSelectedCategoryId] = useState('all');
 
   const loading = productsLoading || categoriesLoading;
 
-  const groupedProducts = useMemo(() => {
-    const group: GroupedProducts = {};
-
-    categories.forEach(cat => {
-      group[cat.name] = [];
-    });
-    group['Outros'] = [];
-
-    products.forEach(product => {
-      const category = categories.find(c => c.id === product.categoryId);
-      const categoryName = category ? category.name : 'Outros';
-      if (!group[categoryName]) {
-        group[categoryName] = [];
-      }
-      group[categoryName].push(product);
-    });
-
-    // Clean up empty categories
-    Object.keys(group).forEach(key => {
-      if (group[key].length === 0) {
-        delete group[key];
-      }
-    });
-
-    return group;
-  }, [products, categories]);
+  const filteredProducts = useMemo(() => {
+    if (selectedCategoryId === 'all') {
+      return products;
+    }
+    return products.filter(p => p.categoryId === selectedCategoryId);
+  }, [products, selectedCategoryId]);
   
-  const categoryOrder = Object.keys(groupedProducts).sort((a, b) => {
-    if (a === 'Outros') return 1;
-    if (b === 'Outros') return -1;
-    return a.localeCompare(b);
-  });
 
   const cartTotal = useMemo(() => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
@@ -128,47 +101,55 @@ export function StorefrontClient() {
         </div>
       </header>
 
-      {categoryOrder.length === 0 ? (
+      {products.length === 0 ? (
         <div className="text-center py-20">
             <Package className="w-16 h-16 mx-auto text-muted-foreground" />
             <h2 className="mt-4 text-2xl font-semibold">Nenhum produto no cardápio</h2>
             <p className="mt-2 text-muted-foreground">Volte em breve para ver nossas delícias!</p>
         </div>
       ) : (
-        <div className="space-y-10">
-          {categoryOrder.map(categoryName => (
-            <section key={categoryName}>
-              <h2 className="text-2xl font-bold flex items-center gap-3 mb-4">
-                <Tag className="w-6 h-6 text-primary/80" />
-                {categoryName}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {groupedProducts[categoryName].map(product => (
-                  <Card key={product.id} className="overflow-hidden flex flex-col group">
-                    <CardHeader className="p-0">
-                      <div className="aspect-square bg-muted flex items-center justify-center relative">
-                        {product.imageUrl ? (
-                          <Image src={product.imageUrl} alt={product.name} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform duration-300" />
-                        ) : (
-                          <Package className="w-16 h-16 text-muted-foreground" />
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 flex flex-col flex-grow">
-                      <h3 className="font-semibold text-lg flex-grow">{product.name}</h3>
-                      <div className="flex justify-between items-end mt-4">
-                        <p className="text-xl font-bold text-primary">{formatCurrency(product.price)}</p>
-                        <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)}>
-                          <ShoppingCart className="w-4 h-4 mr-2" />
-                          Pedir
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          ))}
+        <div className="space-y-6">
+            <div className="max-w-xs">
+                 <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Filtrar por categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
+                        {categories.map(category => (
+                            <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+          
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredProducts.map(product => (
+                <Card key={product.id} className="overflow-hidden flex flex-col group">
+                <CardHeader className="p-0">
+                    <div className="aspect-square bg-muted flex items-center justify-center relative">
+                    {product.imageUrl ? (
+                        <Image src={product.imageUrl} alt={product.name} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                        <Package className="w-16 h-16 text-muted-foreground" />
+                    )}
+                    </div>
+                </CardHeader>
+                <CardContent className="p-4 flex flex-col flex-grow">
+                    <h3 className="font-semibold text-lg flex-grow">{product.name}</h3>
+                    <div className="flex justify-between items-end mt-4">
+                    <p className="text-xl font-bold text-primary">{formatCurrency(product.price)}</p>
+                    <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)}>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Pedir
+                    </Button>
+                    </div>
+                </CardContent>
+                </Card>
+            ))}
+            </div>
         </div>
       )}
 
