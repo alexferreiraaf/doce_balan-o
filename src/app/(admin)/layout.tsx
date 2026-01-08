@@ -22,9 +22,12 @@ export default function AdminLayout({
   const pathname = usePathname();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [notifiedOrderIds, setNotifiedOrderIds] = useState<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
+  
+  // Guardamos o timestamp de quando o componente é montado.
+  const [mountTimestamp] = useState(() => Date.now());
+
 
   useEffect(() => {
     if (isUserLoading) {
@@ -37,17 +40,19 @@ export default function AdminLayout({
 
   useEffect(() => {
     const listener = () => setHasInteracted(true);
-    window.addEventListener('click', listener);
+    window.addEventListener('click', listener, { once: true });
     return () => window.removeEventListener('click', listener);
   }, []);
 
+  // Alteramos a query para buscar apenas novos pedidos a partir do momento que o layout foi montado.
   const pendingOrdersQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions`),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
+      where('dateMs', '>', mountTimestamp) // Filtra apenas pedidos criados DEPOIS que a página carregou
     );
-  }, [firestore, user]);
+  }, [firestore, user, mountTimestamp]);
 
   useEffect(() => {
     if (!pendingOrdersQuery) return;
@@ -55,9 +60,9 @@ export default function AdminLayout({
     const unsubscribe = onSnapshot(pendingOrdersQuery, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         const newOrder = change.doc.data() as Transaction;
-        const orderId = change.doc.id;
-
-        if (change.type === 'added' && !notifiedOrderIds.has(orderId)) {
+        
+        // A notificação só ocorrerá para documentos recém-adicionados que satisfazem a query.
+        if (change.type === 'added') {
             toast({
               title: '🎉 Novo Pedido Recebido!',
               description: `${newOrder.description}. Valor: ${formatCurrency(newOrder.amount)}`,
@@ -69,15 +74,11 @@ export default function AdminLayout({
                     console.warn("Audio playback failed:", error);
                 });
             }
-
-            setNotifiedOrderIds(prev => new Set(prev).add(orderId));
         }
       });
     });
 
     return () => unsubscribe();
-  // We remove notifiedOrderIds from dependencies to avoid re-subscribing on every new notification.
-  // The check `!notifiedOrderIds.has(orderId)` is sufficient.
   }, [pendingOrdersQuery, toast, hasInteracted]);
 
 
