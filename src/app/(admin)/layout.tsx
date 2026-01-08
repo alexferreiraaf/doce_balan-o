@@ -10,6 +10,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { APP_ID } from '@/app/lib/constants';
 import type { Transaction } from '@/app/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils';
 
 export default function AdminLayout({
   children,
@@ -21,7 +22,6 @@ export default function AdminLayout({
   const pathname = usePathname();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notifiedOrderIds, setNotifiedOrderIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -36,6 +36,10 @@ export default function AdminLayout({
 
   const pendingOrdersQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
+    // We only listen to orders for the logged-in user.
+    // Storefront orders are created under a specific user ID,
+    // so we need to be logged in as that user to get notifications.
+    // Or adjust rules and query if that's not the desired behavior.
     return query(
       collection(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions`),
       where('status', '==', 'pending')
@@ -51,18 +55,17 @@ export default function AdminLayout({
           const newOrder = change.doc.data() as Transaction;
           const orderId = change.doc.id;
 
+          // Only notify if we haven't seen this order ID before
           if (!notifiedOrderIds.has(orderId)) {
-            // Play sound
-            audioRef.current?.play().catch(e => console.error("Error playing audio:", e));
             
-            // Show toast
+            // Show toast notification
             toast({
               title: '🎉 Novo Pedido Recebido!',
-              description: `Pedido de ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
+              description: `${newOrder.description}. Valor: ${formatCurrency(newOrder.amount)}`,
               duration: 10000, // 10 seconds
             });
 
-            // Add to notified set
+            // Add to notified set to prevent re-notifying
             setNotifiedOrderIds(prev => new Set(prev).add(orderId));
           }
         }
@@ -87,7 +90,6 @@ export default function AdminLayout({
       <main className="flex-grow pb-24 sm:pb-0 flex-1">
         {children}
       </main>
-      <audio ref={audioRef} src="https://cdn.freesound.org/previews/219/219244_4101325-lq.mp3" preload="auto" />
     </div>
   );
 }
