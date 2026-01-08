@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -26,6 +26,7 @@ import { ThemeToggle } from './theme-toggle';
 const navLinks = [
   { href: '/pdv', label: 'PDV', icon: ShoppingCart },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/store-orders', label: 'Pedidos da Loja', icon: FileText },
   { href: '/transactions', label: 'Lançamentos', icon: List },
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
   { href: '/products', label: 'Produtos', icon: Package },
@@ -215,8 +216,8 @@ export function Navbar() {
         
         <MobileMenuButton label="Cadastros" icon={Archive} links={registrationLinks} />
         
+        <NavButton href="/store-orders" label="Pedidos" icon={FileText} />
         <NavButton href="/transactions" label="Lançamentos" icon={List} />
-        <NavButton href="/reports" label="Relatórios" icon={TrendingUp} />
 
       </div>
 

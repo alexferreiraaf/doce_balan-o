@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown } from 'lucide-react';
+import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, FileText } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -22,12 +22,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
-import { TransactionList } from './transaction-list';
+import { TransactionList } from '../transactions/transaction-list';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
-import { EditTransactionSheet } from './edit-transaction-sheet';
+import { EditTransactionSheet } from '../transactions/edit-transaction-sheet';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 
-export function TransactionsClient() {
+export function StoreOrdersClient() {
   const { transactions, loading: transactionsLoading } = useTransactions();
   const { customers, loading: customersLoading } = useCustomers();
   const { user, isUserLoading } = useUser();
@@ -36,21 +36,21 @@ export function TransactionsClient() {
 
   const loading = transactionsLoading || customersLoading;
 
-  const { paidTransactions, pendingFiado, totalFiadoValue } = useMemo(() => {
-    // Exclude storefront orders from the manual transactions page logic
-    const manualTransactions = transactions.filter(t => t.category !== 'Venda Online');
+  const { storeOrdersPending, storeOrdersPaid, totalPendingValue } = useMemo(() => {
+    const storeOrders = transactions.filter(t => t.category === 'Venda Online');
     
-    const paid = manualTransactions.filter(t => t.status !== 'pending');
-    const fiado = manualTransactions.filter((t) => t.status === 'pending');
-    const fiadoValue = fiado.reduce((sum, t) => {
+    const pending = storeOrders.filter(t => t.status === 'pending');
+    const paid = storeOrders.filter(t => t.status === 'paid');
+
+    const pendingValue = pending.reduce((sum, t) => {
         const remainingAmount = t.amount - (t.downPayment || 0);
         return sum + remainingAmount;
     }, 0);
 
     return {
-      paidTransactions: paid,
-      pendingFiado: fiado,
-      totalFiadoValue: fiadoValue
+      storeOrdersPending: pending,
+      storeOrdersPaid: paid,
+      totalPendingValue: pendingValue,
     };
   }, [transactions]);
 
@@ -71,7 +71,7 @@ export function TransactionsClient() {
             requestResourceData: updateData,
         }));
         console.error("Error updating transaction: ", error);
-        toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a venda." });
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o pedido." });
       });
   };
 
@@ -83,28 +83,28 @@ export function TransactionsClient() {
     <>
       <div className="space-y-8">
         <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold tracking-tight text-primary">Meus Lançamentos</h1>
-            <div className="hidden sm:block">
-                <AddTransactionSheet />
-            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-3">
+              <FileText className="w-8 h-8" />
+              Pedidos da Loja
+            </h1>
         </div>
         
-        {pendingFiado.length > 0 && (
+        {storeOrdersPending.length > 0 && (
           <Card>
               <CardHeader>
                   <div className="flex justify-between items-start">
                       <div>
                           <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
                               <Clock className="w-5 h-5 mr-2 text-amber-600" />
-                              Vendas a Prazo (Fiado) Pendentes
+                              Pedidos Pendentes
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground">Total pendente: <span className="font-bold">{formatCurrency(totalFiadoValue)}</span></p>
+                          <p className="text-sm text-muted-foreground">Total pendente: <span className="font-bold">{formatCurrency(totalPendingValue)}</span></p>
                       </div>
                   </div>
               </CardHeader>
               <CardContent>
                   <ul className="space-y-3">
-                  {pendingFiado.map((t) => {
+                  {storeOrdersPending.map((t) => {
                       const customerName = customers.find(c => c.id === t.customerId)?.name;
                       const remainingAmount = t.amount - (t.downPayment || 0);
                       const hasDownPayment = (t.downPayment || 0) > 0;
@@ -169,12 +169,9 @@ export function TransactionsClient() {
         )}
 
         <TransactionList 
-          transactions={paidTransactions}
-          title="Lançamentos Concluídos"
+          transactions={storeOrdersPaid}
+          title="Pedidos da Loja Concluídos"
         />
-      </div>
-      <div className="sm:hidden fixed bottom-20 right-4 z-50">
-        <AddTransactionSheet isMobile={true}/>
       </div>
     </>
   );
