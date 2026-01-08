@@ -340,7 +340,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         userId: targetUserId,
         type: data.type,
         description: transactionDescription,
-        category: data.fromStorefront ? 'Venda Online' : data.category,
+        category: data.category,
         amount: data.amount,
         discount: data.discount || 0,
         deliveryFee: data.deliveryFee || 0,
@@ -368,7 +368,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             form.reset({type: data.type, description: '', amount: 0, quantity: 1, discount: 0, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: data.fromStorefront ? 'pickup' : undefined});
             setSheetOpen(false);
         })
-        .catch(() => {
+        .catch((error) => {
+            console.error('Error adding transaction:', error);
             errorEmitter.emit(
                 'permission-error',
                 new FirestorePermissionError({
