@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -155,11 +155,14 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-            {!isUserLoading && !isPOSPage && (
-                <div className="hidden sm:block">
-                    {/* O botão para desktop está agora dentro do TransactionsClient */}
-                </div>
-            )}
+            <Link href="/loja" passHref legacyBehavior>
+                <a target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" className="hidden sm:flex bg-primary-foreground/20 text-primary-foreground border-transparent hover:bg-primary-foreground/30">
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ver Loja
+                    </Button>
+                </a>
+            </Link>
             <ThemeToggle />
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -188,6 +191,11 @@ export function Navbar() {
                    ) : (
                     <>
                         <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => router.push('/loja')}>
+                           <Eye className="mr-2 h-4 w-4" />
+                           Ver Loja
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />
