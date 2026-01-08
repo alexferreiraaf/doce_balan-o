@@ -815,7 +815,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               </div>
               
               
-              <FormField
+              {deliveryTypeValue === 'delivery' && (
+                <FormField
                     control={form.control}
                     name="deliveryFee"
                     render={({ field }) => (
@@ -828,6 +829,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                         </FormItem>
                     )}
                 />
+              )}
 
               <FormField
                 control={form.control}
