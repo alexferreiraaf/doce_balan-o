@@ -24,9 +24,7 @@ export default function AdminLayout({
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
-  
-  // Guardamos o timestamp de quando o componente é montado.
-  const [mountTimestamp] = useState(() => Date.now());
+  const [notifiedOrderIds] = useState(() => new Set<string>());
 
 
   useEffect(() => {
@@ -44,30 +42,30 @@ export default function AdminLayout({
     return () => window.removeEventListener('click', listener);
   }, []);
 
-  // Alteramos a query para buscar apenas novos pedidos a partir do momento que o layout foi montado.
   const pendingOrdersQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions`),
-      where('status', '==', 'pending'),
-      where('dateMs', '>', mountTimestamp) // Filtra apenas pedidos criados DEPOIS que a página carregou
+      where('status', '==', 'pending')
     );
-  }, [firestore, user, mountTimestamp]);
+  }, [firestore, user]);
 
   useEffect(() => {
     if (!pendingOrdersQuery) return;
 
     const unsubscribe = onSnapshot(pendingOrdersQuery, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
-        const newOrder = change.doc.data() as Transaction;
-        
-        // A notificação só ocorrerá para documentos recém-adicionados que satisfazem a query.
-        if (change.type === 'added') {
+        const orderId = change.doc.id;
+
+        if (change.type === 'added' && !notifiedOrderIds.has(orderId)) {
+            const newOrder = change.doc.data() as Transaction;
             toast({
               title: '🎉 Novo Pedido Recebido!',
               description: `${newOrder.description}. Valor: ${formatCurrency(newOrder.amount)}`,
               duration: 10000, 
             });
+
+            notifiedOrderIds.add(orderId);
 
             if (hasInteracted) {
                 audioRef.current?.play().catch(error => {
@@ -79,7 +77,7 @@ export default function AdminLayout({
     });
 
     return () => unsubscribe();
-  }, [pendingOrdersQuery, toast, hasInteracted]);
+  }, [pendingOrdersQuery, toast, hasInteracted, notifiedOrderIds]);
 
 
   if (isUserLoading || !user) {
