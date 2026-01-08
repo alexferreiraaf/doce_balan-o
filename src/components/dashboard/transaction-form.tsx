@@ -926,5 +926,3 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     </>
   );
 }
-
-    
