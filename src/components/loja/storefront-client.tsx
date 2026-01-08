@@ -359,7 +359,7 @@ export function StorefrontClient() {
         cart={cart}
         cartTotal={cartTotal}
         onSaleFinalized={handleSaleFinalized}
-        fromStorefront
+        fromStorefront={true}
       />
 
     </div>
