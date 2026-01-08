@@ -66,7 +66,7 @@ export function ProductsClient() {
 
   return (
     <div className="space-y-8">
-       <div className="flex items-center justify-between">
+       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center">
             <Package className="w-8 h-8 mr-3" />
             Meus Produtos
@@ -100,7 +100,7 @@ export function ProductsClient() {
                             <Table>
                                 <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[80px]">Imagem</TableHead>
+                                    <TableHead className="w-[80px] hidden sm:table-cell">Imagem</TableHead>
                                     <TableHead>Produto</TableHead>
                                     <TableHead>Preço</TableHead>
                                     <TableHead className="text-right">Ações</TableHead>
@@ -109,7 +109,7 @@ export function ProductsClient() {
                                 <TableBody>
                                 {groupedProducts[categoryName].map((product) => (
                                     <TableRow key={product.id}>
-                                    <TableCell>
+                                    <TableCell className="hidden sm:table-cell">
                                       <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden relative">
                                         {product.isFeatured && <Star className="absolute top-1 right-1 w-4 h-4 text-yellow-400 fill-yellow-400"/>}
                                         {product.imageUrl ? (

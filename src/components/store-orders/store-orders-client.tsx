@@ -89,7 +89,7 @@ export function StoreOrdersClient() {
   return (
     <>
       <div className="space-y-8">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center gap-3">
               <FileText className="w-8 h-8" />
               Pedidos da Loja
