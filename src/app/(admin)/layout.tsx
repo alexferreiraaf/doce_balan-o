@@ -75,7 +75,7 @@ export default function AdminLayout({
       snapshot.docChanges().forEach((change) => {
         const orderId = change.doc.id;
 
-        // Notify only for newly added documents that we haven't seen before
+        // Notify only for newly added documents that we haven't seen before in this session
         if (change.type === 'added' && !notifiedOrderIds.has(orderId)) {
             const newOrder = change.doc.data() as Transaction;
             toast({
@@ -84,7 +84,7 @@ export default function AdminLayout({
               duration: 10000, 
             });
             
-            // Add to notified set to prevent re-notification
+            // Add to notified set to prevent re-notification during this session
             setNotifiedOrderIds(prevIds => new Set(prevIds).add(orderId));
 
             if (hasInteracted) {
@@ -97,7 +97,7 @@ export default function AdminLayout({
     });
 
     return () => unsubscribe();
-  }, [pendingOrdersQuery, toast, hasInteracted, notifiedOrderIds]);
+  }, [pendingOrdersQuery, toast, hasInteracted]); // removed notifiedOrderIds dependency
 
 
   if (isUserLoading || !user) {
