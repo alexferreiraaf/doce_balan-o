@@ -62,7 +62,7 @@ const formSchema = z.object({
   customerNumber: z.string().optional(),
   customerComplement: z.string().optional(),
   customerNeighborhood: z.string().optional(),
-  customerCity: z.string().optional(),
+  customerCity: zstring().optional(),
   customerState: z.string().optional(),
   
   hasDownPayment: z.enum(['yes', 'no']).optional(),
@@ -161,6 +161,10 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const customerCity = form.watch('customerCity');
   const customerState = form.watch('customerState');
 
+  const productId = form.watch('productId');
+  const quantity = form.watch('quantity');
+  const deliveryFee = form.watch('deliveryFee');
+  
   // Effect for category suggestion (for expenses)
   useEffect(() => {
     if (typeValue === 'expense') {
@@ -180,26 +184,29 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
   // Effect to calculate total amount for income
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (value.type === 'income') {
-        const product = products.find((p) => p.id === value.productId);
+    if (typeValue === 'income') {
+        const product = products.find((p) => p.id === productId);
         const productPrice = product ? product.price : 0;
-        const baseTotal = cartTotal ?? (productPrice * Number(value.quantity || 0));
+        const baseTotal = cartTotal ?? (productPrice * Number(quantity || 0));
         
         const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + opt.price, 0);
-        const deliveryFee = Number(value.deliveryFee || 0);
+        const currentDeliveryFee = Number(deliveryFee || 0);
         
-        const totalAmount = baseTotal + optionalsTotal + deliveryFee;
+        const totalAmount = baseTotal + optionalsTotal + currentDeliveryFee;
         
-        form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
+        if (form.getValues('amount') !== totalAmount) {
+            form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
+        }
         
         const optionalsDescription = selectedOptionals.map(o => o.name).join(', ');
-        form.setValue('additionalDescription', optionalsDescription);
-        form.setValue('additionalValue', optionalsTotal);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, products, cartTotal, selectedOptionals]);
+        if (form.getValues('additionalDescription') !== optionalsDescription) {
+            form.setValue('additionalDescription', optionalsDescription);
+        }
+        if (form.getValues('additionalValue') !== optionalsTotal) {
+            form.setValue('additionalValue', optionalsTotal);
+        }
+    }
+  }, [typeValue, productId, quantity, deliveryFee, selectedOptionals, products, cartTotal, form]);
 
   useEffect(() => {
     if (deliveryTypeValue === 'pickup') {
