@@ -40,10 +40,13 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     const fetchTransactions = async () => {
       try {
         const allFetchedTransactions: Transaction[] = [];
-        const chunkSize = 30; // Firestore 'in' query limit
+        
+        // Firestore 'in' query supports up to 30 elements. We chunk the userIds to handle more.
+        const chunkSize = 30;
         for (let i = 0; i < targetUserIds.length; i += chunkSize) {
             const chunkUserIds = targetUserIds.slice(i, i + chunkSize);
             
+            // This query now always includes a 'where' clause, matching the updated security rules.
             const q = query(
               collectionGroup(firestore, 'transactions'),
               where('userId', 'in', chunkUserIds)
@@ -60,10 +63,10 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
       } catch (error) {
         console.error("Caught error in useTransactions:", error);
-        // Instead of a generic toast, we emit a contextual error for the listener to catch.
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: 'transactions', // This is a collection group query
             operation: 'list',
+            requestResourceData: { userIds: targetUserIds } // Add context
         }));
       } finally {
         setLoading(false);

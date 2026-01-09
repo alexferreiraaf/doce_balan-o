@@ -50,8 +50,9 @@ service cloud.firestore {
     }
     
     // Rule for the collection group query on 'transactions'
+    // This now requires that the query filters by 'userId'
     match /{path=**}/transactions/{transactionId} {
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && request.query.keys.hasAny(['userId']);
     }
   }
 }
