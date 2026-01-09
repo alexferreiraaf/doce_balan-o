@@ -22,6 +22,7 @@ export interface Transaction {
   timestamp: Timestamp;
   dateMs: number;
   receiptUrl?: string;
+  fromStorefront?: boolean;
 }
 
 export interface Product {
@@ -30,6 +31,8 @@ export interface Product {
   price: number;
   categoryId?: string;
   imageUrl?: string;
+  isFeatured?: boolean;
+  salesCount?: number;
 }
 
 export interface Customer {
@@ -50,8 +53,23 @@ export interface ProductCategory {
   name: string;
 }
 
-export interface DeliveryZone {
+export interface Optional {
   id: string;
   name: string;
-  fee: number;
+  price: number;
+}
+
+export type DayOfWeek = 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday';
+
+export interface OpeningHours {
+  enabled: boolean;
+  open: string;
+  close: string;
+}
+
+export interface AppSettings {
+  pixKey?: string;
+  address?: string;
+  phone?: string;
+  openingHours?: Record<DayOfWeek, OpeningHours>;
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, orderBy, where, documentId } from 'firebase/firestore';
+import { collection, query, orderBy, where, getDocs, collectionGroup } from 'firebase/firestore';
 import { useAuth } from './use-auth';
 import type { Transaction } from '@/app/lib/types';
 import { APP_ID } from '../constants';
@@ -9,62 +9,78 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 
 interface UseTransactionsOptions {
-  userIds?: string[]; // Optional array of user IDs
+  userIds?: (string | undefined)[]; // Allow undefined/null values
 }
 
 export function useTransactions(options: UseTransactionsOptions = {}) {
   const { userId, isAuthReady } = useAuth();
   const firestore = useFirestore();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const targetUserIds = useMemo(() => {
-    if (options.userIds && options.userIds.length > 0) {
-      return [...new Set(options.userIds)]; // Use provided user IDs, ensure uniqueness
-    }
-    if (userId) {
-      return [userId]; // Default to the logged-in user
-    }
-    return [];
+    // Filter out any null/undefined ids and remove duplicates
+    const allIds = (options.userIds && options.userIds.length > 0) ? options.userIds : [userId];
+    return [...new Set(allIds.filter(id => !!id))] as string[];
   }, [options.userIds, userId]);
 
 
-  const transactionsQuery = useMemoFirebase(() => {
-    if (!firestore || targetUserIds.length === 0) return null;
-    
-    // This hook is now only fetching for a single user's subcollection at a time.
-    // The logic in store-orders-client handles multiple user fetches.
-    // If we ever need to query across multiple users' subcollections simultaneously in a single component,
-    // we'd need a different strategy (e.g., multiple useCollection calls or a more complex backend aggregation).
-    const primaryUserId = targetUserIds[0];
-
-    return query(
-      collection(firestore, `artifacts/${APP_ID}/users/${primaryUserId}/transactions`),
-      orderBy('dateMs', 'desc')
-    );
-  }, [firestore, targetUserIds]);
-
-  const { data: transactions, isLoading: transactionsLoading, error } = useCollection<Transaction>(transactionsQuery);
-
-  const { toast } = useToast();
-
   useEffect(() => {
-    if (!isAuthReady) {
+    if (!firestore || !isAuthReady) {
       setLoading(true);
       return;
     }
-    setLoading(transactionsLoading);
-  }, [isAuthReady, transactionsLoading]);
-  
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching transactions: ", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar dados",
-        description: "Não foi possível buscar seus lançamentos. Verifique sua conexão e tente recarregar a página.",
-      });
-    }
-  }, [error, toast]);
 
-  return { transactions: transactions || [], loading };
+    if (targetUserIds.length === 0) {
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+
+    const fetchTransactions = async () => {
+      try {
+        const allFetchedTransactions: Transaction[] = [];
+        // Firestore 'in' query is limited to 30 items. We fetch in chunks if needed.
+        const chunkSize = 30;
+        for (let i = 0; i < targetUserIds.length; i += chunkSize) {
+            const chunkUserIds = targetUserIds.slice(i, i + chunkSize);
+            
+            const q = query(
+              collectionGroup(firestore, 'transactions'),
+              where('userId', 'in', chunkUserIds)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+              // Note: This fetches data once. For real-time, you'd need multiple onSnapshot listeners,
+              // which is more complex to manage here. A single fetch is safer and often sufficient.
+              allFetchedTransactions.push({ ...(doc.data() as Omit<Transaction, 'id'>), id: doc.id });
+            });
+        }
+        
+        allFetchedTransactions.sort((a, b) => b.dateMs - a.dateMs);
+        setTransactions(allFetchedTransactions);
+
+      } catch (error) {
+        console.error("Error fetching transactions for multiple users: ", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar dados",
+          description: "Não foi possível buscar os lançamentos. Verifique sua conexão e tente recarregar a página.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+
+    // The dependency array should react to changes in the calculated user IDs.
+  }, [firestore, isAuthReady, targetUserIds, toast]);
+
+
+  return { transactions, loading };
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Clock, CheckCircle, User, Banknote, Landmark, FileText, CreditCard, Coins } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
@@ -31,35 +31,18 @@ interface StoreOrdersClientProps {
 }
 
 export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [allTransactionsLoading, setAllTransactionsLoading] = useState(true);
-
-  // We need to fetch transactions for multiple users (the admin and the storefront user)
-  // useTransactions hook is designed for one user, so we will call it for each and combine results.
-  const adminTransactions = useTransactions({ userIds: userIds.filter(id => id !== process.env.NEXT_PUBLIC_STOREFRONT_USER_ID) });
-  const storefrontTransactions = useTransactions({ userIds: userIds.filter(id => id === process.env.NEXT_PUBLIC_STOREFRONT_USER_ID) });
-
-
-  useEffect(() => {
-    if (!adminTransactions.loading && !storefrontTransactions.loading) {
-      const combined = [...adminTransactions.transactions, ...storefrontTransactions.transactions];
-      // Simple de-duplication
-      const uniqueTransactions = Array.from(new Map(combined.map(t => [t.id, t])).values());
-      uniqueTransactions.sort((a, b) => b.dateMs - a.dateMs);
-      setAllTransactions(uniqueTransactions);
-      setAllTransactionsLoading(false);
-    }
-  }, [adminTransactions, storefrontTransactions]);
-
+  // The useTransactions hook now handles fetching from multiple userIds.
+  const { transactions: allTransactions, loading: transactionsLoading } = useTransactions({ userIds });
   const { customers, loading: customersLoading } = useCustomers();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const loading = allTransactionsLoading || customersLoading;
+  const loading = transactionsLoading || customersLoading || isUserLoading;
 
   const { storeOrdersPending, storeOrdersPaid, totalPendingValue } = useMemo(() => {
-    const storeOrders = allTransactions.filter(t => t.category === 'Venda Online');
+    // Filter for storefront orders from all fetched transactions.
+    const storeOrders = allTransactions.filter(t => t.category === 'Venda Online' || t.fromStorefront);
     
     const pending = storeOrders.filter(t => t.status === 'pending');
     const paid = storeOrders.filter(t => t.status === 'paid');
@@ -81,7 +64,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
         toast({ variant: "destructive", title: "Erro", description: "Usuário ou serviço indisponível." });
         return;
     }
-    // A transação pode pertencer a um usuário diferente do logado (o storefront user)
+    // The transaction could belong to a different user (the storefront user)
     const transactionUserId = transaction.userId;
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${transactionUserId}/transactions/${transaction.id}`);
     const updateData = { status: 'paid' };
