@@ -11,8 +11,8 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Allow anyone to create a transaction (for storefront orders) but only if the data being sent
-    // matches the user path. Only the owner can read, update, or delete.
+    // Allow anyone to create a transaction (for storefront orders) but only the owner can read, update, or delete.
+    // The owner can also list their own transactions.
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
       allow read, update, delete: if isOwner(userId);
       allow create: if request.resource.data.userId == userId;
@@ -46,6 +46,11 @@ service cloud.firestore {
     match /artifacts/{appId}/settings/app {
       allow get: if true;
       allow write: if isSignedIn();
+    }
+    
+    // Rule for the collection group query on 'transactions'
+    match /{path=**}/transactions/{transactionId} {
+      allow list: if isSignedIn() && request.query.limit <= 30; // Allow listing if the user is signed in. The limit is a security best practice.
     }
   }
 }
