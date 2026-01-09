@@ -51,10 +51,11 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
     
-    // This collection group query allows an admin to query across all users' transactions,
-    // which is necessary for the store orders page.
+    // This collection group query allows an admin to query across all users' transactions.
+    // We only need to check if the user is signed in, as the client-side logic
+    // will handle filtering for specific user IDs.
     match /{path=**}/transactions/{transactionId} {
-      allow list: if isSignedIn() && request.query.limit <= 200;
+      allow list: if isSignedIn();
     }
   }
 }

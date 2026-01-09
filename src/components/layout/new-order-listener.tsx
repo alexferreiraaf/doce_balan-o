@@ -50,17 +50,18 @@ export function NewOrderListener() {
       return;
     }
 
-    // Query for pending transactions from the storefront user that are newer than the component mount time
+    // Query for transactions from the storefront user that are newer than the component mount time.
+    // We will filter for 'pending' status on the client side to avoid needing a composite index.
     const q = query(
       collection(firestore, `artifacts/docuras-da-fran-default/users/${storefrontUserId}/transactions`),
-      where('status', '==', 'pending'),
       where('timestamp', '>', initialLoadTimestamp.current || Timestamp.now())
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
-            if (change.type === 'added') {
-                const newOrder = change.doc.data() as Transaction;
+            const newOrder = change.doc.data() as Transaction;
+            // Client-side filtering for status
+            if (change.type === 'added' && newOrder.status === 'pending') {
 
                 // Play sound
                 audioRef.current?.play().catch(error => {
