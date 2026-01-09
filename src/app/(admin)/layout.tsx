@@ -6,6 +6,7 @@ import { useUser } from '@/firebase';
 import Loading from './loading-component';
 import { Navbar } from '@/components/layout/navbar';
 import { cn } from '@/lib/utils';
+import { NewOrderListener } from '@/components/layout/new-order-listener';
 
 
 export default function AdminLayout({
@@ -34,6 +35,7 @@ export default function AdminLayout({
 
   return (
     <div className={cn("min-h-screen flex flex-col bg-background", isPOSPage && "h-screen overflow-hidden")}>
+      <NewOrderListener />
       <Navbar />
       <main className="flex-grow pb-24 sm:pb-0 flex-1">
         {children}

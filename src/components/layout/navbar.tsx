@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike, PlusSquare, Settings, ChevronDown } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike, PlusSquare, Settings, ChevronDown, Bell } from 'lucide-react';
 import { signOut } from 'firebase/auth';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AddTransactionSheet } from '@/components/dashboard/add-transaction-sheet';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
@@ -25,12 +27,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from './theme-toggle';
+import { storefrontUserId } from '@/firebase/config';
+import { Badge } from '../ui/badge';
 
 
 const mainNavLinks = [
   { href: '/pdv', label: 'PDV', icon: ShoppingCart },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/store-orders', label: 'Pedidos da Loja', icon: FileText },
+  { href: '/store-orders', label: 'Pedidos da Loja', icon: FileText, id: 'store-orders' },
   { href: '/transactions', label: 'Lançamentos', icon: List },
   { href: '/reports', label: 'Relatórios', icon: TrendingUp },
 ];
@@ -50,8 +54,26 @@ export function Navbar() {
   const pathname = usePathname();
   const { isUserLoading, user } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+
+  useEffect(() => {
+    if (!firestore || !storefrontUserId) return;
+
+    const q = query(
+      collection(firestore, `artifacts/docuras-da-fran-default/users/${storefrontUserId}/transactions`),
+      where('status', '==', 'pending')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPendingOrdersCount(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, [firestore]);
+
 
   const handleLogout = async () => {
     try {
@@ -76,23 +98,34 @@ export function Navbar() {
     return email.charAt(0).toUpperCase();
   };
   
-  const NavButton = ({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) => (
-    <Link href={href} passHref>
-      <Button
-        variant="ghost"
-        className={cn(
-          'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
-          pathname === href && 'text-primary font-semibold'
-        )}
-        asChild
-      >
-        <div>
-          <Icon className="w-6 h-6 mb-0.5" />
-          <span className="text-xs">{label}</span>
-        </div>
-      </Button>
-    </Link>
-  );
+  const NavButton = ({ href, label, icon: Icon, id }: { href: string; label: string; icon: React.ElementType, id?: string }) => {
+    const isStoreOrders = id === 'store-orders';
+    const showBadge = isStoreOrders && pendingOrdersCount > 0;
+
+    return (
+        <Link href={href} passHref>
+          <Button
+            variant="ghost"
+            className={cn(
+              'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full relative',
+              pathname === href && 'text-primary font-semibold'
+            )}
+            asChild
+          >
+            <div>
+              {showBadge && (
+                <span className="absolute top-1 right-1 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 items-center justify-center text-white text-[10px]">{pendingOrdersCount}</span>
+                </span>
+              )}
+              <Icon className="w-6 h-6 mb-0.5" />
+              <span className="text-xs">{label}</span>
+            </div>
+          </Button>
+        </Link>
+    )
+  };
   
   const MobileMenuButton = ({ label, icon: Icon, links }: { label: string; icon: React.ElementType; links: typeof registrationLinks }) => {
     const isAnyActive = links.some(link => pathname === link.href);
@@ -138,24 +171,29 @@ export function Navbar() {
         </Link>
         
         <div className="hidden sm:flex items-center space-x-1 bg-primary/80 p-1 rounded-full">
-          {mainNavLinks.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} passHref>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3',
-                  pathname === href && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
-                )}
-                asChild
-              >
-                <div>
-                  <Icon className="w-4 h-4 mr-2" />
-                  {label}
-                </div>
-              </Button>
-            </Link>
-          ))}
+          {mainNavLinks.map(({ href, label, icon: Icon, id }) => {
+            const isStoreOrders = id === 'store-orders';
+            const showBadge = isStoreOrders && pendingOrdersCount > 0;
+            return (
+                <Link key={href} href={href} passHref>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3 relative',
+                      pathname === href && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
+                    )}
+                    asChild
+                  >
+                    <div>
+                      {showBadge && <Badge className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 text-xs animate-pulse">{pendingOrdersCount}</Badge>}
+                      <Icon className="w-4 h-4 mr-2" />
+                      {label}
+                    </div>
+                  </Button>
+                </Link>
+            )
+          })}
            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -241,7 +279,7 @@ export function Navbar() {
         
         <MobileMenuButton label="Cadastros" icon={Archive} links={registrationLinks} />
         
-        <NavButton href="/store-orders" label="Pedidos" icon={FileText} />
+        <NavButton href="/store-orders" label="Pedidos" icon={FileText} id="store-orders" />
         <NavButton href="/transactions" label="Lançamentos" icon={List} />
 
       </div>
