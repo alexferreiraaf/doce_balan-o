@@ -22,6 +22,7 @@ export interface Transaction {
   timestamp: Timestamp;
   dateMs: number;
   receiptUrl?: string;
+  fromStorefront?: boolean;
 }
 
 export interface Product {

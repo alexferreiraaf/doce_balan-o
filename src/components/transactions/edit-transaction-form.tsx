@@ -151,7 +151,7 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
     }
 
     startTransition(() => {
-      const docPath = `artifacts/${APP_ID}/users/${user.uid}/transactions/${transaction.id}`;
+      const docPath = `artifacts/${APP_ID}/users/${transaction.userId}/transactions/${transaction.id}`;
       const transactionRef = doc(firestore, docPath);
       
       let transactionDescription = data.description || '';
