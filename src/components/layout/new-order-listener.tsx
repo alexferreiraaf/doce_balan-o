@@ -18,11 +18,19 @@ export function NewOrderListener() {
   const lastSeenTimestamp = useRef<Timestamp | null>(null);
 
   useEffect(() => {
-    // Preload the audio
-    if (typeof Audio !== 'undefined') {
-      audioRef.current = new Audio('/sounds/notification.mp3');
-      audioRef.current.load();
-    }
+    // Check if audio file exists before creating the Audio object
+    fetch('/sounds/notification.mp3')
+      .then(response => {
+        if (response.ok && typeof Audio !== 'undefined') {
+          audioRef.current = new Audio('/sounds/notification.mp3');
+          audioRef.current.load();
+        } else {
+            console.warn("Audio file /sounds/notification.mp3 not found. Sound notifications will be disabled.");
+        }
+      })
+      .catch(() => {
+        console.warn("Could not check for audio file. Sound notifications might be disabled.");
+      });
   }, []);
 
   useEffect(() => {
@@ -44,11 +52,10 @@ export function NewOrderListener() {
         if (change.type === 'added') {
           const newOrder = change.doc.data();
           
-          // Play sound
+          // Play sound if audio is available
           audioRef.current?.play().catch(error => {
             console.error("Audio play failed:", error);
             // This can happen if the user hasn't interacted with the page yet.
-            // A good improvement would be to prompt the user to enable audio.
           });
           
           // Show toast notification
@@ -62,8 +69,6 @@ export function NewOrderListener() {
             description: `Novo pedido: ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
             duration: 10000, // Show for 10 seconds
           });
-
-          // Here you could also update a global state to show a badge on the navbar
         }
       });
     }, (error) => {
