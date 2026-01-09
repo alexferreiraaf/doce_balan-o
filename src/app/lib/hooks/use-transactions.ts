@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { collection, query, orderBy, where, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { useAuth } from './use-auth';
 import type { Transaction } from '@/app/lib/types';
 import { APP_ID } from '../constants';
@@ -38,32 +38,41 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     setLoading(true);
 
     const fetchTransactions = async () => {
-      try {
-        const allFetchedTransactions: Transaction[] = [];
-        
-        for (const currentUserId of targetUserIds) {
-          const transCollectionRef = collection(firestore, `artifacts/${APP_ID}/users/${currentUserId}/transactions`);
+      const allFetchedTransactions: Transaction[] = [];
+      let hasError = false;
+
+      for (const currentUserId of targetUserIds) {
+        try {
+          const transCollectionPath = `artifacts/${APP_ID}/users/${currentUserId}/transactions`;
+          const transCollectionRef = collection(firestore, transCollectionPath);
           const q = query(transCollectionRef);
           
           const querySnapshot = await getDocs(q);
           querySnapshot.forEach((doc) => {
             allFetchedTransactions.push({ ...(doc.data() as Omit<Transaction, 'id'>), id: doc.id });
           });
+        } catch (error) {
+          hasError = true;
+          console.error(`Caught error in useTransactions for userId ${currentUserId}:`, error);
+          // Emit a specific, contextual error for this failed part of the fetch.
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: `artifacts/${APP_ID}/users/${currentUserId}/transactions`,
+              operation: 'list',
+              requestResourceData: { queriedUserId: currentUserId }
+          }));
+          // We break the loop on the first error to avoid spamming errors.
+          break;
         }
-        
+      }
+      
+      if (!hasError) {
         allFetchedTransactions.sort((a, b) => b.dateMs - a.dateMs);
         setTransactions(allFetchedTransactions);
-
-      } catch (error) {
-        console.error("Caught error in useTransactions:", error);
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: 'transactions', // This is a collection group query
-            operation: 'list',
-            requestResourceData: { userIds: targetUserIds } // Add context
-        }));
-      } finally {
-        setLoading(false);
+      } else {
+        setTransactions([]); // Clear data on error
       }
+      
+      setLoading(false);
     };
 
     fetchTransactions();
