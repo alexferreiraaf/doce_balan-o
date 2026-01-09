@@ -14,7 +14,7 @@ service cloud.firestore {
     // Allow anyone to create a transaction (for storefront orders) but only the owner can read, update, or delete.
     // The owner can also list their own transactions.
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow read, update, delete: if isOwner(userId);
+      allow get, update, delete: if isOwner(userId);
       allow create: if request.resource.data.userId == userId;
     }
 
