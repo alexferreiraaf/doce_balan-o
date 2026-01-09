@@ -13,6 +13,7 @@ import { DangerZone } from './danger-zone';
 import { RecentTransactionsList } from './recent-transactions-list';
 import { InputWithCopy } from '../ui/input';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { storefrontUserId } from '@/firebase/config';
 
 export function DashboardClient() {
   const { transactions, loading } = useTransactions();
@@ -43,6 +44,8 @@ export function DashboardClient() {
     return <Loading />;
   }
 
+  const showStorefrontIdAlert = user?.uid && !storefrontUserId;
+
   return (
     <>
      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -68,7 +71,7 @@ export function DashboardClient() {
                 />
             </div>
             
-            {user?.uid && (
+            {showStorefrontIdAlert && (
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertTitle>Conecte sua loja ao seu painel!</AlertTitle>
