@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { MoreVertical, Trash2, Loader2 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
-import { useUser, useFirestore } from '@/firebase'; // Changed from useAuth to useUser
+import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -28,10 +28,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 
 interface DeleteTransactionButtonProps {
   transactionId: string;
+  transactionUserId: string; // The owner of the transaction
 }
 
-export function DeleteTransactionButton({ transactionId }: DeleteTransactionButtonProps) {
-  const { user, isUserLoading: isAuthLoading } = useUser(); // Correctly use useUser
+export function DeleteTransactionButton({ transactionId, transactionUserId }: DeleteTransactionButtonProps) {
+  const { user, isUserLoading: isAuthLoading } = useUser(); // The currently logged-in user (admin)
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -44,7 +45,8 @@ export function DeleteTransactionButton({ transactionId }: DeleteTransactionButt
     }
     
     setIsDeleting(true);
-    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
+    // Use the passed transactionUserId to build the correct path
+    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${transactionUserId}/transactions/${transactionId}`);
 
     try {
       await deleteDoc(transactionRef);

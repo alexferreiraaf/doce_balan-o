@@ -125,7 +125,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
                 Marcar como Pago
             </Button>
           <EditTransactionSheet transaction={t} />
-          <DeleteTransactionButton transactionId={t.id} />
+          <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
       </div>
       </li>
     )
@@ -191,7 +191,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
                             <span className="font-bold text-lg text-green-600">
                               {formatCurrency(t.amount)}
                             </span>
-                            <DeleteTransactionButton transactionId={t.id} />
+                            <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
                          </div>
                        </li>
                     )

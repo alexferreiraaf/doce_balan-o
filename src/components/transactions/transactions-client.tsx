@@ -28,17 +28,18 @@ import { EditTransactionSheet } from './edit-transaction-sheet';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 
 export function TransactionsClient() {
-  const { transactions, loading: transactionsLoading } = useTransactions();
-  const { customers, loading: customersLoading } = useCustomers();
   const { user, isUserLoading } = useUser();
+  // Fetch transactions only for the logged-in user on this page
+  const { transactions, loading: transactionsLoading } = useTransactions({ userIds: [user?.uid] });
+  const { customers, loading: customersLoading } = useCustomers();
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const loading = transactionsLoading || customersLoading;
+  const loading = transactionsLoading || customersLoading || isUserLoading;
 
   const { paidTransactions, pendingFiado, totalFiadoValue } = useMemo(() => {
     // Exclude storefront orders from the manual transactions page logic
-    const manualTransactions = transactions.filter(t => t.category !== 'Venda Online');
+    const manualTransactions = transactions.filter(t => t.category !== 'Venda Online' && !t.fromStorefront);
     
     const paid = manualTransactions.filter(t => t.status !== 'pending');
     const fiado = manualTransactions.filter((t) => t.status === 'pending');
@@ -159,7 +160,7 @@ export function TransactionsClient() {
                               </DropdownMenuContent>
                           </DropdownMenu>
                           <EditTransactionSheet transaction={t} />
-                          <DeleteTransactionButton transactionId={t.id} />
+                          <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
                       </div>
                       </li>
                   )})}

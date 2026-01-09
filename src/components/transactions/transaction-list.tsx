@@ -8,6 +8,7 @@ import { Badge } from '../ui/badge';
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from './edit-transaction-sheet';
+import { useUser } from '@/firebase';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -23,6 +24,7 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
 
 export function TransactionList({ transactions, title }: TransactionListProps) {
   const { customers } = useCustomers();
+  const { user } = useUser();
 
   if (transactions.length === 0) {
     return (
@@ -74,7 +76,7 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                         {formatCurrency(t.amount)}
                     </span>
                     <EditTransactionSheet transaction={t} />
-                    <DeleteTransactionButton transactionId={t.id} />
+                    <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
                 </div>
                 </li>
             )
