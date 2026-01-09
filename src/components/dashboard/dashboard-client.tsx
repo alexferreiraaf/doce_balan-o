@@ -16,8 +16,10 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { storefrontUserId } from '@/firebase/config';
 
 export function DashboardClient() {
-  const { transactions, loading } = useTransactions();
   const { user } = useUser();
+  
+  const userIdsToFetch = [user?.uid, storefrontUserId].filter(Boolean) as string[];
+  const { transactions, loading } = useTransactions({ userIds: userIdsToFetch });
 
   const { totalIncome, totalExpense, balance } = useMemo(() => {
     const incomePaid = transactions
