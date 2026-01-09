@@ -1,16 +1,21 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { storefrontUserId } from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { BellRing } from 'lucide-react';
 import { useNotificationStore } from '@/stores/notification-store';
+import { ToastAction } from "@/components/ui/toast"
+import type { Transaction } from '@/app/lib/types';
+
 
 export function NewOrderListener() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const setPendingOrdersCount = useNotificationStore((state) => state.setPendingOrdersCount);
   const addPendingOrder = useNotificationStore((state) => state.addPendingOrder);
@@ -57,7 +62,7 @@ export function NewOrderListener() {
         setPendingOrdersCount(snapshot.size);
 
         snapshot.docChanges().forEach((change) => {
-            const newOrder = change.doc.data();
+            const newOrder = change.doc.data() as Transaction;
             const orderTimestamp = newOrder.timestamp as Timestamp;
 
             // Only act on newly added documents that are newer than the initial page load
@@ -77,7 +82,12 @@ export function NewOrderListener() {
                     </div>
                     ),
                     description: `Novo pedido: ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
-                    duration: 10000,
+                    duration: 20000, // Increase duration to give time to click
+                    action: newOrder.customerId ? (
+                        <ToastAction altText="Ver Pedido" onClick={() => router.push(`/customers/${newOrder.customerId}`)}>
+                            Ver Pedido
+                        </ToastAction>
+                    ) : undefined,
                 });
 
                 // Increment visual badge counter
@@ -90,7 +100,7 @@ export function NewOrderListener() {
     });
 
     return () => unsubscribe();
-  }, [firestore, toast, setPendingOrdersCount, addPendingOrder]);
+  }, [firestore, toast, setPendingOrdersCount, addPendingOrder, router]);
 
   return null;
 }
