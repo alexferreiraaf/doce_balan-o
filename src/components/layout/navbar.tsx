@@ -34,14 +34,17 @@ const mainNavLinks = [
   { href: '/pdv', label: 'PDV', icon: ShoppingCart },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/store-orders', label: 'Pedidos da Loja', icon: FileText, id: 'store-orders' },
-  { href: '/transactions', label: 'Lançamentos', icon: List },
-  { href: '/reports', label: 'Relatórios', icon: TrendingUp },
 ];
 
 const registrationLinks = [
     { href: '/products', label: 'Produtos', icon: Package },
     { href: '/customers', label: 'Clientes', icon: Users },
     { href: '/optionals', label: 'Opcionais', icon: PlusSquare },
+];
+
+const reportsLinks = [
+    { href: '/reports', label: 'Visão Geral', icon: TrendingUp },
+    { href: '/transactions', label: 'Lançamentos', icon: List },
 ];
 
 const mobileNavLinks = [
@@ -121,8 +124,8 @@ export function Navbar() {
     return href ? <Link href={finalHref} passHref>{button}</Link> : button;
   };
   
-  const MobileMenuButton = ({ label, icon: Icon, links }: { label: string; icon: React.ElementType; links: typeof registrationLinks }) => {
-    const isAnyActive = links.some(link => pathname === link.href);
+  const MobileMenuButton = ({ label, icon: Icon, links, activePaths }: { label: string; icon: React.ElementType; links: {href: string; label: string; icon: React.ElementType}[]; activePaths: string[] }) => {
+    const isAnyActive = activePaths.some(path => pathname === path);
 
     return (
         <DropdownMenu>
@@ -141,7 +144,7 @@ export function Navbar() {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48 mb-2" align="center" side="top">
-                <DropdownMenuLabel>Cadastros</DropdownMenuLabel>
+                <DropdownMenuLabel>{label}</DropdownMenuLabel>
                 <DropdownMenuSeparator/>
                 {links.map(({ href, label, icon: Icon }) => (
                     <DropdownMenuItem key={href} onSelect={() => router.push(href)}>
@@ -185,6 +188,32 @@ export function Navbar() {
                 </Button>
             )
           })}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3',
+                     reportsLinks.some(l => pathname.startsWith(l.href)) && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
+                  )}
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Relatórios
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {reportsLinks.map(({ href, label, icon: Icon }) => (
+                  <DropdownMenuItem key={href} onSelect={() => router.push(href)}>
+                    <Icon className="mr-2 h-4 w-4" />
+                    <span>{label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -268,11 +297,10 @@ export function Navbar() {
             <NavButton key={link.href} href={link.href} label={link.label} icon={link.icon} onClick={() => router.push(link.href)} />
         ))}
         
-        <MobileMenuButton label="Cadastros" icon={Archive} links={registrationLinks} />
-        
+        <MobileMenuButton label="Relatórios" icon={TrendingUp} links={reportsLinks} activePaths={reportsLinks.map(l => l.href)} />
+        <MobileMenuButton label="Cadastros" icon={Archive} links={registrationLinks} activePaths={registrationLinks.map(l => l.href)} />
         <NavButton label="Pedidos" icon={FileText} id="store-orders" onClick={handleStoreOrdersClick} />
 
-        <NavButton href="/transactions" label="Lançamentos" icon={List} onClick={() => router.push('/transactions')} />
 
       </div>
 
