@@ -17,8 +17,7 @@ export function NewOrderListener() {
   const { toast } = useToast();
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const setPendingOrdersCount = useNotificationStore((state) => state.setPendingOrdersCount);
-  const addPendingOrder = useNotificationStore((state) => state.addPendingOrder);
+  const { addPendingOrder } = useNotificationStore();
 
   // Using a ref to track the initial load timestamp
   const initialLoadTimestamp = useRef<Timestamp | null>(null);
@@ -51,22 +50,17 @@ export function NewOrderListener() {
       return;
     }
 
-    // Query for pending transactions from the storefront user
+    // Query for pending transactions from the storefront user that are newer than the component mount time
     const q = query(
       collection(firestore, `artifacts/docuras-da-fran-default/users/${storefrontUserId}/transactions`),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
+      where('timestamp', '>', initialLoadTimestamp.current || Timestamp.now())
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        // On initial load, or when there are no changes, just set the total count
-        setPendingOrdersCount(snapshot.size);
-
         snapshot.docChanges().forEach((change) => {
-            const newOrder = change.doc.data() as Transaction;
-            const orderTimestamp = newOrder.timestamp as Timestamp;
-
-            // Only act on newly added documents that are newer than the initial page load
-            if (change.type === 'added' && initialLoadTimestamp.current && orderTimestamp > initialLoadTimestamp.current) {
+            if (change.type === 'added') {
+                const newOrder = change.doc.data() as Transaction;
 
                 // Play sound
                 audioRef.current?.play().catch(error => {
@@ -82,12 +76,7 @@ export function NewOrderListener() {
                     </div>
                     ),
                     description: `Novo pedido: ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
-                    duration: 20000, // Increase duration to give time to click
-                    action: newOrder.customerId ? (
-                        <ToastAction altText="Ver Pedido" onClick={() => router.push(`/customers/${newOrder.customerId}`)}>
-                            Ver Pedido
-                        </ToastAction>
-                    ) : undefined,
+                    duration: 20000,
                 });
 
                 // Increment visual badge counter
@@ -100,7 +89,7 @@ export function NewOrderListener() {
     });
 
     return () => unsubscribe();
-  }, [firestore, toast, setPendingOrdersCount, addPendingOrder, router]);
+  }, [firestore, toast, addPendingOrder, router]);
 
   return null;
 }

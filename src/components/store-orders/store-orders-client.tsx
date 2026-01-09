@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle, User, Banknote, Landmark, FileText, CreditCard, Coins } from 'lucide-react';
+import { Clock, CheckCircle, User, Banknote, Landmark, FileText, CreditCard, Coins, Eye } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -18,6 +18,7 @@ import type { PaymentMethod, Transaction } from '@/app/lib/types';
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from '../transactions/edit-transaction-sheet';
+import Link from 'next/link';
 
 const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
     pix: { text: 'PIX', icon: Landmark },
@@ -86,7 +87,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
   }
   
   const TransactionRow = ({ t }: { t: Transaction }) => {
-    const customerName = customers.find(c => c.id === t.customerId)?.name;
+    const customer = customers.find(c => c.id === t.customerId);
     const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
     return (
        <li
@@ -96,10 +97,10 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
       <div className="flex-grow flex flex-col gap-2 w-full">
           <span className="font-semibold text-card-foreground">{t.description}</span>
           <div className='flex items-center gap-2 flex-wrap'>
-              {customerName && (
+              {customer && (
                   <Badge variant="outline" className="text-xs border-primary/50">
                       <User className="w-3 h-3 mr-1" />
-                      {customerName}
+                      {customer.name}
                   </Badge>
               )}
               {paymentInfo && (
@@ -124,6 +125,14 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Marcar como Pago
             </Button>
+          {customer && (
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/customers/${customer.id}`}>
+                <Eye className="w-4 h-4 mr-2" />
+                Ver Cliente
+              </Link>
+            </Button>
+          )}
           <EditTransactionSheet transaction={t} />
           <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
       </div>
