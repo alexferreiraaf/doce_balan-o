@@ -45,6 +45,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import { storefrontUserId } from '@/firebase/config';
 import { Separator } from '../ui/separator';
+import { Card } from '../ui/card';
 
 
 const selectedOptionalSchema = z.object({
