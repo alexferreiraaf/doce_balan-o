@@ -4,9 +4,7 @@ import { collection, query, orderBy, where, getDocs, collectionGroup } from 'fir
 import { useAuth } from './use-auth';
 import type { Transaction } from '@/app/lib/types';
 import { APP_ID } from '../constants';
-import { useToast } from '@/hooks/use-toast';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 
 interface UseTransactionsOptions {
   userIds?: (string | undefined)[]; // Allow undefined/null values
@@ -17,7 +15,6 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   const firestore = useFirestore();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
   const targetUserIds = useMemo(() => {
     // Filter out any null/undefined ids and remove duplicates
@@ -43,8 +40,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     const fetchTransactions = async () => {
       try {
         const allFetchedTransactions: Transaction[] = [];
-        // Firestore 'in' query is limited to 30 items. We fetch in chunks if needed.
-        const chunkSize = 30;
+        const chunkSize = 30; // Firestore 'in' query limit
         for (let i = 0; i < targetUserIds.length; i += chunkSize) {
             const chunkUserIds = targetUserIds.slice(i, i + chunkSize);
             
@@ -55,8 +51,6 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
             
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach((doc) => {
-              // Note: This fetches data once. For real-time, you'd need multiple onSnapshot listeners,
-              // which is more complex to manage here. A single fetch is safer and often sufficient.
               allFetchedTransactions.push({ ...(doc.data() as Omit<Transaction, 'id'>), id: doc.id });
             });
         }
@@ -65,12 +59,12 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
         setTransactions(allFetchedTransactions);
 
       } catch (error) {
-        console.error("Error fetching transactions for multiple users: ", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar dados",
-          description: "Não foi possível buscar os lançamentos. Verifique sua conexão e tente recarregar a página.",
-        });
+        console.error("Caught error in useTransactions:", error);
+        // Instead of a generic toast, we emit a contextual error for the listener to catch.
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'transactions', // This is a collection group query
+            operation: 'list',
+        }));
       } finally {
         setLoading(false);
       }
@@ -78,8 +72,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
     fetchTransactions();
 
-    // The dependency array should react to changes in the calculated user IDs.
-  }, [firestore, isAuthReady, targetUserIds, toast]);
+  }, [firestore, isAuthReady, targetUserIds]);
 
 
   return { transactions, loading };
