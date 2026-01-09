@@ -11,13 +11,13 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Allow signed-in users to list transactions (for admin panel to see store orders),
-    // but only the owner can read details, update, or delete.
+    // Allow signed-in users to list/read/delete transactions (for admin panel to manage store orders),
+    // but only the owner can update.
     // Anyone can create a transaction (for storefront orders).
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow list, get: if isSignedIn();
-      allow update, delete: if isOwner(userId);
-      allow create: if request.resource.data.userId == userId;
+      allow list, get, delete: if isSignedIn();
+      allow update: if isOwner(userId);
+      allow create: if true; // Allows storefront to create orders for any user
     }
 
     // PUBLIC COLLECTIONS
@@ -51,10 +51,10 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
     
-    // This rule is no longer necessary with the per-collection rules above,
-    // but is kept for reference. The more specific rule on the user's transaction path will take precedence.
+    // This collection group query allows an admin to query across all users' transactions,
+    // which is necessary for the store orders page.
     match /{path=**}/transactions/{transactionId} {
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && request.query.limit <= 200;
     }
   }
 }
