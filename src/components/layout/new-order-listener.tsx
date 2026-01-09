@@ -29,20 +29,11 @@ export function NewOrderListener() {
     }
     
     // Pre-load the audio file
-    fetch('/sounds/notification.mp3')
-      .then(response => {
-        if (response.ok && typeof Audio !== 'undefined') {
-          if (!audioRef.current) {
-            audioRef.current = new Audio('/sounds/notification.mp3');
-            audioRef.current.load();
-          }
-        } else if (response.status === 404) {
-          console.warn("Arquivo de áudio '/sounds/notification.mp3' não encontrado. As notificações sonoras estão desativadas.");
-        }
-      })
-      .catch(() => {
-        console.warn("Não foi possível verificar o arquivo de áudio. As notificações sonoras podem estar desativadas.");
-      });
+    if (typeof Audio !== 'undefined' && !audioRef.current) {
+      audioRef.current = new Audio('/sounds/notification.mp3');
+      audioRef.current.load(); // Pre-loads the audio
+      // We don't try to play it here, just get it ready.
+    }
   }, []);
 
   useEffect(() => {
@@ -64,9 +55,13 @@ export function NewOrderListener() {
             if (change.type === 'added' && newOrder.status === 'pending') {
 
                 // Play sound
-                audioRef.current?.play().catch(error => {
-                    console.error("Falha ao tocar áudio:", error);
-                });
+                if (audioRef.current) {
+                  audioRef.current.play().catch(error => {
+                    // This error is common if the user hasn't interacted with the page yet.
+                    // We can safely ignore it. The visual notification will still appear.
+                    console.log("Falha ao tocar áudio de notificação (geralmente por falta de interação do usuário):", error.message);
+                  });
+                }
 
                 // Show toast notification
                 toast({
