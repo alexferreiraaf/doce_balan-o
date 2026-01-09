@@ -3,7 +3,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Package, Bike, X, Plus, ChevronsUpDown, Minus } from 'lucide-react';
+import { Loader2, Package, Bike, X, Plus, ChevronsUpDown, Minus, ChevronDown } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, doc, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
 import axios from 'axios';
 
@@ -46,6 +46,7 @@ import { useSettings } from '@/app/lib/hooks/use-settings';
 import { storefrontUserId } from '@/firebase/config';
 import { Separator } from '../ui/separator';
 import { Card } from '../ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 
 
 const selectedOptionalSchema = z.object({
@@ -788,40 +789,44 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               )}
               
               
-              <div className="space-y-2">
-                <FormLabel>Opcionais</FormLabel>
-                 <Card className="p-4">
-                    {optionalsLoading ? (
-                        <p className="text-sm text-center text-muted-foreground">Carregando opcionais...</p>
-                    ) : optionals.length === 0 ? (
-                        <p className="text-sm text-center text-muted-foreground">Nenhum opcional cadastrado.</p>
-                    ) : (
-                        <div className="space-y-3">
-                            {optionals.map(opt => {
-                                const selected = selectedOptionals.find(s => s.id === opt.id);
-                                return (
-                                    <div key={opt.id} className="flex items-center justify-between">
-                                        <div>
-                                            <p className="font-medium">{opt.name}</p>
-                                            <p className="text-xs text-muted-foreground">{formatCurrency(opt.price)}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => handleOptionalQuantityChange(opt, -1)}>
-                                                <Minus className="h-4 w-4" />
-                                            </Button>
-                                            <span className="font-bold text-lg w-5 text-center">{selected?.quantity || 0}</span>
-                                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => handleOptionalQuantityChange(opt, 1)}>
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                 </Card>
-                 <FormMessage />
-              </div>
+              <Collapsible className="space-y-2">
+                <CollapsibleTrigger className="flex justify-between items-center w-full">
+                  <FormLabel>Opcionais</FormLabel>
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Card className="p-4">
+                      {optionalsLoading ? (
+                          <p className="text-sm text-center text-muted-foreground">Carregando opcionais...</p>
+                      ) : optionals.length === 0 ? (
+                          <p className="text-sm text-center text-muted-foreground">Nenhum opcional cadastrado.</p>
+                      ) : (
+                          <div className="space-y-3">
+                              {optionals.map(opt => {
+                                  const selected = selectedOptionals.find(s => s.id === opt.id);
+                                  return (
+                                      <div key={opt.id} className="flex items-center justify-between">
+                                          <div>
+                                              <p className="font-medium">{opt.name}</p>
+                                              <p className="text-xs text-muted-foreground">{formatCurrency(opt.price)}</p>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                              <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => handleOptionalQuantityChange(opt, -1)}>
+                                                  <Minus className="h-4 w-4" />
+                                              </Button>
+                                              <span className="font-bold text-lg w-5 text-center">{selected?.quantity || 0}</span>
+                                              <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => handleOptionalQuantityChange(opt, 1)}>
+                                                  <Plus className="h-4 w-4" />
+                                              </Button>
+                                          </div>
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                      )}
+                  </Card>
+                </CollapsibleContent>
+              </Collapsible>
               
               
               {deliveryTypeValue === 'delivery' && (
