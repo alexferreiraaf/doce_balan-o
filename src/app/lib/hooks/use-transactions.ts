@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, query, orderBy, where, documentId } from 'firebase/firestore';
 import { useAuth } from './use-auth';
 import type { Transaction } from '@/app/lib/types';
@@ -17,7 +17,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   const firestore = useFirestore();
   const [loading, setLoading] = useState(true);
 
-  const targetUserIds = useMemoFirebase(() => {
+  const targetUserIds = useMemo(() => {
     if (options.userIds && options.userIds.length > 0) {
       return [...new Set(options.userIds)]; // Use provided user IDs, ensure uniqueness
     }
@@ -29,12 +29,12 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
 
   const transactionsQuery = useMemoFirebase(() => {
-    if (targetUserIds.length === 0) return null;
+    if (!firestore || targetUserIds.length === 0) return null;
     
-    // As we can't query subcollections across different documents directly,
-    // this logic assumes all storefront transactions are under ONE specific storefront user ID.
-    // If we need to fetch from multiple users' subcollections, we'd need multiple hooks.
-    // This implementation now targets a single user's subcollection, determined by the logic above.
+    // This hook is now only fetching for a single user's subcollection at a time.
+    // The logic in store-orders-client handles multiple user fetches.
+    // If we ever need to query across multiple users' subcollections simultaneously in a single component,
+    // we'd need a different strategy (e.g., multiple useCollection calls or a more complex backend aggregation).
     const primaryUserId = targetUserIds[0];
 
     return query(
