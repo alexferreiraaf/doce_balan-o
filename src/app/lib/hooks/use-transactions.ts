@@ -41,21 +41,14 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       try {
         const allFetchedTransactions: Transaction[] = [];
         
-        // Firestore 'in' query supports up to 30 elements. We chunk the userIds to handle more.
-        const chunkSize = 30;
-        for (let i = 0; i < targetUserIds.length; i += chunkSize) {
-            const chunkUserIds = targetUserIds.slice(i, i + chunkSize);
-            
-            // This query now always includes a 'where' clause, matching the updated security rules.
-            const q = query(
-              collectionGroup(firestore, 'transactions'),
-              where('userId', 'in', chunkUserIds)
-            );
-            
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((doc) => {
-              allFetchedTransactions.push({ ...(doc.data() as Omit<Transaction, 'id'>), id: doc.id });
-            });
+        for (const currentUserId of targetUserIds) {
+          const transCollectionRef = collection(firestore, `artifacts/${APP_ID}/users/${currentUserId}/transactions`);
+          const q = query(transCollectionRef);
+          
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach((doc) => {
+            allFetchedTransactions.push({ ...(doc.data() as Omit<Transaction, 'id'>), id: doc.id });
+          });
         }
         
         allFetchedTransactions.sort((a, b) => b.dateMs - a.dateMs);
