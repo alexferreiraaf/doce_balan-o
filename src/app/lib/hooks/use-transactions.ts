@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { collection, query, onSnapshot, Unsubscribe, DocumentData } from 'firebase/firestore';
 import { useAuth } from './use-auth';
 import type { Transaction } from '@/app/lib/types';
 import { APP_ID } from '../constants';
@@ -22,83 +22,68 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     return [...new Set(allIds.filter(id => !!id))] as string[];
   }, [options.userIds, authUserId]);
 
+  // Ref to hold all transactions from all listeners
+  const allTransactionsRef = useRef<Record<string, Transaction[]>>({});
 
   useEffect(() => {
-    // Don't run if the auth state isn't ready or firestore is not available.
     if (!firestore || !isAuthReady) {
       setLoading(true);
       return;
     }
-
-    // If there are no valid user IDs to fetch for, we can stop loading and show empty.
+    
     if (targetUserIds.length === 0) {
       setTransactions([]);
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     setError(null);
+    allTransactionsRef.current = {}; // Reset on user change
 
-    const fetchAllTransactions = async () => {
-      const allFetchedTransactions: Transaction[] = [];
-      let fetchError: Error | null = null;
+    const unsubscribes: Unsubscribe[] = targetUserIds.map((userId) => {
+      const transCollectionPath = `artifacts/${APP_ID}/users/${userId}/transactions`;
+      const q = query(collection(firestore, transCollectionPath));
 
-      // Create a promise for each user ID's transaction fetch
-      const fetchPromises = targetUserIds.map(async (currentUserId) => {
-        try {
-          const transCollectionPath = `artifacts/${APP_ID}/users/${currentUserId}/transactions`;
-          const transCollectionRef = collection(firestore, transCollectionPath);
-          const q = query(transCollectionRef);
-          
-          const querySnapshot = await getDocs(q);
+      const unsubscribe = onSnapshot(
+        q,
+        (querySnapshot) => {
           const userTransactions: Transaction[] = [];
           querySnapshot.forEach((doc) => {
             userTransactions.push({ ...(doc.data() as Omit<Transaction, 'id'>), id: doc.id });
           });
-          return userTransactions;
 
-        } catch (err: any) {
-          console.error(`Error fetching transactions for userId ${currentUserId}:`, err);
-          // Create and emit a contextual error for debugging security rules.
+          // Update the part of the state for this user
+          allTransactionsRef.current[userId] = userTransactions;
+
+          // Combine all transactions from all listeners
+          const combined = Object.values(allTransactionsRef.current).flat();
+          combined.sort((a, b) => b.dateMs - a.dateMs);
+          
+          setTransactions(combined);
+          setError(null); // Clear previous errors on successful fetch
+          setLoading(false); // We have data, so not loading anymore
+        },
+        (err) => {
+          console.error(`Error listening to transactions for userId ${userId}:`, err);
           const permissionError = new FirestorePermissionError({
-              path: `artifacts/${APP_ID}/users/${currentUserId}/transactions`,
-              operation: 'list',
-              requestResourceData: { queriedUserId: currentUserId }
+            path: transCollectionPath,
+            operation: 'list',
+            requestResourceData: { queriedUserId: userId },
           });
           errorEmitter.emit('permission-error', permissionError);
-          // Set the error state and throw it to stop Promise.all
-          fetchError = permissionError;
-          throw permissionError;
+          setError(permissionError);
+          setLoading(false);
         }
-      });
-      
-      try {
-        // Wait for all fetches to complete
-        const results = await Promise.all(fetchPromises);
-        
-        // Flatten the array of arrays into a single array
-        const combinedTransactions = results.flat();
-        
-        // Sort all transactions together by date
-        combinedTransactions.sort((a, b) => b.dateMs - a.dateMs);
-        
-        setTransactions(combinedTransactions);
+      );
+      return unsubscribe;
+    });
 
-      } catch (err: any) {
-        // This will catch the first error thrown from any of the promises
-        setError(err);
-        setTransactions([]); // Clear data on error
-      } finally {
-        setLoading(false);
-      }
+    // Cleanup function to unsubscribe from all listeners
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
     };
-
-    fetchAllTransactions();
-
-  // Use a stringified version of targetUserIds for stable dependency checking.
   }, [firestore, isAuthReady, JSON.stringify(targetUserIds)]);
-
 
   return { transactions, loading, error };
 }
