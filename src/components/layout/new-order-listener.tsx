@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { storefrontUserId } from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
@@ -13,19 +13,31 @@ export function NewOrderListener() {
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const setPendingOrdersCount = useNotificationStore((state) => state.setPendingOrdersCount);
-  
+  const addPendingOrder = useNotificationStore((state) => state.addPendingOrder);
+
+  // Using a ref to track the initial load timestamp
+  const initialLoadTimestamp = useRef<Timestamp | null>(null);
+
   useEffect(() => {
+    // Set the timestamp only once on component mount
+    if (!initialLoadTimestamp.current) {
+        initialLoadTimestamp.current = Timestamp.now();
+    }
+    
+    // Pre-load the audio file
     fetch('/sounds/notification.mp3')
       .then(response => {
         if (response.ok && typeof Audio !== 'undefined') {
-          audioRef.current = new Audio('/sounds/notification.mp3');
-          audioRef.current.load();
-        } else {
-            console.warn("Audio file /sounds/notification.mp3 not found. Sound notifications will be disabled.");
+          if (!audioRef.current) {
+            audioRef.current = new Audio('/sounds/notification.mp3');
+            audioRef.current.load();
+          }
+        } else if (response.status === 404) {
+          console.warn("Arquivo de áudio '/sounds/notification.mp3' não encontrado. As notificações sonoras estão desativadas.");
         }
       })
       .catch(() => {
-        console.warn("Could not check for audio file. Sound notifications might be disabled.");
+        console.warn("Não foi possível verificar o arquivo de áudio. As notificações sonoras podem estar desativadas.");
       });
   }, []);
 
@@ -34,40 +46,51 @@ export function NewOrderListener() {
       return;
     }
 
+    // Query for pending transactions from the storefront user
     const q = query(
       collection(firestore, `artifacts/docuras-da-fran-default/users/${storefrontUserId}/transactions`),
       where('status', '==', 'pending')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPendingOrdersCount(snapshot.size);
+        // On initial load, or when there are no changes, just set the total count
+        setPendingOrdersCount(snapshot.size);
 
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const newOrder = change.doc.data();
-          
-          audioRef.current?.play().catch(error => {
-            console.error("Audio play failed:", error);
-          });
-          
-          toast({
-            title: (
-              <div className="flex items-center gap-2">
-                <BellRing className="h-5 w-5 text-primary" />
-                <span className="font-bold">Novo Pedido Recebido!</span>
-              </div>
-            ),
-            description: `Novo pedido: ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
-            duration: 10000,
-          });
-        }
-      });
+        snapshot.docChanges().forEach((change) => {
+            const newOrder = change.doc.data();
+            const orderTimestamp = newOrder.timestamp as Timestamp;
+
+            // Only act on newly added documents that are newer than the initial page load
+            if (change.type === 'added' && initialLoadTimestamp.current && orderTimestamp > initialLoadTimestamp.current) {
+
+                // Play sound
+                audioRef.current?.play().catch(error => {
+                    console.error("Falha ao tocar áudio:", error);
+                });
+
+                // Show toast notification
+                toast({
+                    title: (
+                    <div className="flex items-center gap-2">
+                        <BellRing className="h-5 w-5 text-primary" />
+                        <span className="font-bold">Novo Pedido Recebido!</span>
+                    </div>
+                    ),
+                    description: `Novo pedido: ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
+                    duration: 10000,
+                });
+
+                // Increment visual badge counter
+                addPendingOrder();
+            }
+        });
+
     }, (error) => {
-      console.error("Error listening for new orders:", error);
+      console.error("Erro ao escutar novos pedidos:", error);
     });
 
     return () => unsubscribe();
-  }, [firestore, toast, setPendingOrdersCount]);
+  }, [firestore, toast, setPendingOrdersCount, addPendingOrder]);
 
   return null;
 }

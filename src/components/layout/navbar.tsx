@@ -55,7 +55,7 @@ export function Navbar() {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const pendingOrdersCount = useNotificationStore((state) => state.pendingOrdersCount);
+  const { newOrdersBadgeCount, resetNewOrdersBadge } = useNotificationStore();
 
 
   const handleLogout = async () => {
@@ -81,33 +81,44 @@ export function Navbar() {
     return email.charAt(0).toUpperCase();
   };
   
-  const NavButton = ({ href, label, icon: Icon, id }: { href: string; label: string; icon: React.ElementType, id?: string }) => {
-    const isStoreOrders = id === 'store-orders';
-    const showBadge = isStoreOrders && pendingOrdersCount > 0;
+  const handleStoreOrdersClick = () => {
+    resetNewOrdersBadge();
+    router.push('/store-orders');
+  };
 
-    return (
-        <Link href={href} passHref>
-          <Button
-            variant="ghost"
-            className={cn(
-              'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full relative',
-              pathname === href && 'text-primary font-semibold'
+  const NavButton = ({ href, label, icon: Icon, id, onClick }: { href?: string; label: string; icon: React.ElementType, id?: string; onClick?: () => void }) => {
+    const isStoreOrders = id === 'store-orders';
+    const showBadge = isStoreOrders && newOrdersBadgeCount > 0;
+    const finalHref = href || '#';
+    const isActive = href ? pathname === href : false;
+
+    const content = (
+        <div className="relative w-full">
+            {showBadge && (
+            <span className="absolute top-0 right-1 sm:right-2 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 items-center justify-center text-white text-[10px]">{newOrdersBadgeCount}</span>
+            </span>
             )}
-            asChild
-          >
-            <div>
-              {showBadge && (
-                <span className="absolute top-1 right-1 flex h-4 w-4">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 items-center justify-center text-white text-[10px]">{pendingOrdersCount}</span>
-                </span>
-              )}
-              <Icon className="w-6 h-6 mb-0.5" />
-              <span className="text-xs">{label}</span>
-            </div>
-          </Button>
-        </Link>
+            <Icon className="w-6 h-6 mb-0.5" />
+            <span className="text-xs">{label}</span>
+        </div>
+    );
+
+    const button = (
+        <Button
+            variant="ghost"
+            onClick={onClick}
+            className={cn(
+            'flex flex-col h-auto items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md p-2 w-full',
+            isActive && 'text-primary font-semibold'
+            )}
+        >
+            {content}
+        </Button>
     )
+
+    return href ? <Link href={finalHref} passHref>{button}</Link> : button;
   };
   
   const MobileMenuButton = ({ label, icon: Icon, links }: { label: string; icon: React.ElementType; links: typeof registrationLinks }) => {
@@ -156,25 +167,22 @@ export function Navbar() {
         <div className="hidden sm:flex items-center space-x-1 bg-primary/80 p-1 rounded-full">
           {mainNavLinks.map(({ href, label, icon: Icon, id }) => {
             const isStoreOrders = id === 'store-orders';
-            const showBadge = isStoreOrders && pendingOrdersCount > 0;
+            const showBadge = isStoreOrders && newOrdersBadgeCount > 0;
             return (
-                <Link key={href} href={href} passHref>
-                  <Button
+                <Button
+                    key={href}
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3 relative',
-                      pathname === href && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
+                    'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3 relative',
+                    pathname === href && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
                     )}
-                    asChild
-                  >
-                    <div>
-                      {showBadge && <Badge className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 text-xs animate-pulse">{pendingOrdersCount}</Badge>}
-                      <Icon className="w-4 h-4 mr-2" />
-                      {label}
-                    </div>
-                  </Button>
-                </Link>
+                    onClick={isStoreOrders ? handleStoreOrdersClick : () => router.push(href)}
+                >
+                    {showBadge && <Badge className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0 text-xs animate-pulse">{newOrdersBadgeCount}</Badge>}
+                    <Icon className="w-4 h-4 mr-2" />
+                    {label}
+                </Button>
             )
           })}
            <DropdownMenu>
@@ -257,13 +265,14 @@ export function Navbar() {
       {/* Mobile Nav */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border z-50 grid grid-cols-5 items-center p-1.5 gap-1">
         {mobileNavLinks.map((link) => (
-            <NavButton key={link.href} {...link} />
+            <NavButton key={link.href} href={link.href} label={link.label} icon={link.icon} onClick={() => router.push(link.href)} />
         ))}
         
         <MobileMenuButton label="Cadastros" icon={Archive} links={registrationLinks} />
         
-        <NavButton href="/store-orders" label="Pedidos" icon={FileText} id="store-orders" />
-        <NavButton href="/transactions" label="Lançamentos" icon={List} />
+        <NavButton label="Pedidos" icon={FileText} id="store-orders" onClick={handleStoreOrdersClick} />
+
+        <NavButton href="/transactions" label="Lançamentos" icon={List} onClick={() => router.push('/transactions')} />
 
       </div>
 
