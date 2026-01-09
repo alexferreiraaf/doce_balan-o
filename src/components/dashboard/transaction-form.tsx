@@ -3,7 +3,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Package, Bike, X, Plus, ChevronsUpDown } from 'lucide-react';
+import { Loader2, Package, Bike, X, Plus, ChevronsUpDown, Minus } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, doc, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
 import axios from 'axios';
 
@@ -34,7 +34,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { AddProductDialog } from './add-product-dialog';
 import { formatCurrency } from '@/lib/utils';
-import type { Product, Transaction, Customer, Optional } from '@/app/lib/types';
+import type { Product, Transaction, Customer, Optional, SelectedOptional } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
@@ -44,7 +44,15 @@ import { Checkbox } from '../ui/checkbox';
 import { ScrollArea } from '../ui/scroll-area';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import { storefrontUserId } from '@/firebase/config';
+import { Separator } from '../ui/separator';
 
+
+const selectedOptionalSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.number(),
+  quantity: z.number(),
+});
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -74,7 +82,7 @@ const formSchema = z.object({
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
   fromStorefront: z.boolean().optional(),
-  selectedOptionals: z.array(z.string()).optional(),
+  selectedOptionals: z.array(selectedOptionalSchema).optional(),
 }).refine(data => {
     if (data.type === 'income' && data.hasDownPayment !== 'yes' && !data.fromStorefront) {
         return !!data.paymentMethod;
@@ -139,7 +147,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const { customers, loading: customersLoading } = useCustomers();
   const { optionals, loading: optionalsLoading } = useOptionals();
   const { settings, loading: settingsLoading } = useSettings();
-  const [selectedOptionals, setSelectedOptionals] = useState<Optional[]>([]);
+  const [selectedOptionals, setSelectedOptionals] = useState<SelectedOptional[]>([]);
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -204,7 +212,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     const productPrice = product ? product.price : 0;
     const baseTotal = cartTotal ?? (productPrice * Number(quantity || 0));
     
-    const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + opt.price, 0);
+    const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + (opt.price * opt.quantity), 0);
     const currentDeliveryFee = deliveryTypeValue === 'delivery' ? Number(deliveryFee || 0) : 0;
     
     const totalAmount = baseTotal + optionalsTotal + currentDeliveryFee;
@@ -213,12 +221,17 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
     }
     
-    const optionalsDescription = selectedOptionals.map(o => o.name).join(', ');
+    const optionalsDescription = selectedOptionals
+      .map(o => `${o.quantity}x ${o.name}`)
+      .join(', ');
     if (form.getValues('additionalDescription') !== optionalsDescription) {
         form.setValue('additionalDescription', optionalsDescription);
     }
     if (form.getValues('additionalValue') !== optionalsTotal) {
         form.setValue('additionalValue', optionalsTotal);
+    }
+    if (JSON.stringify(form.getValues('selectedOptionals')) !== JSON.stringify(selectedOptionals)) {
+      form.setValue('selectedOptionals', selectedOptionals);
     }
   }, [productId, quantity, deliveryFee, selectedOptionals, products, cartTotal, form, deliveryTypeValue]);
 
@@ -339,7 +352,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             }
 
             if (selectedOptionals.length > 0) {
-                transactionDescription += ` (+ ${selectedOptionals.map(o => o.name).join(', ')})`;
+                 transactionDescription += ` (+ ${selectedOptionals.map(o => `${o.quantity}x ${o.name}`).join(', ')})`;
             }
 
             if (downPaymentValue > 0) {
@@ -374,8 +387,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 amount: data.amount,
                 discount: 0,
                 deliveryFee: data.deliveryType === 'delivery' ? (data.deliveryFee || 0) : 0,
-                additionalDescription: selectedOptionals.map(o => o.name).join(', ') || '',
-                additionalValue: selectedOptionals.reduce((sum, opt) => sum + opt.price, 0),
+                additionalDescription: selectedOptionals.map(o => `${o.quantity}x ${o.name}`).join(', ') || '',
+                additionalValue: selectedOptionals.reduce((sum, opt) => sum + (opt.price * opt.quantity), 0),
+                selectedOptionals: data.selectedOptionals || [],
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
@@ -453,14 +467,19 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     setSelectedOptionals([]);
   };
 
-  const handleOptionalToggle = (optional: Optional) => {
+  const handleOptionalQuantityChange = (optional: Optional, change: 1 | -1) => {
     setSelectedOptionals(prev => {
-        const isSelected = prev.some(o => o.id === optional.id);
-        if (isSelected) {
-            return prev.filter(o => o.id !== optional.id);
-        } else {
-            return [...prev, optional];
+        const existing = prev.find(o => o.id === optional.id);
+        if (existing) {
+            const newQuantity = existing.quantity + change;
+            if (newQuantity <= 0) {
+                return prev.filter(o => o.id !== optional.id);
+            }
+            return prev.map(o => o.id === optional.id ? { ...o, quantity: newQuantity } : o);
+        } else if (change === 1) {
+            return [...prev, { ...optional, quantity: 1 }];
         }
+        return prev;
     });
   }
 
@@ -770,52 +789,36 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               
               <div className="space-y-2">
                 <FormLabel>Opcionais</FormLabel>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between"
-                        >
-                            <span className="truncate">
-                                {selectedOptionals.length > 0 ? selectedOptionals.map(o => o.name).join(', ') : "Selecione os opcionais..."}
-                            </span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                         {optionalsLoading ? (
-                            <p className="text-sm text-center text-muted-foreground p-4">Carregando opcionais...</p>
-                        ) : (
-                            <ScrollArea className="max-h-60">
-                                <div className="p-4 space-y-2">
-                                {optionals.map(opt => (
-                                     <div key={opt.id} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={opt.id}
-                                            checked={selectedOptionals.some(o => o.id === opt.id)}
-                                            onCheckedChange={(checked) => {
-                                                if (checked) {
-                                                    setSelectedOptionals(prev => [...prev, opt]);
-                                                } else {
-                                                    setSelectedOptionals(prev => prev.filter(o => o.id !== opt.id));
-                                                }
-                                            }}
-                                        />
-                                        <label
-                                            htmlFor={opt.id}
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex justify-between w-full"
-                                        >
-                                            <span>{opt.name}</span>
-                                            <span className='text-muted-foreground'>{formatCurrency(opt.price)}</span>
-                                        </label>
+                 <Card className="p-4">
+                    {optionalsLoading ? (
+                        <p className="text-sm text-center text-muted-foreground">Carregando opcionais...</p>
+                    ) : optionals.length === 0 ? (
+                        <p className="text-sm text-center text-muted-foreground">Nenhum opcional cadastrado.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {optionals.map(opt => {
+                                const selected = selectedOptionals.find(s => s.id === opt.id);
+                                return (
+                                    <div key={opt.id} className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium">{opt.name}</p>
+                                            <p className="text-xs text-muted-foreground">{formatCurrency(opt.price)}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => handleOptionalQuantityChange(opt, -1)}>
+                                                <Minus className="h-4 w-4" />
+                                            </Button>
+                                            <span className="font-bold text-lg w-5 text-center">{selected?.quantity || 0}</span>
+                                            <Button type="button" variant="outline" size="icon" className="h-7 w-7" onClick={() => handleOptionalQuantityChange(opt, 1)}>
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                ))}
-                                </div>
-                            </ScrollArea>
-                        )}
-                    </PopoverContent>
-                </Popover>
+                                );
+                            })}
+                        </div>
+                    )}
+                 </Card>
                  <FormMessage />
               </div>
               

@@ -43,6 +43,13 @@
           "type": "number",
           "description": "Value of the additional item for an income transaction."
         },
+        "selectedOptionals": {
+          "type": "array",
+          "description": "Array of selected optionals with quantities.",
+          "items": {
+            "$ref": "#/entities/SelectedOptional"
+          }
+        },
         "downPayment": {
           "type": "number",
           "description": "Down payment amount for an income transaction."
@@ -92,6 +99,10 @@
         "receiptUrl": {
             "type": "string",
             "description": "URL of the saved receipt in Firebase Storage."
+        },
+        "fromStorefront": {
+            "type": "boolean",
+            "description": "Indicates if the transaction originated from the storefront."
         }
       },
       "required": [
@@ -149,6 +160,14 @@
         "imageUrl": {
           "type": "string",
           "description": "URL for the product image."
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Whether the product is featured in the storefront."
+        },
+        "salesCount": {
+          "type": "number",
+          "description": "How many times the product has been sold."
         }
       },
       "required": [
@@ -228,6 +247,110 @@
         "id",
         "name"
       ]
+    },
+    "Optional": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Optional",
+      "type": "object",
+      "description": "Represents an optional add-on for a product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the optional."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the optional."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the optional."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "price"
+      ]
+    },
+     "SelectedOptional": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Selected Optional",
+      "type": "object",
+      "description": "Represents a selected optional item with its quantity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the optional."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the optional."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the optional."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the selected optional."
+        }
+      },
+      "required": ["id", "name", "price", "quantity"]
+    },
+    "AppSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "App Settings",
+      "type": "object",
+      "description": "Represents global application settings.",
+      "properties": {
+        "pixKey": {
+          "type": "string",
+          "description": "The PIX key for receiving payments."
+        },
+         "address": {
+          "type": "string",
+          "description": "The store's physical address."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The store's contact phone or WhatsApp number."
+        },
+        "openingHours": {
+            "type": "object",
+            "description": "The store's opening hours.",
+            "properties": {
+                "sunday": { "$ref": "#/entities/OpeningHours" },
+                "monday": { "$ref": "#/entities/OpeningHours" },
+                "tuesday": { "$ref": "#/entities/OpeningHours" },
+                "wednesday": { "$ref": "#/entities/OpeningHours" },
+                "thursday": { "$ref": "#/entities/OpeningHours" },
+                "friday": { "$ref": "#/entities/OpeningHours" },
+                "saturday": { "$ref": "#/entities/OpeningHours" }
+            }
+        }
+      }
+    },
+    "OpeningHours": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Opening Hours",
+        "type": "object",
+        "description": "Represents the opening hours for a specific day.",
+        "properties": {
+            "enabled": {
+                "type": "boolean",
+                "description": "Whether the store is open on this day."
+            },
+            "open": {
+                "type": "string",
+                "description": "The opening time in HH:mm format."
+            },
+            "close": {
+                "type": "string",
+                "description": "The closing time in HH:mm format."
+            }
+        },
+        "required": ["enabled", "open", "close"]
     }
   },
   "auth": {
@@ -321,8 +444,44 @@
             }
           ]
         }
+      },
+      {
+        "path": "artifacts/{appId}/optionals/{optionalId}",
+        "definition": {
+          "entityName": "Optional",
+          "schema": {
+            "$ref": "#/backend/entities/Optional"
+          },
+          "description": "Stores optional add-ons, accessible to all users.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the Controle da Doçuras application."
+            },
+            {
+              "name": "optionalId",
+              "description": "The unique identifier of the optional."
+            }
+          ]
+        }
+      },
+      {
+        "path": "artifacts/{appId}/settings/app",
+        "definition": {
+          "entityName": "AppSettings",
+          "schema": {
+            "$ref": "#/backend/entities/AppSettings"
+          },
+          "description": "Stores global application settings in a single document.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The unique identifier of the application."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories."
+    "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories and optionals."
   }
 }

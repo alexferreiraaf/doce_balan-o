@@ -4,6 +4,10 @@ export type TransactionType = 'income' | 'expense';
 export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'fiado';
 export type TransactionStatus = 'paid' | 'pending';
 
+export interface SelectedOptional extends Optional {
+  quantity: number;
+}
+
 export interface Transaction {
   id: string;
   userId: string;
@@ -15,6 +19,7 @@ export interface Transaction {
   deliveryFee?: number;
   additionalDescription?: string;
   additionalValue?: number;
+  selectedOptionals?: SelectedOptional[];
   downPayment?: number;
   paymentMethod?: PaymentMethod | null;
   status: TransactionStatus;
