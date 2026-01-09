@@ -92,6 +92,10 @@
         "receiptUrl": {
             "type": "string",
             "description": "URL of the saved receipt in Firebase Storage."
+        },
+        "fromStorefront": {
+            "type": "boolean",
+            "description": "Indicates if the transaction originated from the storefront."
         }
       },
       "required": [

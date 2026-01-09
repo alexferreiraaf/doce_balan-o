@@ -18,16 +18,17 @@ service cloud.firestore {
       allow create: if request.resource.data.userId == userId;
     }
 
-    // Allow anyone to create a product, but only signed-in users can manage them.
+    // PUBLIC COLLECTIONS
+    // Allow anyone to read products, but only signed-in users can manage them.
     match /artifacts/{appId}/products/{productId} {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
-    // Allow anyone to create a customer (for storefront orders), but only signed-in users can manage them.
+    // Allow anyone to read customers, but only signed-in users can manage them.
     match /artifacts/{appId}/customers/{customerId} {
-      allow list: if isSignedIn();
-      allow get, create, update, delete: if isSignedIn();
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn();
     }
     
     // Allow anyone to read categories, but only signed-in users can manage them.
@@ -50,7 +51,7 @@ service cloud.firestore {
     
     // Rule for the collection group query on 'transactions'
     match /{path=**}/transactions/{transactionId} {
-      allow list: if isSignedIn() && request.query.limit <= 30; // Allow listing if the user is signed in. The limit is a security best practice.
+      allow list: if isSignedIn();
     }
   }
 }
