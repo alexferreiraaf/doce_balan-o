@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike, PlusSquare, Settings, ChevronDown, Bell } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import { WhiskIcon } from '@/components/icons/whisk-icon';
@@ -27,8 +26,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from './theme-toggle';
-import { storefrontUserId } from '@/firebase/config';
 import { Badge } from '../ui/badge';
+import { useNotificationStore } from '@/stores/notification-store';
 
 
 const mainNavLinks = [
@@ -54,25 +53,9 @@ export function Navbar() {
   const pathname = usePathname();
   const { isUserLoading, user } = useUser();
   const auth = useAuth();
-  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
-
-  useEffect(() => {
-    if (!firestore || !storefrontUserId) return;
-
-    const q = query(
-      collection(firestore, `artifacts/docuras-da-fran-default/users/${storefrontUserId}/transactions`),
-      where('status', '==', 'pending')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPendingOrdersCount(snapshot.size);
-    });
-
-    return () => unsubscribe();
-  }, [firestore]);
+  const pendingOrdersCount = useNotificationStore((state) => state.pendingOrdersCount);
 
 
   const handleLogout = async () => {

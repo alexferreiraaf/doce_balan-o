@@ -6,19 +6,15 @@ import { useFirestore } from '@/firebase';
 import { storefrontUserId } from '@/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { BellRing } from 'lucide-react';
+import { useNotificationStore } from '@/stores/notification-store';
 
-// This component will listen for new orders and show a notification.
-// It doesn't render anything visible in the layout itself.
 export function NewOrderListener() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const setPendingOrdersCount = useNotificationStore((state) => state.setPendingOrdersCount);
   
-  // A ref to store the timestamp of the last seen order to avoid showing old orders on page load.
-  const lastSeenTimestamp = useRef<Timestamp | null>(null);
-
   useEffect(() => {
-    // Check if audio file exists before creating the Audio object
     fetch('/sounds/notification.mp3')
       .then(response => {
         if (response.ok && typeof Audio !== 'undefined') {
@@ -38,27 +34,22 @@ export function NewOrderListener() {
       return;
     }
 
-    // Query for new transactions from the storefront user, ordered by timestamp.
-    // We start listening from the current time to avoid fetching all past orders.
     const q = query(
       collection(firestore, `artifacts/docuras-da-fran-default/users/${storefrontUserId}/transactions`),
-      where('timestamp', '>', Timestamp.now()),
-      orderBy('timestamp', 'desc')
+      where('status', '==', 'pending')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      // We only care about new documents added since the listener was attached.
+      setPendingOrdersCount(snapshot.size);
+
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const newOrder = change.doc.data();
           
-          // Play sound if audio is available
           audioRef.current?.play().catch(error => {
             console.error("Audio play failed:", error);
-            // This can happen if the user hasn't interacted with the page yet.
           });
           
-          // Show toast notification
           toast({
             title: (
               <div className="flex items-center gap-2">
@@ -67,17 +58,16 @@ export function NewOrderListener() {
               </div>
             ),
             description: `Novo pedido: ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
-            duration: 10000, // Show for 10 seconds
+            duration: 10000,
           });
         }
       });
     }, (error) => {
       console.error("Error listening for new orders:", error);
-      // Don't show toast for permission errors, as they can be noisy.
     });
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
-  }, [firestore, toast]);
+    return () => unsubscribe();
+  }, [firestore, toast, setPendingOrdersCount]);
 
-  return null; // This component does not render anything
+  return null;
 }
