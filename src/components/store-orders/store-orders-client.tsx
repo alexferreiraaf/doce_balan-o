@@ -19,6 +19,8 @@ import { DeleteTransactionButton } from '../dashboard/delete-transaction-button'
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from '../transactions/edit-transaction-sheet';
 import Link from 'next/link';
+import { OrderDetailsDialog } from './order-details-dialog';
+
 
 const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
     pix: { text: 'PIX', icon: Landmark },
@@ -126,12 +128,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
                 Marcar como Pago
             </Button>
           {customer && (
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/customers/${customer.id}`}>
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Cliente
-              </Link>
-            </Button>
+            <OrderDetailsDialog transaction={t} customer={customer} />
           )}
           <EditTransactionSheet transaction={t} />
           <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
