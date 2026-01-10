@@ -1,13 +1,13 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { Product, ProductCategory, Transaction, Customer } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff } from 'lucide-react';
+import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Input } from '../ui/input';
@@ -16,7 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '../ui/badge';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
-import { SaleReceiptDialog } from './sale-receipt-dialog';
+import { SaleReceiptDialog, type SaleReceiptDialogRef } from './sale-receipt-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser } from '@/firebase';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
+import { APP_ID } from '@/app/lib/constants';
 
 interface CartItem extends Product {
   quantity: number;
@@ -38,7 +43,7 @@ function ProductFilters({
   onSearchTermChange,
 }: ProductFiltersProps) {
   return (
-    <Card className="p-3 sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+    <Card className="p-3 sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex-shrink-0">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -69,6 +74,7 @@ function ProductFilters({
                 </Button>
               ))}
           </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
     </Card>
@@ -128,7 +134,7 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                 className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden"
                 onClick={() => onProductClick(product)}
               >
-                <div className="w-full h-32 bg-muted flex items-center justify-center overflow-hidden">
+                <div className="w-full h-48 bg-muted flex items-center justify-center overflow-hidden">
                     {product.imageUrl ? (
                         <Image 
                             src={product.imageUrl} 
@@ -141,7 +147,7 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                         <Package className="w-12 h-12 text-muted-foreground" />
                     )}
                 </div>
-                <div className="p-3 flex flex-col justify-between h-full flex-grow">
+                <div className="p-3 flex flex-col justify-between flex-grow">
                   <h3 className="font-semibold text-card-foreground leading-tight">{product.name}</h3>
                   <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
                 </div>
@@ -151,7 +157,7 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
     );
 }
 
-function CartView({ cart, onUpdateQuantity, onFinalize, total }: { cart: CartItem[], onUpdateQuantity: (id: string, qty: number) => void, onFinalize: () => void, total: number}) {
+function CartView({ cart, onUpdateQuantity, onFinalize, total, onAddMore }: { cart: CartItem[], onUpdateQuantity: (id: string, qty: number) => void, onFinalize: () => void, total: number, onAddMore: () => void}) {
      return (
         <Card className="flex flex-col max-h-full">
           <div className="p-4 border-b flex-shrink-0">
@@ -187,6 +193,12 @@ function CartView({ cart, onUpdateQuantity, onFinalize, total }: { cart: CartIte
             </div>
           </ScrollArea>
           <div className="p-4 mt-auto border-t space-y-3 flex-shrink-0">
+             {cart.length > 0 && (
+                <Button variant="outline" className="w-full" onClick={onAddMore}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar mais produtos
+                </Button>
+             )}
              <div className="flex justify-between items-center text-xl font-bold">
                 <span>Total:</span>
                 <span>{formatCurrency(total)}</span>
@@ -207,8 +219,13 @@ export function POSClient() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showFinalizeSheet, setShowFinalizeSheet] = useState(false);
   const [lastSale, setLastSale] = useState<{transaction: Transaction, customer?: Customer} | null>(null);
+  const receiptDialogRef = useRef<SaleReceiptDialogRef>(null);
   const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState('products');
+  const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const storage = getStorage();
 
   const filteredProducts = useMemo(() => {
     return products
@@ -257,10 +274,44 @@ export function POSClient() {
     setShowFinalizeSheet(open);
   }
 
-  const handleSaleFinalized = (transaction: Transaction, customer?: Customer) => {
+  const handleSaleFinalized = async (transaction: Transaction, customer?: Customer) => {
     setShowFinalizeSheet(false);
     setLastSale({transaction, customer});
+    
+    // Save receipt if there's a customer
+    if (customer && user) {
+        try {
+            const pdfBlob = await receiptDialogRef.current?.generatePdf();
+            if (pdfBlob) {
+                const receiptStorageRef = storageRef(storage, `receipts/${user.uid}/${transaction.id}.pdf`);
+                await uploadBytes(receiptStorageRef, pdfBlob);
+                const downloadUrl = await getDownloadURL(receiptStorageRef);
+                
+                const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transaction.id}`);
+                await updateDoc(transactionRef, { receiptUrl: downloadUrl });
+
+                toast({
+                    title: 'Comprovante Salvo',
+                    description: 'O comprovante foi salvo no histórico do cliente.',
+                });
+            }
+        } catch (error) {
+            console.error("Failed to save receipt:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao Salvar Comprovante',
+                description: 'Não foi possível salvar o comprovante automaticamente.',
+            });
+        }
+    }
+    
     setCart([]); // Clear cart after sale is finalized
+  }
+
+  const handleAddMore = () => {
+      if (isMobile) {
+          setMobileTab('products');
+      }
   }
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -299,7 +350,7 @@ export function POSClient() {
                     </div>
                 </TabsContent>
                 <TabsContent value="cart" className="flex-grow p-4 overflow-hidden">
-                    <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
+                    <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} onAddMore={handleAddMore} />
                 </TabsContent>
             </Tabs>
             <AddTransactionSheet
@@ -311,6 +362,7 @@ export function POSClient() {
             />
             {lastSale && (
                 <SaleReceiptDialog
+                    ref={receiptDialogRef}
                     transaction={lastSale.transaction}
                     customer={lastSale.customer}
                     isOpen={!!lastSale}
@@ -324,22 +376,24 @@ export function POSClient() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-full">
       {/* Product Selection */}
-      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col">
-        <ProductFilters
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-        />
-        <ScrollArea className="flex-grow p-4">
+      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col h-full overflow-hidden">
+        <div className="p-4">
+            <ProductFilters
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                searchTerm={searchTerm}
+                onSearchTermChange={setSearchTerm}
+            />
+        </div>
+        <ScrollArea className="flex-grow px-4 pb-4">
           <ProductGrid products={filteredProducts} onProductClick={addToCart} />
         </ScrollArea>
       </div>
 
       {/* Sale Summary */}
       <div className="lg:col-span-1">
-        <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} />
+        <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} onAddMore={handleAddMore} />
       </div>
 
       <AddTransactionSheet
@@ -352,6 +406,7 @@ export function POSClient() {
 
        {lastSale && (
           <SaleReceiptDialog
+              ref={receiptDialogRef}
               transaction={lastSale.transaction}
               customer={lastSale.customer}
               isOpen={!!lastSale}

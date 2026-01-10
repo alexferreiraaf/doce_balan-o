@@ -50,6 +50,7 @@ import { Separator } from '../ui/separator';
 import { Card } from '../ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Calendar } from '../ui/calendar';
+import { AddCustomerDialog } from './add-customer-dialog';
 
 
 const selectedOptionalSchema = z.object({
@@ -68,12 +69,14 @@ const formSchema = z.object({
   productId: z.string().optional(),
   quantity: z.coerce.number().optional(),
   deliveryFee: z.coerce.number().optional(),
+  discount: z.coerce.number().optional(),
   additionalDescription: z.string().optional(),
   additionalValue: z.coerce.number().optional(),
   paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
   
   // Storefront / Customer fields
   deliveryType: z.enum(['delivery', 'pickup']).optional(),
+  customerId: z.string().optional(),
   customerName: z.string().optional(),
   customerWhatsapp: z.string().optional(),
   customerCep: z.string().optional(),
@@ -205,6 +208,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       amount: cartTotal ?? 0,
       quantity: 1,
       deliveryFee: 0,
+      discount: 0,
       additionalDescription: '',
       additionalValue: 0,
       hasDownPayment: 'no',
@@ -236,6 +240,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const productId = form.watch('productId');
   const quantity = form.watch('quantity');
   const deliveryFee = form.watch('deliveryFee');
+  const discount = form.watch('discount');
   
   // Effect for category suggestion (for expenses)
   useEffect(() => {
@@ -262,8 +267,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     
     const optionalsTotal = selectedOptionals.reduce((sum, opt) => sum + (opt.price * opt.quantity), 0);
     const currentDeliveryFee = deliveryTypeValue === 'delivery' ? Number(deliveryFee || 0) : 0;
+    const currentDiscount = Number(discount || 0);
     
-    const totalAmount = baseTotal + optionalsTotal + currentDeliveryFee;
+    const totalAmount = baseTotal + optionalsTotal + currentDeliveryFee - currentDiscount;
     
     if (form.getValues('amount') !== totalAmount) {
         form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
@@ -281,7 +287,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     if (JSON.stringify(form.getValues('selectedOptionals')) !== JSON.stringify(selectedOptionals)) {
       form.setValue('selectedOptionals', selectedOptionals);
     }
-  }, [productId, quantity, deliveryFee, selectedOptionals, products, cartTotal, form, deliveryTypeValue]);
+  }, [productId, quantity, deliveryFee, discount, selectedOptionals, products, cartTotal, form, deliveryTypeValue]);
 
   useEffect(() => {
     if (deliveryTypeValue === 'pickup') {
@@ -291,7 +297,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   
   // Effect to set delivery fee based on city
   useEffect(() => {
-    if (deliveryTypeValue === 'delivery') {
+    if (fromStorefront && deliveryTypeValue === 'delivery') {
       const city = customerCity?.trim().toLowerCase();
       const state = customerState?.trim().toLowerCase();
       
@@ -301,7 +307,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         form.setValue('deliveryFee', 0);
       }
     }
-  }, [customerCity, customerState, deliveryTypeValue, form]);
+  }, [customerCity, customerState, deliveryTypeValue, form, fromStorefront]);
   
   const handleCepBlur = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, '');
@@ -353,7 +359,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             return;
         }
 
-        let customerId: string | undefined;
+        let customerId: string | undefined = data.customerId;
         let newCustomer: Customer | undefined;
 
         try {
@@ -416,7 +422,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 transactionDescription += ` (Entrada de ${formatCurrency(downPaymentValue)})`;
             }
             
-            if (data.fromStorefront && data.deliveryType) {
+            if (data.deliveryType) {
                 transactionDescription += ` - ${data.deliveryType === 'delivery' ? 'Entrega' : 'Retirada'}`;
             }
 
@@ -442,7 +448,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 description: transactionDescription,
                 category: data.fromStorefront ? 'Venda Online' : data.category,
                 amount: data.amount,
-                discount: 0,
+                discount: data.discount || 0,
                 deliveryFee: data.deliveryType === 'delivery' ? (data.deliveryFee || 0) : 0,
                 additionalDescription: selectedOptionals.map(o => `${o.quantity}x ${o.name}`).join(', ') || '',
                 additionalValue: selectedOptionals.reduce((sum, opt) => sum + (opt.price * opt.quantity), 0),
@@ -495,7 +501,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 onSaleFinalized(createdTransaction, newCustomer);
             }
 
-            form.reset({type: data.type, description: '', amount: 0, quantity: 1, deliveryFee: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: data.fromStorefront ? 'pickup' : undefined});
+            form.reset({type: data.type, description: '', amount: 0, quantity: 1, deliveryFee: 0, discount: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: data.fromStorefront ? 'pickup' : undefined});
             setSelectedOptionals([]);
             setSheetOpen(false);
 
@@ -517,6 +523,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     form.setValue('type', newType);
     form.setValue('quantity', 1);
     form.setValue('deliveryFee', 0);
+    form.setValue('discount', 0);
     form.setValue('additionalDescription', '');
     form.setValue('additionalValue', 0);
     form.setValue('hasDownPayment', 'no');
@@ -678,8 +685,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   />
               )}
               
-              {fromStorefront && (
-                 <FormField
+                <FormField
                     control={form.control}
                     name="deliveryType"
                     render={({ field }) => (
@@ -709,9 +715,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     </FormItem>
                     )}
                 />
-              )}
               
-              {fromStorefront && (
+              {fromStorefront ? (
                 <div className='space-y-4'>
                     <FormField
                         control={form.control}
@@ -740,107 +745,166 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                         )}
                     />
                 </div>
+              ): (
+                <FormField
+                    control={form.control}
+                    name="customerId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <div className="flex justify-between items-center">
+                            <FormLabel>Cliente</FormLabel>
+                            <AddCustomerDialog />
+                        </div>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                            <SelectTrigger disabled={customersLoading}>
+                                <SelectValue placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"} />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {customers.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
               )}
             
               
               {deliveryTypeValue === 'delivery' && (
                  <div className="space-y-4 p-4 border rounded-md">
-                     <FormField
-                        control={form.control}
-                        name="customerCep"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>CEP</FormLabel>
-                            <FormControl>
-                              <CepInput placeholder="Digite o CEP para buscar" {...field} onBlur={(e) => handleCepBlur(e.target.value)} onValueChange={(value) => field.onChange(value)} />
-                            </FormControl>
-                            {isFetchingCep && <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Buscando endereço...</div>}
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="customerStreet"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Rua</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Rua, Avenida, etc." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField
+                    {!fromStorefront ? (
+                         <FormField
                             control={form.control}
-                            name="customerNumber"
+                            name="deliveryFee"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Número</FormLabel>
+                                <FormLabel>Taxa de Entrega (R$)</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ex: 123" {...field} />
+                                <CurrencyInput placeholder="R$ 0,00" {...field} onValueChange={(value) => field.onChange(value)} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
-                            />
-                            <FormField
-                            control={form.control}
-                            name="customerComplement"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Complemento</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Apto, Bloco" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
-                        <FormField
-                        control={form.control}
-                        name="customerNeighborhood"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Bairro</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Bairro" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    ) : (
+                        <>
                             <FormField
-                            control={form.control}
-                            name="customerCity"
-                            render={({ field }) => (
-                                <FormItem className='sm:col-span-2'>
-                                <FormLabel>Cidade</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Cidade" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                            <FormField
-                            control={form.control}
-                            name="customerState"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>UF</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="SP" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
+                                control={form.control}
+                                name="customerCep"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>CEP</FormLabel>
+                                    <FormControl>
+                                    <CepInput placeholder="Digite o CEP para buscar" {...field} onBlur={(e) => handleCepBlur(e.target.value)} onValueChange={(value) => field.onChange(value)} />
+                                    </FormControl>
+                                    {isFetchingCep && <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Buscando endereço...</div>}
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                                <FormField
+                                control={form.control}
+                                name="customerStreet"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Rua</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Rua, Avenida, etc." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <FormField
+                                    control={form.control}
+                                    name="customerNumber"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Número</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ex: 123" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                    <FormField
+                                    control={form.control}
+                                    name="customerComplement"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Complemento</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Apto, Bloco" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                </div>
+                                <FormField
+                                control={form.control}
+                                name="customerNeighborhood"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Bairro</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Bairro" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <FormField
+                                    control={form.control}
+                                    name="customerCity"
+                                    render={({ field }) => (
+                                        <FormItem className='sm:col-span-2'>
+                                        <FormLabel>Cidade</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Cidade" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                    <FormField
+                                    control={form.control}
+                                    name="customerState"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>UF</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="SP" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="deliveryFee"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Taxa de Entrega (R$)</FormLabel>
+                                        <FormControl>
+                                        <CurrencyInput placeholder="R$ 0,00" {...field} onValueChange={(value) => field.onChange(value)} readOnly={fromStorefront} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </>
+                        )}
                  </div>
               )}
               
@@ -965,22 +1029,19 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 </CollapsibleContent>
               </Collapsible>
               
-              
-              {deliveryTypeValue === 'delivery' && (
-                <FormField
-                    control={form.control}
-                    name="deliveryFee"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Taxa de Entrega (R$)</FormLabel>
-                        <FormControl>
-                          <CurrencyInput placeholder="R$ 0,00" {...field} onValueChange={(value) => field.onChange(value)} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-              )}
+              <FormField
+                  control={form.control}
+                  name="discount"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Desconto (R$)</FormLabel>
+                      <FormControl>
+                        <CurrencyInput placeholder="R$ 0,00" {...field} onValueChange={(value) => field.onChange(value)} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+              />
 
               <FormField
                 control={form.control}
