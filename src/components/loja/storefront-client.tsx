@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Carousel, CarouselContent, CarouselItem } from '../ui/carousel';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { ThemeToggle } from '../layout/theme-toggle';
 
 interface CartItem extends Product {
   quantity: number;
@@ -210,6 +211,9 @@ export function StorefrontClient() {
                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary">Cardápio Doçuras da Fran</h1>
                 <p className="text-muted-foreground mt-1">Escolha seus doces favoritos e faça seu pedido!</p>
             </div>
+        </div>
+        <div className="flex items-center gap-2">
+            <ThemeToggle />
         </div>
       </header>
 
