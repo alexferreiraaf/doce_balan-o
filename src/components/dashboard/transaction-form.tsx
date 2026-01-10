@@ -442,7 +442,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
             const transactionCollectionPath = `artifacts/${APP_ID}/users/${targetUserId}/transactions`;
             
-            const transactionData: Omit<Transaction, 'id' | 'timestamp'> = {
+            const transactionData: Partial<Omit<Transaction, 'id' | 'timestamp'>> = {
                 userId: targetUserId,
                 type: data.type,
                 description: transactionDescription,
@@ -458,8 +458,11 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 status: status,
                 customerId: customerId,
                 dateMs: Date.now(),
-                scheduledAt: scheduledAtTimestamp,
             };
+            
+            if (scheduledAtTimestamp) {
+                transactionData.scheduledAt = scheduledAtTimestamp;
+            }
             
             // 3. Create transaction and update product sales counts in a batch
             const batch = writeBatch(firestore);
@@ -489,7 +492,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             
             if (data.type === 'income' && onSaleFinalized) {
                 const createdTransaction: Transaction = {
-                    ...transactionData,
+                    ...(transactionData as Omit<Transaction, 'id' | 'timestamp'>),
                     id: newTransactionRef.id,
                     timestamp: {
                       toDate: () => new Date(),
