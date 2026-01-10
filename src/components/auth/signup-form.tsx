@@ -54,7 +54,7 @@ export function SignupForm() {
           title: 'Conta criada com sucesso!',
           description: 'Você já pode acessar o painel.',
         });
-        router.push('/'); // Redirect to the main dashboard
+        router.push('/pdv'); // Redirect to the main dashboard
         router.refresh();
       } catch (error) {
          let description = 'Ocorreu um erro desconhecido. Tente novamente.';

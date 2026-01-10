@@ -53,7 +53,7 @@ export function LoginForm() {
           title: 'Login bem-sucedido!',
           description: 'Bem-vindo(a) de volta!',
         });
-        router.push('/'); 
+        router.push('/pdv'); 
         router.refresh();
       } catch (error) {
         let description = 'Ocorreu um erro desconhecido. Tente novamente.';
