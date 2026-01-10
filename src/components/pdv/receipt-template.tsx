@@ -16,18 +16,35 @@ interface ReceiptTemplateProps {
 }
 
 const parseCartFromDescription = (description: string, allProducts: Product[]): { name: string; quantity: number, price: number }[] => {
-    if (!description.includes('x ')) return [];
-    
-    return description.split(', ').map(part => {
-        const match = part.match(/(\d+)x (.*)/);
+    // Handle cases where the description is not a standard cart (e.g., from POS single product sale)
+    if (description.startsWith('Venda de ')) {
+        const match = description.match(/(\d+)x (.+?)(?: \((Entrada de|Agendado para|\+).*\))?$/);
         if (match) {
             const quantity = parseInt(match[1], 10);
-            const name = match[2].replace(/ \(.*/, '').replace(/\(\+.*/, '').trim();
+            const name = match[2].trim();
             const product = allProducts.find(p => p.name === name);
-            return { quantity, name, price: product?.price || 0 };
+            if (product) {
+                return [{ quantity, name, price: product.price }];
+            }
         }
-        return null;
-    }).filter((item): item is { name: string; quantity: number, price: number } => item !== null);
+    }
+    
+    // Original logic for comma-separated items (from storefront cart)
+    if (description.includes(', ')) {
+        return description.split(', ').map(part => {
+            const match = part.match(/(\d+)x (.*)/);
+            if (match) {
+                const quantity = parseInt(match[1], 10);
+                const name = match[2].replace(/ \(.*/, '').replace(/\(\+.*/, '').trim();
+                const product = allProducts.find(p => p.name === name);
+                return { quantity, name, price: product?.price || 0 };
+            }
+            return null;
+        }).filter((item): item is { name: string; quantity: number, price: number } => item !== null);
+    }
+    
+    // Fallback for descriptions that don't match cart patterns
+    return [];
 };
 
 
@@ -41,7 +58,10 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
 
         const saleDate = transaction.dateMs ? format(new Date(transaction.dateMs), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
         const orderNumber = (allTransactions.length).toString().padStart(4, '0');
-        const parsedItems = parseCartFromDescription(transaction.description, products);
+        
+        const mainDescription = transaction.description.split(' - ')[0]; // Get only the cart part
+        const parsedItems = parseCartFromDescription(mainDescription, products);
+
         const subtotal = parsedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
         return {
