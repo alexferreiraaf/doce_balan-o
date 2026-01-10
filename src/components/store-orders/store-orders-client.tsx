@@ -1,7 +1,8 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle, User, Banknote, Landmark, FileText, CreditCard, Coins, Eye } from 'lucide-react';
+import { Clock, CheckCircle, User, Banknote, Landmark, FileText, CreditCard, Coins, Eye, Calendar } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(admin)/loading-component';
@@ -109,6 +110,12 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
                 <Badge variant="outline" className="text-xs">
                   <paymentInfo.icon className="w-3 h-3 mr-1" />
                   {paymentInfo.text}
+                </Badge>
+              )}
+               {t.scheduledAt && (
+                <Badge variant="outline" className="text-xs">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  {format(t.scheduledAt.toDate(), "dd/MM 'às' HH:mm")}
                 </Badge>
               )}
               <Badge variant="destructive" className="text-xs">

@@ -1,11 +1,13 @@
 'use client';
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Package, Bike, X, Plus, ChevronsUpDown, Minus, ChevronDown } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, doc, runTransaction, getDoc, writeBatch } from 'firebase/firestore';
+import { Loader2, Package, Bike, X, Plus, ChevronsUpDown, Minus, ChevronDown, CalendarIcon } from 'lucide-react';
+import { collection, addDoc, serverTimestamp, doc, runTransaction, getDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import axios from 'axios';
+import { addDays, format, getDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +35,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { AddProductDialog } from './add-product-dialog';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import type { Product, Transaction, Customer, Optional, SelectedOptional } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
@@ -47,6 +49,7 @@ import { storefrontUserId } from '@/firebase/config';
 import { Separator } from '../ui/separator';
 import { Card } from '../ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { Calendar } from '../ui/calendar';
 
 
 const selectedOptionalSchema = z.object({
@@ -85,6 +88,11 @@ const formSchema = z.object({
   downPayment: z.coerce.number().optional(),
   fromStorefront: z.boolean().optional(),
   selectedOptionals: z.array(selectedOptionalSchema).optional(),
+
+  // Scheduling fields
+  scheduledDate: z.date().optional(),
+  scheduledTime: z.string().optional(),
+
 }).refine(data => {
     if (data.type === 'income' && data.hasDownPayment !== 'yes' && !data.fromStorefront) {
         return !!data.paymentMethod;
@@ -117,6 +125,22 @@ const formSchema = z.object({
 }, {
     message: 'Por favor, selecione a forma de pagamento.',
     path: ['paymentMethod'],
+}).refine(data => {
+    if (data.fromStorefront && !data.scheduledDate) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Por favor, selecione uma data.',
+    path: ['scheduledDate'],
+}).refine(data => {
+    if (data.fromStorefront && data.scheduledDate && !data.scheduledTime) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Por favor, selecione um horário.',
+    path: ['scheduledTime'],
 });
 
 
@@ -134,6 +158,24 @@ interface TransactionFormProps {
     fromStorefront?: boolean;
 }
 
+const getAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
+    // Check for the next 60 days
+    for (let i = 0; i < 60; i++) {
+        const date = addDays(today, i);
+        const dayOfWeek = getDay(date); // 0 (Sun) to 6 (Sat)
+        if (dayOfWeek === 5 || dayOfWeek === 6) { // Friday or Saturday
+            dates.push(date);
+        }
+    }
+    return dates;
+};
+
+const availableTimeSlots = [
+    '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+];
+
 export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal, fromStorefront = false }: TransactionFormProps) {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
@@ -150,6 +192,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const { optionals, loading: optionalsLoading } = useOptionals();
   const { settings, loading: settingsLoading } = useSettings();
   const [selectedOptionals, setSelectedOptionals] = useState<SelectedOptional[]>([]);
+  
+  const availableDates = useMemo(() => getAvailableDates(), []);
+
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -186,6 +231,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const customerCity = form.watch('customerCity');
   const customerState = form.watch('customerState');
   const paymentMethodValue = form.watch('paymentMethod');
+  const scheduledDateValue = form.watch('scheduledDate');
 
   const productId = form.watch('productId');
   const quantity = form.watch('quantity');
@@ -335,6 +381,15 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             // 2. Prepare transaction data
             let transactionDescription = data.description || '';
             const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
+            let scheduledAtTimestamp: Timestamp | undefined;
+            
+            if (data.fromStorefront && data.scheduledDate && data.scheduledTime) {
+                const [hours, minutes] = data.scheduledTime.split(':').map(Number);
+                const scheduledDateWithTime = new Date(data.scheduledDate);
+                scheduledDateWithTime.setHours(hours, minutes, 0, 0);
+                scheduledAtTimestamp = Timestamp.fromDate(scheduledDateWithTime);
+                transactionDescription += ` (Agendado para ${format(scheduledDateWithTime, "dd/MM 'às' HH:mm")})`;
+            }
 
             let productsInSale: {id: string, quantity: number}[] = [];
 
@@ -397,6 +452,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 status: status,
                 customerId: customerId,
                 dateMs: Date.now(),
+                scheduledAt: scheduledAtTimestamp,
             };
             
             // 3. Create transaction and update product sales counts in a batch
@@ -788,9 +844,90 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                  </div>
               )}
               
+                {fromStorefront && (
+                <div className="space-y-4 pt-2">
+                    <Separator />
+                    <FormLabel>Agendamento</FormLabel>
+                     <p className="text-sm text-muted-foreground">
+                        Selecione a data e hora para a retirada ou entrega do seu pedido. Atendemos sextas e sábados das 12:00 às 18:00.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="scheduledDate"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Data</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "pl-3 text-left font-normal",
+                                                        !field.value && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    {field.value ? (
+                                                        format(field.value, "PPP", { locale: ptBR })
+                                                    ) : (
+                                                        <span>Escolha uma data</span>
+                                                    )}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                disabled={(date) =>
+                                                    !availableDates.some(
+                                                        (availableDate) =>
+                                                            date.getFullYear() === availableDate.getFullYear() &&
+                                                            date.getMonth() === availableDate.getMonth() &&
+                                                            date.getDate() === availableDate.getDate()
+                                                    )
+                                                }
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {scheduledDateValue && (
+                            <FormField
+                                control={form.control}
+                                name="scheduledTime"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Horário</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione o horário" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {availableTimeSlots.map(slot => (
+                                                    <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                    </div>
+                </div>
+              )}
               
               <Collapsible className="space-y-2">
-                <CollapsibleTrigger className="flex justify-between items-center w-full">
+                <CollapsibleTrigger className="flex justify-between items-center w-full pt-2">
                   <FormLabel>Opcionais</FormLabel>
                   <ChevronDown className="h-4 w-4" />
                 </CollapsibleTrigger>

@@ -28,6 +28,7 @@ export interface Transaction {
   dateMs: number;
   receiptUrl?: string;
   fromStorefront?: boolean;
+  scheduledAt?: Timestamp;
 }
 
 export interface Product {

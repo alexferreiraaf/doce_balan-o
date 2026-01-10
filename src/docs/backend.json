@@ -92,6 +92,11 @@
           "description": "Timestamp of when the transaction occurred.",
           "format": "date-time"
         },
+        "scheduledAt": {
+            "type": "string",
+            "description": "Timestamp of when the order is scheduled for pickup/delivery.",
+            "format": "date-time"
+        },
         "dateMs": {
           "type": "number",
           "description": "Timestamp in milliseconds for easier filtering and sorting."
