@@ -1,10 +1,11 @@
 import React, { forwardRef, useCallback } from 'react';
 import { Input } from './input';
 
-const currencyMask = (value: string) => {
+const currencyMask = (value: string): string => {
   if (!value) return '';
   let v = value.replace(/\D/g, '');
-  v = (parseInt(v, 10) / 100).toFixed(2).toString();
+  if (v === '') return '';
+  v = (parseInt(v, 10) / 100).toFixed(2);
   v = v.replace('.', ',');
   v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
   return `R$ ${v}`;
@@ -40,49 +41,38 @@ type MaskedInputProps = React.ComponentProps<"input"> & {
 
 const MaskedInput = forwardRef<HTMLInputElement, MaskedInputProps>(({ mask, onValueChange, ...props }, ref) => {
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    let maskedValue = '';
+    let rawValue = e.target.value;
     let numericValue: number | string = rawValue.replace(/\D/g, '');
-
+    
     switch (mask) {
       case 'currency':
-        maskedValue = currencyMask(rawValue);
-        numericValue = parseFloat(rawValue.replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
+        // For currency, the numeric value should be a float
+        numericValue = parseFloat(numericValue) / 100 || 0;
         break;
       case 'cep':
-        maskedValue = cepMask(rawValue);
-        numericValue = rawValue.replace(/\D/g, '');
-        break;
       case 'phone':
-        maskedValue = phoneMask(rawValue);
-        numericValue = rawValue.replace(/\D/g, '');
+        // For others, it's a string of digits
         break;
       default:
-        maskedValue = rawValue;
         numericValue = rawValue;
     }
     
-    // This is a bit of a trick to update the input's visual value
-    // while propagating the unmasked value to the form handler.
-    e.target.value = maskedValue;
     onValueChange(numericValue);
     
   }, [mask, onValueChange]);
-  
-  const handleValueFormatting = (value: any) => {
-    if (value === undefined || value === null) return '';
+
+  const getValueForDisplay = (value: any) => {
+    if (value === undefined || value === null || value === '') return '';
     let strValue = String(value);
 
     switch (mask) {
       case 'currency':
-        if(typeof value === 'string' && value.includes('R$')) {
-            return value;
-        }
-        // The value from the form is a number, so we need to format it for display.
-        // We multiply by 100 because the number is stored as a float (e.g., 25.50)
-        // but the mask function expects an integer string (e.g., "2550").
-        const numericVal = parseFloat(strValue) || 0;
-        return currencyMask(String(numericVal * 100));
+        // When typing, we receive the number from the form.
+        // Format it back to a masked string for display.
+        const num = parseFloat(strValue);
+        if (isNaN(num)) return '';
+        // The number is a float (e.g., 25.5). We need to convert it to a string of cents "2550".
+        return currencyMask(String(Math.round(num * 100)));
       case 'cep':
         return cepMask(strValue);
       case 'phone':
@@ -92,8 +82,7 @@ const MaskedInput = forwardRef<HTMLInputElement, MaskedInputProps>(({ mask, onVa
     }
   }
 
-
-  return <Input {...props} onChange={handleInputChange} value={handleValueFormatting(props.value)} ref={ref} />;
+  return <Input {...props} onChange={handleInputChange} value={getValueForDisplay(props.value)} ref={ref} />;
 });
 
 MaskedInput.displayName = 'MaskedInput';
