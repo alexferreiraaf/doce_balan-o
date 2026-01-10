@@ -36,7 +36,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { AddProductDialog } from './add-product-dialog';
 import { formatCurrency, cn } from '@/lib/utils';
-import type { Product, Transaction, Customer, Optional, SelectedOptional } from '@/app/lib/types';
+import type { Product, Transaction, Customer, Optional, SelectedOptional, CartItem } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
@@ -54,6 +54,13 @@ import { AddCustomerDialog } from './add-customer-dialog';
 
 
 const selectedOptionalSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.number(),
+  quantity: z.number(),
+});
+
+const cartItemSchema = z.object({
   id: z.string(),
   name: z.string(),
   price: z.number(),
@@ -91,6 +98,7 @@ const formSchema = z.object({
   downPayment: z.coerce.number().optional(),
   fromStorefront: z.boolean().optional(),
   selectedOptionals: z.array(selectedOptionalSchema).optional(),
+  cartItems: z.array(cartItemSchema).optional(),
 
   // Scheduling fields
   scheduledDate: z.date().optional(),
@@ -149,14 +157,14 @@ const formSchema = z.object({
 
 type TransactionFormValues = z.infer<typeof formSchema> & { fromStorefront?: boolean };
 
-interface CartItem extends Product {
+interface InitialCartItem extends Product {
   quantity: number;
 }
 
 interface TransactionFormProps {
     setSheetOpen: (open: boolean) => void;
     onSaleFinalized?: (transaction: Transaction, customer?: Customer) => void;
-    cart?: CartItem[];
+    cart?: InitialCartItem[];
     cartTotal?: number;
     fromStorefront?: boolean;
 }
@@ -225,6 +233,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       customerCity: '',
       customerState: '',
       selectedOptionals: [],
+      cartItems: cart || [],
     },
   });
 
@@ -397,6 +406,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 transactionDescription += ` (Agendado para ${format(scheduledDateWithTime, "dd/MM 'às' HH:mm")})`;
             }
 
+            let cartItems: CartItem[] = [];
             let productsInSale: {id: string, quantity: number}[] = [];
 
             if (data.type === 'income' && !cart) {
@@ -407,9 +417,11 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 }
                 transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
                 productsInSale.push({id: product.id, quantity: data.quantity});
+                cartItems.push({id: product.id, name: product.name, price: product.price, quantity: data.quantity});
             } else if (data.type === 'income' && cart) {
                 transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
                 productsInSale = cart.map(item => ({id: item.id, quantity: item.quantity}));
+                cartItems = cart;
             } else {
                 transactionDescription = data.description || 'Despesa sem descrição';
             }
@@ -453,6 +465,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 additionalDescription: selectedOptionals.map(o => `${o.quantity}x ${o.name}`).join(', ') || '',
                 additionalValue: selectedOptionals.reduce((sum, opt) => sum + (opt.price * opt.quantity), 0),
                 selectedOptionals: data.selectedOptionals || [],
+                cartItems: cartItems,
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,

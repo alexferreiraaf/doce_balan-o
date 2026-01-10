@@ -9,6 +9,13 @@ export interface SelectedOptional extends Optional {
   quantity: number;
 }
 
+export interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 export interface Transaction {
   id: string;
   userId: string;
@@ -21,6 +28,7 @@ export interface Transaction {
   additionalDescription?: string;
   additionalValue?: number;
   selectedOptionals?: SelectedOptional[];
+  cartItems?: CartItem[];
   downPayment?: number;
   paymentMethod?: PaymentMethod | null;
   status: TransactionStatus;
