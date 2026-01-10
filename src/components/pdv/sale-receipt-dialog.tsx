@@ -81,10 +81,11 @@ export const SaleReceiptDialog = forwardRef<SaleReceiptDialogRef, SaleReceiptDia
           description: 'O comprovante foi enviado com sucesso.',
         });
       } else {
-        throw new Error("Navigator.share not supported for files.");
+        // Fallback to download if sharing is not supported
+        handleDownload();
       }
     } catch (err) {
-       console.error("Share failed", err);
+       console.error("Share failed, falling back to download.", err);
        handleDownload();
     }
   };
