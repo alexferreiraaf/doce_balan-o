@@ -287,7 +287,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     if (JSON.stringify(form.getValues('selectedOptionals')) !== JSON.stringify(selectedOptionals)) {
       form.setValue('selectedOptionals', selectedOptionals);
     }
-  }, [productId, quantity, deliveryFee, discount, selectedOptionals, products, cartTotal, form, deliveryTypeValue]);
+  }, [productId, quantity, deliveryTypeValue, discount, selectedOptionals, products, cartTotal, form]);
 
   useEffect(() => {
     if (deliveryTypeValue === 'pickup') {
@@ -1032,7 +1032,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 </CollapsibleContent>
               </Collapsible>
               
-              <FormField
+                <FormField
                   control={form.control}
                   name="discount"
                   render={({ field }) => (
