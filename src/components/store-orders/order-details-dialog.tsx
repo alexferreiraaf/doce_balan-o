@@ -9,10 +9,11 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { Eye, User, Phone, Home, Bike, Package, Landmark, Coins, CreditCard } from "lucide-react";
+import { Eye, User, Phone, Home, Bike, Package, Landmark, Coins, CreditCard, Calendar } from "lucide-react";
 import type { Transaction, Customer, PaymentMethod } from "@/app/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { Separator } from "../ui/separator";
+import { format } from "date-fns";
 
 interface OrderDetailsDialogProps {
     transaction: Transaction;
@@ -92,6 +93,19 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
                     </div>
 
                     <Separator />
+
+                    {/* Scheduling Info */}
+                    {transaction.scheduledAt && (
+                        <>
+                            <div className="space-y-2">
+                                <h3 className="font-semibold flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" />Agendamento</h3>
+                                <div className="pl-6 text-sm">
+                                    <p>{format(transaction.scheduledAt.toDate(), "dd/MM/yyyy 'às' HH:mm")}</p>
+                                </div>
+                            </div>
+                            <Separator />
+                        </>
+                    )}
 
                     {/* Order Info */}
                     <div className="space-y-2">
