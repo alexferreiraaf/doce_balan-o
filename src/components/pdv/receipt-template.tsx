@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Customer, Product, Transaction } from '@/app/lib/types';
+import type { Customer, Product, Transaction, SelectedOptional } from '@/app/lib/types';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { useMemo } from 'react';
@@ -15,36 +15,49 @@ interface ReceiptTemplateProps {
   customer?: Customer;
 }
 
-const parseCartFromDescription = (description: string, allProducts: Product[]): { name: string; quantity: number, price: number }[] => {
-    // Handle cases where the description is not a standard cart (e.g., from POS single product sale)
-    if (description.startsWith('Venda de ')) {
-        const match = description.match(/(\d+)x (.+?)(?: \((Entrada de|Agendado para|\+).*\))?$/);
-        if (match) {
-            const quantity = parseInt(match[1], 10);
-            const name = match[2].trim();
-            const product = allProducts.find(p => p.name === name);
-            if (product) {
-                return [{ quantity, name, price: product.price }];
-            }
-        }
-    }
-    
-    // Original logic for comma-separated items (from storefront cart)
-    if (description.includes(', ')) {
-        return description.split(', ').map(part => {
-            const match = part.match(/(\d+)x (.*)/);
-            if (match) {
-                const quantity = parseInt(match[1], 10);
-                const name = match[2].replace(/ \(.*/, '').replace(/\(\+.*/, '').trim();
-                const product = allProducts.find(p => p.name === name);
-                return { quantity, name, price: product?.price || 0 };
-            }
-            return null;
-        }).filter((item): item is { name: string; quantity: number, price: number } => item !== null);
-    }
-    
-    // Fallback for descriptions that don't match cart patterns
-    return [];
+interface CartItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+const parseCartFromDescription = (transaction: Transaction, allProducts: Product[]): CartItem[] => {
+  // If the sale came from the storefront, it contains a cart. The description is a summary.
+  if (transaction.fromStorefront || (transaction.description && transaction.description.includes(','))) {
+      const items: CartItem[] = [];
+      // Split the main description part to get individual items
+      const descriptionPart = transaction.description.split(' (+')[0];
+      const itemStrings = descriptionPart.split(', ');
+
+      for (const itemString of itemStrings) {
+          const match = itemString.match(/(\d+)x (.*)/);
+          if (match) {
+              const quantity = parseInt(match[1], 10);
+              const name = match[2].trim();
+              const product = allProducts.find(p => p.name === name);
+              if (product) {
+                  items.push({ name, quantity, price: product.price });
+              }
+          }
+      }
+      return items;
+  }
+
+  // Handle single product sale from POS
+  if (transaction.description && transaction.description.startsWith('Venda de ')) {
+      const match = transaction.description.match(/Venda de (\d+)x (.+?)(?: \(.+\)| - .+)?$/);
+      if (match) {
+          const quantity = parseInt(match[1], 10);
+          const name = match[2].trim();
+          const product = allProducts.find(p => p.name === name);
+          if (product) {
+              return [{ name, quantity, price: product.price }];
+          }
+      }
+  }
+  
+  // Fallback if no items could be parsed
+  return [];
 };
 
 
@@ -59,9 +72,8 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
         const saleDate = transaction.dateMs ? format(new Date(transaction.dateMs), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : 'Data inválida';
         const orderNumber = (allTransactions.length).toString().padStart(4, '0');
         
-        const mainDescription = transaction.description.split(' - ')[0]; // Get only the cart part
-        const parsedItems = parseCartFromDescription(mainDescription, products);
-
+        const parsedItems = parseCartFromDescription(transaction, products);
+        
         const subtotal = parsedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
         return {
@@ -116,7 +128,7 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
             ))}
         </div>
         
-        {((transaction.additionalDescription && transaction.additionalValue) || (transaction.deliveryFee && transaction.deliveryFee > 0) || (transaction.discount && transaction.discount > 0)) && (
+        {((transaction.additionalDescription && transaction.additionalValue && transaction.additionalValue > 0) || (transaction.deliveryFee && transaction.deliveryFee > 0) || (transaction.discount && transaction.discount > 0)) && (
             <>
                 <hr className="border-dashed border-black my-2" />
                 <div className="space-y-1">
@@ -124,7 +136,7 @@ export const ReceiptTemplate = React.forwardRef<HTMLDivElement, ReceiptTemplateP
                         <span>Subtotal:</span>
                         <span>{formatCurrency(subtotal)}</span>
                     </div>
-                     {transaction.additionalDescription && transaction.additionalValue && (
+                     {transaction.additionalDescription && transaction.additionalValue && transaction.additionalValue > 0 && (
                         <div className="flex justify-between">
                             <span>{transaction.additionalDescription}:</span>
                             <span>{formatCurrency(transaction.additionalValue)}</span>
