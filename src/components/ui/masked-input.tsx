@@ -71,14 +71,18 @@ const MaskedInput = forwardRef<HTMLInputElement, MaskedInputProps>(({ mask, onVa
   
   const handleValueFormatting = (value: any) => {
     if (value === undefined || value === null) return '';
-    const strValue = String(value);
+    let strValue = String(value);
 
     switch (mask) {
       case 'currency':
+        if(typeof value === 'string' && value.includes('R$')) {
+            return value;
+        }
         // The value from the form is a number, so we need to format it for display.
         // We multiply by 100 because the number is stored as a float (e.g., 25.50)
         // but the mask function expects an integer string (e.g., "2550").
-        return currencyMask(String(parseFloat(strValue) * 100));
+        const numericVal = parseFloat(strValue) || 0;
+        return currencyMask(String(numericVal * 100));
       case 'cep':
         return cepMask(strValue);
       case 'phone':
