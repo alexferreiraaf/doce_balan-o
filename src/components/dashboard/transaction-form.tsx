@@ -287,7 +287,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
     if (JSON.stringify(form.getValues('selectedOptionals')) !== JSON.stringify(selectedOptionals)) {
       form.setValue('selectedOptionals', selectedOptionals);
     }
-  }, [productId, quantity, deliveryTypeValue, discount, selectedOptionals, products, cartTotal, form]);
+  }, [productId, quantity, deliveryTypeValue, deliveryFee, discount, selectedOptionals, products, cartTotal, form]);
 
   useEffect(() => {
     if (deliveryTypeValue === 'pickup') {
@@ -470,6 +470,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             // Add new transaction to the batch
             const transactionCollection = collection(firestore, transactionCollectionPath);
             const finalTransactionData = { ...transactionData, timestamp: serverTimestamp() };
+            if (!finalTransactionData.scheduledAt) {
+              delete finalTransactionData.scheduledAt;
+            }
             const newTransactionRef = doc(transactionCollection);
             batch.set(newTransactionRef, finalTransactionData);
             
