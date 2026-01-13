@@ -47,6 +47,7 @@ const formSchema = z.object({
   categoryId: z.string().optional(),
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
+  isPromotion: z.boolean().default(false),
   imageFile: z.any()
     .refine((file) => !file || file.size <= MAX_FILE_SIZE_BYTES, `O tamanho máximo da imagem é ${MAX_FILE_SIZE_MB}MB.`)
     .refine((file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type), 'Formato de arquivo não suportado (aceito: JPG, PNG, WEBP).')
@@ -81,6 +82,7 @@ export function AddProductDialog() {
       categoryId: '',
       imageUrl: '',
       isFeatured: false,
+      isPromotion: false,
     },
   });
 
@@ -136,6 +138,7 @@ export function AddProductDialog() {
         categoryId: data.categoryId || '',
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
+        isPromotion: data.isPromotion,
         salesCount: 0,
       };
 
@@ -278,6 +281,24 @@ export function AddProductDialog() {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="isPromotion"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Marcar como promoção</FormLabel>
+                    <FormMessage />
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => { setOpen(false); resetFormState(); }}>
                 Cancelar
@@ -293,3 +314,5 @@ export function AddProductDialog() {
     </Dialog>
   );
 }
+
+    

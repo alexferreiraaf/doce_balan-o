@@ -50,6 +50,13 @@
             "$ref": "#/entities/SelectedOptional"
           }
         },
+        "cartItems": {
+            "type": "array",
+            "description": "Array of items in the cart for a storefront sale.",
+            "items": {
+                "$ref": "#/entities/CartItem"
+            }
+        },
         "downPayment": {
           "type": "number",
           "description": "Down payment amount for an income transaction."
@@ -169,6 +176,10 @@
         "isFeatured": {
           "type": "boolean",
           "description": "Whether the product is featured in the storefront."
+        },
+        "isPromotion": {
+            "type": "boolean",
+            "description": "Whether the product is part of a promotion."
         },
         "salesCount": {
           "type": "number",
@@ -302,6 +313,31 @@
         }
       },
       "required": ["id", "name", "price", "quantity"]
+    },
+    "CartItem": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Cart Item",
+        "type": "object",
+        "description": "Represents an item in the shopping cart.",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Product ID."
+            },
+            "name": {
+                "type": "string",
+                "description": "Product name."
+            },
+            "price": {
+                "type": "number",
+                "description": "Product price at the time of sale."
+            },
+            "quantity": {
+                "type": "number",
+                "description": "Quantity of the product."
+            }
+        },
+        "required": ["id", "name", "price", "quantity"]
     },
     "AppSettings": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -490,3 +526,4 @@
     "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories and optionals."
   }
 }
+    

@@ -4,7 +4,7 @@ import Loading from '@/app/(admin)/loading-component';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddProductDialog } from './add-product-dialog';
-import { Package, Tag, ImageOff, Star } from 'lucide-react';
+import { Package, Tag, ImageOff, Star, Percent } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
   Table,
@@ -111,7 +111,10 @@ export function ProductsClient() {
                                     <TableRow key={product.id}>
                                     <TableCell className="hidden sm:table-cell">
                                       <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center overflow-hidden relative">
-                                        {product.isFeatured && <Star className="absolute top-1 right-1 w-4 h-4 text-yellow-400 fill-yellow-400"/>}
+                                        <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
+                                            {product.isFeatured && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>}
+                                            {product.isPromotion && <Percent className="w-4 h-4 text-red-500 fill-red-500"/>}
+                                        </div>
                                         {product.imageUrl ? (
                                            <Image 
                                              src={product.imageUrl} 
@@ -144,3 +147,5 @@ export function ProductsClient() {
     </div>
   );
 }
+
+    

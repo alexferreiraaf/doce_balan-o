@@ -6,7 +6,7 @@ import type { AppSettings, DayOfWeek, Product } from '@/app/lib/types';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
-import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock } from 'lucide-react';
+import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
 import { WhiskIcon } from '../icons/whisk-icon';
@@ -79,17 +79,19 @@ export function StorefrontClient() {
   const loading = productsLoading || categoriesLoading || settingsLoading;
   const storeStatus = getStoreStatus(settings);
 
-  const { featuredProducts, bestSellerThreshold, regularProducts } = useMemo(() => {
+  const { promotionalProducts, featuredProducts, bestSellerThreshold, regularProducts } = useMemo(() => {
     if (products.length === 0) {
-      return { featuredProducts: [], bestSellerThreshold: 0, regularProducts: [] };
+      return { promotionalProducts: [], featuredProducts: [], bestSellerThreshold: 0, regularProducts: [] };
     }
 
+    const promotions = products.filter(p => p.isPromotion).slice(0, 4);
     const featured = products.filter(p => p.isFeatured).slice(0, 4);
 
     const salesCounts = products.map(p => p.salesCount || 0).sort((a, b) => b - a);
     const threshold = salesCounts.length > 3 ? salesCounts[2] : 0;
     
     return { 
+      promotionalProducts: promotions,
       featuredProducts: featured,
       bestSellerThreshold: threshold,
       regularProducts: products, // All products for the main grid
@@ -235,6 +237,25 @@ export function StorefrontClient() {
         </div>
       ) : (
         <div className="space-y-12">
+             {promotionalProducts.length > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                        <Percent className="w-6 h-6 text-destructive" />
+                        Promoções Imperdíveis
+                    </h2>
+                    <Carousel opts={{ align: "start", loop: true }} className="w-full">
+                        <CarouselContent>
+                            {promotionalProducts.map((product) => (
+                                <CarouselItem key={product.id} className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                                    <div className="p-1 h-full">
+                                        <ProductCard product={product} />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                    </Carousel>
+                </div>
+            )}
             {featuredProducts.length > 0 && (
                 <div className="space-y-4">
                     <h2 className="text-2xl font-bold tracking-tight">✨ Destaques da Casa</h2>
@@ -369,3 +390,5 @@ export function StorefrontClient() {
     </div>
   );
 }
+
+    

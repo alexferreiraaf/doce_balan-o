@@ -47,6 +47,7 @@ export interface Product {
   categoryId?: string;
   imageUrl?: string;
   isFeatured?: boolean;
+  isPromotion?: boolean;
   salesCount?: number;
 }
 
@@ -88,3 +89,5 @@ export interface AppSettings {
   phone?: string;
   openingHours?: Record<DayOfWeek, OpeningHours>;
 }
+
+    
