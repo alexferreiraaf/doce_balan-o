@@ -6,7 +6,7 @@ import type { AppSettings, DayOfWeek, Product } from '@/app/lib/types';
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
-import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent } from 'lucide-react';
+import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
 import { WhiskIcon } from '../icons/whisk-icon';
@@ -19,6 +19,8 @@ import { Carousel, CarouselContent, CarouselItem } from '../ui/carousel';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { ThemeToggle } from '../layout/theme-toggle';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { cn } from '@/lib/utils';
 
 interface CartItem extends Product {
   quantity: number;
@@ -75,6 +77,7 @@ export function StorefrontClient() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { toast } = useToast();
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+  const [showPromotions, setShowPromotions] = useState(false);
 
   const loading = productsLoading || categoriesLoading || settingsLoading;
   const storeStatus = getStoreStatus(settings);
@@ -84,7 +87,7 @@ export function StorefrontClient() {
       return { promotionalProducts: [], featuredProducts: [], bestSellerThreshold: 0, regularProducts: [] };
     }
 
-    const promotions = products.filter(p => p.isPromotion).slice(0, 4);
+    const promotions = products.filter(p => p.isPromotion);
     const featured = products.filter(p => p.isFeatured).slice(0, 4);
 
     const salesCounts = products.map(p => p.salesCount || 0).sort((a, b) => b - a);
@@ -239,21 +242,25 @@ export function StorefrontClient() {
         <div className="space-y-12">
              {promotionalProducts.length > 0 && (
                 <div className="space-y-4">
-                    <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                        <Percent className="w-6 h-6 text-destructive" />
-                        Promoções Imperdíveis
-                    </h2>
-                    <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                        <CarouselContent>
-                            {promotionalProducts.map((product) => (
-                                <CarouselItem key={product.id} className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                                    <div className="p-1 h-full">
-                                        <ProductCard product={product} />
-                                    </div>
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                    </Carousel>
+                  <Button 
+                    variant="destructive" 
+                    size="lg" 
+                    className="w-full h-14 text-lg"
+                    onClick={() => setShowPromotions(!showPromotions)}
+                  >
+                    <Percent className="w-6 h-6 mr-3" />
+                    Promoções
+                    <ChevronDown className={cn("ml-2 h-5 w-5 transition-transform", showPromotions && "rotate-180")} />
+                  </Button>
+                  <Collapsible open={showPromotions}>
+                    <CollapsibleContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-6">
+                        {promotionalProducts.map((product) => (
+                           <ProductCard key={product.id} product={product} />
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
             )}
             {featuredProducts.length > 0 && (
@@ -390,5 +397,3 @@ export function StorefrontClient() {
     </div>
   );
 }
-
-    
