@@ -469,7 +469,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
-                customerId: customerId,
+                customerId: customerId || null,
                 dateMs: Date.now(),
             };
             
