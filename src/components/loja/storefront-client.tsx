@@ -184,12 +184,20 @@ export function StorefrontClient() {
        <Card className="overflow-hidden flex flex-col group h-full">
             <CardHeader className="p-0">
                 <div className="aspect-square bg-muted flex items-center justify-center relative">
-                {isBestSeller && (
-                    <div className="absolute top-2 left-2 z-10 bg-black/70 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
-                        <Flame className="w-3 h-3 text-orange-400"/>
-                        Mais Pedido
+                    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                        {isBestSeller && (
+                            <div className="bg-black/70 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
+                                <Flame className="w-3 h-3 text-orange-400"/>
+                                Mais Pedido
+                            </div>
+                        )}
+                        {hasPromo && (
+                            <div className="bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
+                                <Percent className="w-3 h-3"/>
+                                Promoção
+                            </div>
+                        )}
                     </div>
-                )}
                 {product.imageUrl ? (
                     <Image src={product.imageUrl} alt={product.name} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform duration-300" />
                 ) : (
