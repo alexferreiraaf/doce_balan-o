@@ -43,6 +43,20 @@
           "type": "number",
           "description": "Value of the additional item for an income transaction."
         },
+        "selectedOptionals": {
+          "type": "array",
+          "description": "Array of selected optionals with quantities.",
+          "items": {
+            "$ref": "#/entities/SelectedOptional"
+          }
+        },
+        "cartItems": {
+            "type": "array",
+            "description": "Array of items in the cart for a storefront sale.",
+            "items": {
+                "$ref": "#/entities/CartItem"
+            }
+        },
         "downPayment": {
           "type": "number",
           "description": "Down payment amount for an income transaction."
@@ -84,6 +98,11 @@
           "type": "string",
           "description": "Timestamp of when the transaction occurred.",
           "format": "date-time"
+        },
+        "scheduledAt": {
+            "type": "string",
+            "description": "Timestamp of when the order is scheduled for pickup/delivery.",
+            "format": "date-time"
         },
         "dateMs": {
           "type": "number",
@@ -157,6 +176,14 @@
         "isFeatured": {
           "type": "boolean",
           "description": "Whether the product is featured in the storefront."
+        },
+        "isPromotion": {
+            "type": "boolean",
+            "description": "Whether the product is part of a promotion."
+        },
+        "promotionalPrice": {
+            "type": "number",
+            "description": "The promotional price of the product, if applicable."
         },
         "salesCount": {
           "type": "number",
@@ -265,6 +292,56 @@
         "name",
         "price"
       ]
+    },
+     "SelectedOptional": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Selected Optional",
+      "type": "object",
+      "description": "Represents a selected optional item with its quantity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the optional."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the optional."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the optional."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the selected optional."
+        }
+      },
+      "required": ["id", "name", "price", "quantity"]
+    },
+    "CartItem": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Cart Item",
+        "type": "object",
+        "description": "Represents an item in the shopping cart.",
+        "properties": {
+            "id": {
+                "type": "string",
+                "description": "Product ID."
+            },
+            "name": {
+                "type": "string",
+                "description": "Product name."
+            },
+            "price": {
+                "type": "number",
+                "description": "Product price at the time of sale."
+            },
+            "quantity": {
+                "type": "number",
+                "description": "Quantity of the product."
+            }
+        },
+        "required": ["id", "name", "price", "quantity"]
     },
     "AppSettings": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -453,3 +530,4 @@
     "reasoning": "The Firestore structure is updated for a public/private data model. Products and Customers are now in root-level collections to be shared among all users. Transactions remain nested under the user's ID to ensure privacy. This supports the new requirement of anonymous access to public data while keeping financial records secure and user-specific. Added a new collection for product categories and optionals."
   }
 }
+    

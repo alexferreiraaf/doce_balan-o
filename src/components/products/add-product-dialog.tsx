@@ -44,6 +44,7 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+  promotionalPrice: z.coerce.number().optional(),
   categoryId: z.string().optional(),
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
@@ -83,8 +84,11 @@ export function AddProductDialog() {
       imageUrl: '',
       isFeatured: false,
       isPromotion: false,
+      promotionalPrice: 0,
     },
   });
+
+  const isPromotion = form.watch("isPromotion");
 
   const resetFormState = () => {
     form.reset();
@@ -139,6 +143,7 @@ export function AddProductDialog() {
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
         isPromotion: data.isPromotion,
+        promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
         salesCount: 0,
       };
 
@@ -299,6 +304,23 @@ export function AddProductDialog() {
                 </FormItem>
               )}
             />
+
+            {isPromotion && (
+                <FormField
+                    control={form.control}
+                    name="promotionalPrice"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Preço Promocional (R$)</FormLabel>
+                        <FormControl>
+                        <CurrencyInput placeholder="R$ 19,90" {...field} onValueChange={(value) => field.onChange(value)} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            )}
+
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => { setOpen(false); resetFormState(); }}>
                 Cancelar
@@ -314,5 +336,3 @@ export function AddProductDialog() {
     </Dialog>
   );
 }
-
-    

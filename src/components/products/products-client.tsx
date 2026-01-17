@@ -129,7 +129,16 @@ export function ProductsClient() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="font-medium">{product.name}</TableCell>
-                                    <TableCell>{formatCurrency(product.price)}</TableCell>
+                                    <TableCell>
+                                      {product.isPromotion && product.promotionalPrice != null ? (
+                                          <div className="flex flex-col">
+                                              <span className="text-muted-foreground line-through text-xs">{formatCurrency(product.price)}</span>
+                                              <span className="font-bold text-primary">{formatCurrency(product.promotionalPrice)}</span>
+                                          </div>
+                                      ) : (
+                                          formatCurrency(product.price)
+                                      )}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <EditProductDialog product={product} />
                                         <DeleteProductButton productId={product.id} />
@@ -147,5 +156,3 @@ export function ProductsClient() {
     </div>
   );
 }
-
-    

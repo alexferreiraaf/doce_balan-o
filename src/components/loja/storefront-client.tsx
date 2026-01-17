@@ -126,6 +126,8 @@ export function StorefrontClient() {
       return;
     }
 
+    const priceToAdd = product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0 ? product.promotionalPrice : product.price;
+
     setCart(currentCart => {
       const existingItem = currentCart.find(item => item.id === product.id);
       if (existingItem) {
@@ -133,7 +135,7 @@ export function StorefrontClient() {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...currentCart, { ...product, quantity: 1 }];
+      return [...currentCart, { ...product, price: priceToAdd, quantity: 1 }];
     });
   };
 
@@ -176,6 +178,8 @@ export function StorefrontClient() {
 
   const ProductCard = ({ product }: { product: Product }) => {
     const isBestSeller = (product.salesCount || 0) > 0 && (product.salesCount || 0) >= bestSellerThreshold;
+    const hasPromo = product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0;
+    const displayPrice = hasPromo ? product.promotionalPrice! : product.price;
     return (
        <Card className="overflow-hidden flex flex-col group h-full">
             <CardHeader className="p-0">
@@ -196,11 +200,16 @@ export function StorefrontClient() {
             <CardContent className="p-4 flex flex-col flex-grow">
                 <h3 className="font-semibold text-lg flex-grow">{product.name}</h3>
                 <div className="flex justify-between items-end mt-4">
-                <p className="text-xl font-bold text-primary">{formatCurrency(product.price)}</p>
-                <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)}>
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Pedir
-                </Button>
+                    <div className="flex flex-col items-start">
+                        {hasPromo && (
+                            <p className="text-sm text-muted-foreground line-through">{formatCurrency(product.price)}</p>
+                        )}
+                        <p className="text-xl font-bold text-primary">{formatCurrency(displayPrice)}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)}>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Pedir
+                    </Button>
                 </div>
             </CardContent>
         </Card>

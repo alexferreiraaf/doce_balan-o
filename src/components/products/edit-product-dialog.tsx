@@ -45,6 +45,7 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+  promotionalPrice: z.coerce.number().optional(),
   categoryId: z.string().optional(),
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
@@ -84,6 +85,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     defaultValues: {
       name: product.name,
       price: product.price,
+      promotionalPrice: product.promotionalPrice || 0,
       categoryId: product.categoryId || '',
       imageUrl: product.imageUrl || '',
       isFeatured: product.isFeatured || false,
@@ -91,10 +93,13 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     },
   });
 
+  const isPromotion = form.watch("isPromotion");
+
   const resetFormState = () => {
     form.reset({
         name: product.name,
         price: product.price,
+        promotionalPrice: product.promotionalPrice || 0,
         categoryId: product.categoryId || '',
         imageUrl: product.imageUrl || '',
         isFeatured: product.isFeatured || false,
@@ -110,6 +115,12 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       resetFormState();
     }
   }, [open, product]);
+
+  useEffect(() => {
+    if (!isPromotion) {
+      form.setValue('promotionalPrice', 0);
+    }
+  }, [isPromotion, form]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -160,6 +171,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
         isPromotion: data.isPromotion,
+        promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
       };
 
       updateDoc(productRef, productData)
@@ -315,6 +327,21 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                 </FormItem>
               )}
             />
+             {isPromotion && (
+                <FormField
+                    control={form.control}
+                    name="promotionalPrice"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Preço Promocional (R$)</FormLabel>
+                        <FormControl>
+                        <CurrencyInput placeholder="R$ 19,90" {...field} onValueChange={(value) => field.onChange(value)} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            )}
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
@@ -330,5 +357,3 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     </Dialog>
   );
 }
-
-    
