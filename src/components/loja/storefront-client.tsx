@@ -233,6 +233,10 @@ export function StorefrontClient() {
             </div>
         </div>
         <div className="flex items-center gap-2">
+           <Button variant="outline" onClick={() => setShowPromotions(!showPromotions)} aria-expanded={showPromotions}>
+              <Percent className="w-4 h-4 mr-2" />
+              Promoções
+            </Button>
             <ThemeToggle />
         </div>
       </header>
@@ -247,6 +251,24 @@ export function StorefrontClient() {
         </Alert>
       )}
 
+      <Collapsible open={showPromotions} className="w-full">
+        <CollapsibleContent className="animate-in fade-in-0 zoom-in-95">
+          <h2 className="text-2xl font-bold tracking-tight mb-4">✨ Promoções</h2>
+          {promotionalProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {promotionalProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 text-muted-foreground bg-muted/50 rounded-lg">
+              <p className="font-semibold">Nenhuma promoção ativa no momento.</p>
+              <p className="text-sm">Volte em breve para conferir as novidades!</p>
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
       {products.length === 0 ? (
         <div className="text-center py-20">
             <Package className="w-16 h-16 mx-auto text-muted-foreground" />
@@ -255,38 +277,6 @@ export function StorefrontClient() {
         </div>
       ) : (
         <div className="space-y-12">
-            <div className="space-y-6">
-                <div className="flex justify-center">
-                    <button 
-                        onClick={() => setShowPromotions(!showPromotions)} 
-                        className="flex flex-col items-center gap-2 text-center group w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg p-2"
-                        aria-expanded={showPromotions}
-                    >
-                        <div className="w-24 h-24 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform group-hover:scale-105 shadow-lg border-4 border-background">
-                            <Percent className="w-10 h-10" />
-                        </div>
-                        <span className="font-semibold text-xl text-primary">Promoções</span>
-                    </button>
-                </div>
-                
-                <Collapsible open={showPromotions} className="w-full">
-                    <CollapsibleContent className="animate-in fade-in-0 zoom-in-95">
-                        {promotionalProducts.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-6">
-                                {promotionalProducts.map((product) => (
-                                    <ProductCard key={product.id} product={product} />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-10 text-muted-foreground bg-muted/50 rounded-lg mt-4">
-                                <p className="font-semibold">Nenhuma promoção ativa no momento.</p>
-                                <p className="text-sm">Volte em breve para conferir as novidades!</p>
-                            </div>
-                        )}
-                    </CollapsibleContent>
-                </Collapsible>
-            </div>
-
             {featuredProducts.length > 0 && (
                 <div className="space-y-4">
                     <h2 className="text-2xl font-bold tracking-tight">✨ Destaques da Casa</h2>
