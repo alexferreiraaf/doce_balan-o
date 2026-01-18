@@ -15,7 +15,6 @@ import { ScrollArea } from '../ui/scroll-area';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Carousel, CarouselContent, CarouselItem } from '../ui/carousel';
 import { useSettings } from '@/app/lib/hooks/use-settings';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { ThemeToggle } from '../layout/theme-toggle';
@@ -190,7 +189,7 @@ export function StorefrontClient() {
                             </div>
                         )}
                         {hasPromo && (
-                            <div className="bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
+                           <div className="bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
                                 <Percent className="w-3 h-3"/>
                                 Promoção
                             </div>
@@ -233,7 +232,7 @@ export function StorefrontClient() {
             </div>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" onClick={() => setShowPromotions(!showPromotions)} aria-expanded={showPromotions}>
+           <Button variant="default" onClick={() => setShowPromotions(!showPromotions)} aria-expanded={showPromotions}>
               <Percent className="w-4 h-4 mr-2" />
               Promoções
             </Button>
@@ -253,19 +252,21 @@ export function StorefrontClient() {
 
       <Collapsible open={showPromotions} className="w-full">
         <CollapsibleContent className="animate-in fade-in-0 zoom-in-95">
-          <h2 className="text-2xl font-bold tracking-tight mb-4">✨ Promoções</h2>
-          {promotionalProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {promotionalProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-10 text-muted-foreground bg-muted/50 rounded-lg">
-              <p className="font-semibold">Nenhuma promoção ativa no momento.</p>
-              <p className="text-sm">Volte em breve para conferir as novidades!</p>
-            </div>
-          )}
+            {promotionalProducts.length > 0 ? (
+                <div className='space-y-4'>
+                    <h2 className="text-2xl font-bold tracking-tight">✨ Promoções</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {promotionalProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="text-center py-10 text-muted-foreground bg-muted/50 rounded-lg">
+                <p className="font-semibold">Nenhuma promoção ativa no momento.</p>
+                <p className="text-sm">Volte em breve para conferir as novidades!</p>
+                </div>
+            )}
         </CollapsibleContent>
       </Collapsible>
 
@@ -280,17 +281,11 @@ export function StorefrontClient() {
             {featuredProducts.length > 0 && (
                 <div className="space-y-4">
                     <h2 className="text-2xl font-bold tracking-tight">✨ Destaques da Casa</h2>
-                    <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                        <CarouselContent>
-                            {featuredProducts.map((product) => (
-                                <CarouselItem key={product.id} className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                                    <div className="p-1 h-full">
-                                        <ProductCard product={product} />
-                                    </div>
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                    </Carousel>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {featuredProducts.map((product) => (
+                           <ProductCard key={product.id} product={product} />
+                        ))}
+                    </div>
                 </div>
             )}
           
