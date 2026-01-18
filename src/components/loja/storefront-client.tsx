@@ -109,7 +109,7 @@ export function StorefrontClient() {
   }, [regularProducts, selectedCategoryId]);
 
   const cartTotal = useMemo(() => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cart.reduce((total, item) => total + (item.promotionalPrice ?? item.price) * item.quantity, 0);
   }, [cart]);
 
   const totalItems = useMemo(() => {
@@ -126,8 +126,6 @@ export function StorefrontClient() {
       return;
     }
 
-    const priceToAdd = product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0 ? product.promotionalPrice : product.price;
-
     setCart(currentCart => {
       const existingItem = currentCart.find(item => item.id === product.id);
       if (existingItem) {
@@ -135,7 +133,7 @@ export function StorefrontClient() {
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...currentCart, { ...product, price: priceToAdd, quantity: 1 }];
+      return [...currentCart, { ...product, quantity: 1 }];
     });
   };
 
@@ -257,29 +255,38 @@ export function StorefrontClient() {
         </div>
       ) : (
         <div className="space-y-12">
-             {promotionalProducts.length > 0 && (
-                <div className="space-y-4">
-                  <Button 
-                    variant="destructive" 
-                    size="lg" 
-                    className="w-full h-14 text-lg"
-                    onClick={() => setShowPromotions(!showPromotions)}
-                  >
-                    <Percent className="w-6 h-6 mr-3" />
-                    Promoções
-                    <ChevronDown className={cn("ml-2 h-5 w-5 transition-transform", showPromotions && "rotate-180")} />
-                  </Button>
-                  <Collapsible open={showPromotions}>
-                    <CollapsibleContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-6">
-                        {promotionalProducts.map((product) => (
-                           <ProductCard key={product.id} product={product} />
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+            <div className="space-y-6">
+                <div className="flex justify-center">
+                    <button 
+                        onClick={() => setShowPromotions(!showPromotions)} 
+                        className="flex flex-col items-center gap-2 text-center group w-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg p-2"
+                        aria-expanded={showPromotions}
+                    >
+                        <div className="w-24 h-24 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform group-hover:scale-105 shadow-lg border-4 border-background">
+                            <Percent className="w-10 h-10" />
+                        </div>
+                        <span className="font-semibold text-xl text-primary">Promoções</span>
+                    </button>
                 </div>
-            )}
+                
+                <Collapsible open={showPromotions} className="w-full">
+                    <CollapsibleContent className="animate-in fade-in-0 zoom-in-95">
+                        {promotionalProducts.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-6">
+                                {promotionalProducts.map((product) => (
+                                    <ProductCard key={product.id} product={product} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-10 text-muted-foreground bg-muted/50 rounded-lg mt-4">
+                                <p className="font-semibold">Nenhuma promoção ativa no momento.</p>
+                                <p className="text-sm">Volte em breve para conferir as novidades!</p>
+                            </div>
+                        )}
+                    </CollapsibleContent>
+                </Collapsible>
+            </div>
+
             {featuredProducts.length > 0 && (
                 <div className="space-y-4">
                     <h2 className="text-2xl font-bold tracking-tight">✨ Destaques da Casa</h2>
@@ -358,7 +365,7 @@ export function StorefrontClient() {
                       )}
                       <div className="flex-grow">
                         <p className="font-semibold">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
+                        <p className="text-sm text-muted-foreground">{formatCurrency(item.promotionalPrice ?? item.price)}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}>
                             <Minus className="h-4 w-4" />
@@ -370,7 +377,7 @@ export function StorefrontClient() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">{formatCurrency(item.price * item.quantity)}</p>
+                        <p className="font-bold">{formatCurrency((item.promotionalPrice ?? item.price) * item.quantity)}</p>
                         <Button variant="ghost" size="icon" className="h-7 w-7 mt-2 text-muted-foreground hover:text-destructive" onClick={() => handleUpdateQuantity(item.id, 0)}>
                            <Trash2 className="h-4 w-4"/>
                         </Button>
