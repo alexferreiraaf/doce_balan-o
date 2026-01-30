@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike, PlusSquare, Settings, ChevronDown, Bell } from 'lucide-react';
+import { Home, TrendingUp, LogOut, List, User as UserIcon, LogIn, Plus, Package, Users, Archive, LayoutDashboard, ShoppingCart, Eye, FileText, Bike, PlusSquare, Settings, ChevronDown, Bell, Tag } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 
@@ -40,6 +40,7 @@ const registrationLinks = [
     { href: '/products', label: 'Produtos', icon: Package },
     { href: '/customers', label: 'Clientes', icon: Users },
     { href: '/optionals', label: 'Opcionais', icon: PlusSquare },
+    { href: '/product-categories', label: 'Categorias', icon: Tag },
 ];
 
 const reportsLinks = [
