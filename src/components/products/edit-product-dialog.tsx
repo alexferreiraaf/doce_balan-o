@@ -21,6 +21,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -37,10 +38,7 @@ import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { AddProductCategoryDialog } from './add-product-category-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
-
-const MAX_FILE_SIZE_MB = 1;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
@@ -50,10 +48,8 @@ const formSchema = z.object({
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isPromotion: z.boolean().default(false),
-  imageFile: z.any()
-    .refine((file) => !file || file.size <= MAX_FILE_SIZE_BYTES, `O tamanho máximo da imagem é ${MAX_FILE_SIZE_MB}MB.`)
-    .refine((file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type), 'Formato de arquivo não suportado (aceito: JPG, PNG, WEBP).')
-    .optional(),
+  isAvailable: z.boolean().default(true),
+  imageFile: z.any().optional(),
 });
 
 
@@ -74,6 +70,7 @@ const fileToBase64 = (file: File): Promise<string> =>
 export function EditProductDialog({ product }: EditProductDialogProps) {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
+  const storage = getStorage();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -90,6 +87,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       imageUrl: product.imageUrl || '',
       isFeatured: product.isFeatured || false,
       isPromotion: product.isPromotion || false,
+      isAvailable: product.isAvailable ?? true,
     },
   });
 
@@ -104,6 +102,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         imageUrl: product.imageUrl || '',
         isFeatured: product.isFeatured || false,
         isPromotion: product.isPromotion || false,
+        isAvailable: product.isAvailable ?? true,
     });
     setImagePreview(product.imageUrl || null);
     const fileInput = document.getElementById(`file-upload-${product.id}`) as HTMLInputElement;
@@ -153,10 +152,32 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
 
       try {
         if (data.imageFile) {
-          imageUrl = await fileToBase64(data.imageFile);
+          const file = data.imageFile as File;
+          const base64 = await fileToBase64(file);
+          const imageStorageRef = storageRef(storage, `products/${user.uid}/${Date.now()}_${file.name}`);
+          await uploadString(imageStorageRef, base64, 'data_url');
+          imageUrl = await getDownloadURL(imageStorageRef);
+
+          // Delete old image if it exists and is a firebase storage url
+          if (product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
+            try {
+              const oldImageRef = storageRef(storage, product.imageUrl);
+              await deleteObject(oldImageRef);
+            } catch (deleteError) {
+              console.warn("Could not delete old image, it might not exist or there's a permission issue.", deleteError);
+            }
+          }
+        } else if (imageUrl === '' && product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
+           // If imageUrl was cleared and there was an old image, delete it.
+            try {
+              const oldImageRef = storageRef(storage, product.imageUrl);
+              await deleteObject(oldImageRef);
+            } catch (deleteError) {
+              console.warn("Could not delete old image on clear, it might not exist or there's a permission issue.", deleteError);
+            }
         }
       } catch (uploadError: any) {
-        console.error('File conversion failed:', uploadError);
+        console.error('File handling failed:', uploadError);
         toast({ variant: 'destructive', title: 'Erro no Upload', description: 'Não foi possível processar a imagem.'});
         return;
       }
@@ -172,6 +193,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         isFeatured: data.isFeatured,
         isPromotion: data.isPromotion,
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
+        isAvailable: data.isAvailable,
       };
 
       updateDoc(productRef, productData)
@@ -288,6 +310,27 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="isAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Disponível para venda</FormLabel>
+                     <FormDescription>
+                      Se desativado, o produto aparecerá como "Em falta" na loja.
+                    </FormDescription>
+                    <FormMessage />
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

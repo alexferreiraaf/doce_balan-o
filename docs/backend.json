@@ -185,6 +185,10 @@
             "type": "number",
             "description": "The promotional price of the product, if applicable."
         },
+        "isAvailable": {
+            "type": "boolean",
+            "description": "Whether the product is available for sale."
+        },
         "salesCount": {
           "type": "number",
           "description": "How many times the product has been sold."

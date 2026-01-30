@@ -21,6 +21,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -36,10 +37,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
 import { Switch } from '../ui/switch';
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 
-const MAX_FILE_SIZE_MB = 1;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
@@ -49,10 +48,8 @@ const formSchema = z.object({
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isPromotion: z.boolean().default(false),
-  imageFile: z.any()
-    .refine((file) => !file || file.size <= MAX_FILE_SIZE_BYTES, `O tamanho máximo da imagem é ${MAX_FILE_SIZE_MB}MB.`)
-    .refine((file) => !file || ACCEPTED_IMAGE_TYPES.includes(file.type), 'Formato de arquivo não suportado (aceito: JPG, PNG, WEBP).')
-    .optional(),
+  isAvailable: z.boolean().default(true),
+  imageFile: z.any().optional(),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -69,6 +66,7 @@ const fileToBase64 = (file: File): Promise<string> =>
 export function AddProductDialog() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
+  const storage = getStorage();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -85,6 +83,7 @@ export function AddProductDialog() {
       isFeatured: false,
       isPromotion: false,
       promotionalPrice: 0,
+      isAvailable: true,
     },
   });
 
@@ -127,11 +126,15 @@ export function AddProductDialog() {
 
       try {
         if (data.imageFile) {
-          imageUrl = await fileToBase64(data.imageFile);
+          const file = data.imageFile as File;
+          const base64 = await fileToBase64(file);
+          const imageStorageRef = storageRef(storage, `products/${user.uid}/${Date.now()}_${file.name}`);
+          await uploadString(imageStorageRef, base64, 'data_url');
+          imageUrl = await getDownloadURL(imageStorageRef);
         }
       } catch (uploadError: any) {
-        console.error('File conversion failed:', uploadError);
-        toast({ variant: 'destructive', title: 'Erro no Upload', description: 'Não foi possível processar a imagem.'});
+        console.error('File upload failed:', uploadError);
+        toast({ variant: 'destructive', title: 'Erro no Upload', description: 'Não foi possível enviar a imagem.'});
         return;
       }
 
@@ -145,6 +148,7 @@ export function AddProductDialog() {
         isPromotion: data.isPromotion,
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
         salesCount: 0,
+        isAvailable: data.isAvailable,
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -265,6 +269,27 @@ export function AddProductDialog() {
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="isAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Disponível para venda</FormLabel>
+                    <FormDescription>
+                      Se desativado, o produto aparecerá como "Em falta" na loja.
+                    </FormDescription>
+                    <FormMessage />
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
