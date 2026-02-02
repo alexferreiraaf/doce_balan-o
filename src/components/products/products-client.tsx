@@ -22,6 +22,11 @@ import { useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { AddProductCategoryDialog } from './add-product-category-dialog';
 import Image from 'next/image';
+import { Switch } from '../ui/switch';
+import { useFirestore, useUser } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { doc, updateDoc } from 'firebase/firestore';
+import { APP_ID } from '@/app/lib/constants';
 
 interface GroupedProducts {
   [categoryName: string]: Product[];
@@ -30,6 +35,9 @@ interface GroupedProducts {
 export function ProductsClient() {
   const { products, loading: productsLoading } = useProducts();
   const { categories, loading: categoriesLoading } = useProductCategories();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
   const loading = productsLoading || categoriesLoading;
 
@@ -52,6 +60,34 @@ export function ProductsClient() {
 
     return group;
   }, [products, categories]);
+
+  const handleAvailabilityChange = async (product: Product, isAvailable: boolean) => {
+    if (!user || !firestore) {
+      toast({
+        variant: "destructive",
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para alterar o produto.",
+      });
+      return;
+    }
+    
+    const productRef = doc(firestore, `artifacts/${APP_ID}/products/${product.id}`);
+
+    try {
+      await updateDoc(productRef, { isAvailable });
+      toast({
+        title: "Produto atualizado!",
+        description: `${product.name} foi ${isAvailable ? 'ativado' : 'desativado'}.`,
+      });
+    } catch (error) {
+      console.error("Error updating product availability:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar",
+        description: "Não foi possível alterar a disponibilidade do produto.",
+      });
+    }
+  };
 
   if (loading) {
     return <Loading />;
@@ -102,6 +138,7 @@ export function ProductsClient() {
                                     <TableHead className="w-[80px] hidden sm:table-cell">Imagem</TableHead>
                                     <TableHead>Produto</TableHead>
                                     <TableHead>Preço</TableHead>
+                                    <TableHead>Disponível</TableHead>
                                     <TableHead className="text-right">Ações</TableHead>
                                 </TableRow>
                                 </TableHeader>
@@ -138,6 +175,13 @@ export function ProductsClient() {
                                           formatCurrency(product.price)
                                       )}
                                     </TableCell>
+                                    <TableCell>
+                                      <Switch
+                                        checked={product.isAvailable}
+                                        onCheckedChange={(checked) => handleAvailabilityChange(product, checked)}
+                                        aria-label="Disponibilidade do produto"
+                                      />
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <EditProductDialog product={product} />
                                         <DeleteProductButton productId={product.id} />
@@ -155,3 +199,5 @@ export function ProductsClient() {
     </div>
   );
 }
+
+  

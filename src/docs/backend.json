@@ -177,9 +177,17 @@
           "type": "boolean",
           "description": "Whether the product is featured in the storefront."
         },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Whether the product is available for sale."
+        },
         "isPromotion": {
             "type": "boolean",
             "description": "Whether the product is part of a promotion."
+        },
+        "promotionalPrice": {
+            "type": "number",
+            "description": "The promotional price of the product, if applicable."
         },
         "salesCount": {
           "type": "number",
@@ -527,3 +535,4 @@
   }
 }
     
+  

@@ -116,6 +116,14 @@ export function StorefrontClient() {
   }, [cart]);
 
   const handleAddToCart = (product: Product) => {
+    if (!product.isAvailable) {
+      toast({
+       variant: 'destructive',
+       title: 'Produto em Falta!',
+       description: 'Este item não está disponível no momento.',
+     });
+     return;
+   }
     if (!storeStatus.isOpen) {
        toast({
         variant: 'destructive',
@@ -177,11 +185,17 @@ export function StorefrontClient() {
     const isBestSeller = (product.salesCount || 0) > 0 && (product.salesCount || 0) >= bestSellerThreshold;
     const hasPromo = product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0;
     const displayPrice = hasPromo ? product.promotionalPrice! : product.price;
+    const isAvailable = product.isAvailable ?? true;
     
     return (
-       <Card className="overflow-hidden flex flex-col group h-full">
+       <Card className={cn("overflow-hidden flex flex-col group h-full", !isAvailable && "opacity-60")}>
             <CardHeader className="p-0">
                 <div className="aspect-square bg-muted flex items-center justify-center relative">
+                    {!isAvailable && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+                            <p className="text-white font-bold text-lg">Em Falta</p>
+                        </div>
+                    )}
                     <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
                         {isBestSeller && (
                             <div className="bg-black/70 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
@@ -212,7 +226,7 @@ export function StorefrontClient() {
                         )}
                         <p className="text-xl font-bold text-primary">{formatCurrency(displayPrice)}</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)}>
+                    <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)} disabled={!isAvailable}>
                         <ShoppingCart className="w-4 h-4 mr-2" />
                         Pedir
                     </Button>
@@ -407,3 +421,5 @@ export function StorefrontClient() {
     </div>
   );
 }
+
+  

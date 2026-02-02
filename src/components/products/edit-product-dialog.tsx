@@ -48,6 +48,7 @@ const formSchema = z.object({
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isPromotion: z.boolean().default(false),
+  isAvailable: z.boolean().default(true),
   imageFile: z.any().optional(),
 });
 
@@ -86,6 +87,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       imageUrl: product.imageUrl || '',
       isFeatured: product.isFeatured || false,
       isPromotion: product.isPromotion || false,
+      isAvailable: product.isAvailable ?? true,
     },
   });
 
@@ -100,6 +102,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         imageUrl: product.imageUrl || '',
         isFeatured: product.isFeatured || false,
         isPromotion: product.isPromotion || false,
+        isAvailable: product.isAvailable ?? true,
     });
     setImagePreview(product.imageUrl || null);
     const fileInput = document.getElementById(`file-upload-${product.id}`) as HTMLInputElement;
@@ -189,6 +192,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
         isPromotion: data.isPromotion,
+        isAvailable: data.isAvailable,
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
       };
 
@@ -345,6 +349,26 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="isAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Disponível para venda</FormLabel>
+                    <FormDescription>
+                      Se desativado, o produto aparecerá como &apos;Em Falta&apos; na loja.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
              {isPromotion && (
                 <FormField
                     control={form.control}
@@ -375,3 +399,5 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     </Dialog>
   );
 }
+
+  

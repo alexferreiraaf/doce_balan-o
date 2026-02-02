@@ -48,6 +48,7 @@ const formSchema = z.object({
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isPromotion: z.boolean().default(false),
+  isAvailable: z.boolean().default(true),
   imageFile: z.any().optional(),
 });
 
@@ -81,6 +82,7 @@ export function AddProductDialog() {
       imageUrl: '',
       isFeatured: false,
       isPromotion: false,
+      isAvailable: true,
       promotionalPrice: 0,
     },
   });
@@ -144,6 +146,7 @@ export function AddProductDialog() {
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
         isPromotion: data.isPromotion,
+        isAvailable: data.isAvailable,
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
         salesCount: 0,
       };
@@ -305,6 +308,26 @@ export function AddProductDialog() {
                 </FormItem>
               )}
             />
+             <FormField
+              control={form.control}
+              name="isAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Disponível para venda</FormLabel>
+                    <FormDescription>
+                      Se desativado, o produto aparecerá como &apos;Em Falta&apos; na loja.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             {isPromotion && (
                 <FormField
@@ -337,3 +360,5 @@ export function AddProductDialog() {
     </Dialog>
   );
 }
+
+  

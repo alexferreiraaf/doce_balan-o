@@ -49,6 +49,7 @@ export interface Product {
   imageUrl?: string;
   isFeatured?: boolean;
   isPromotion?: boolean;
+  isAvailable?: boolean;
   salesCount?: number;
 }
 
@@ -90,3 +91,5 @@ export interface AppSettings {
   phone?: string;
   openingHours?: Record<DayOfWeek, OpeningHours>;
 }
+
+  
