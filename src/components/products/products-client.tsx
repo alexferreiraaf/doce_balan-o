@@ -22,13 +22,6 @@ import { useMemo } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { AddProductCategoryDialog } from './add-product-category-dialog';
 import Image from 'next/image';
-import { Switch } from '@/components/ui/switch';
-import { useUser, useFirestore, errorEmitter } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import { APP_ID } from '@/app/lib/constants';
-import { FirestorePermissionError } from '@/firebase/errors';
-
 
 interface GroupedProducts {
   [categoryName: string]: Product[];
@@ -37,45 +30,8 @@ interface GroupedProducts {
 export function ProductsClient() {
   const { products, loading: productsLoading } = useProducts();
   const { categories, loading: categoriesLoading } = useProductCategories();
-  const { user } = useUser();
-  const firestore = useFirestore();
-  const { toast } = useToast();
 
   const loading = productsLoading || categoriesLoading;
-
-  const handleAvailabilityChange = async (product: Product, isAvailable: boolean) => {
-    if (!firestore || !user) {
-        toast({
-            variant: "destructive",
-            title: "Erro",
-            description: "Você precisa estar logado para alterar o produto.",
-        });
-        return;
-    }
-    const productRef = doc(firestore, `artifacts/${APP_ID}/products`, product.id);
-    try {
-        await updateDoc(productRef, { isAvailable });
-        toast({
-            title: "Status do produto atualizado!",
-            description: `${product.name} está agora ${isAvailable ? 'disponível' : 'indisponível'}.`,
-        });
-    } catch (error) {
-        console.error("Error updating product availability: ", error);
-        toast({
-            variant: "destructive",
-            title: "Erro",
-            description: "Não foi possível atualizar o status do produto.",
-        });
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-              path: productRef.path,
-              operation: 'update',
-              requestResourceData: { isAvailable },
-            })
-        );
-    }
-  };
 
   const groupedProducts = useMemo(() => {
     const group: GroupedProducts = { 'Sem Categoria': [] };
@@ -146,7 +102,6 @@ export function ProductsClient() {
                                     <TableHead className="w-[80px] hidden sm:table-cell">Imagem</TableHead>
                                     <TableHead>Produto</TableHead>
                                     <TableHead>Preço</TableHead>
-                                    <TableHead>Disponível</TableHead>
                                     <TableHead className="text-right">Ações</TableHead>
                                 </TableRow>
                                 </TableHeader>
@@ -182,12 +137,6 @@ export function ProductsClient() {
                                       ) : (
                                           formatCurrency(product.price)
                                       )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Switch
-                                            checked={product.isAvailable ?? true}
-                                            onCheckedChange={(checked) => handleAvailabilityChange(product, checked)}
-                                        />
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <EditProductDialog product={product} />

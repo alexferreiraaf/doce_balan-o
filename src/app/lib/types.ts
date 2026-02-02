@@ -49,7 +49,6 @@ export interface Product {
   imageUrl?: string;
   isFeatured?: boolean;
   isPromotion?: boolean;
-  isAvailable?: boolean;
   salesCount?: number;
 }
 

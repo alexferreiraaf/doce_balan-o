@@ -48,7 +48,6 @@ const formSchema = z.object({
   imageUrl: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isPromotion: z.boolean().default(false),
-  isAvailable: z.boolean().default(true),
   imageFile: z.any().optional(),
 });
 
@@ -83,7 +82,6 @@ export function AddProductDialog() {
       isFeatured: false,
       isPromotion: false,
       promotionalPrice: 0,
-      isAvailable: true,
     },
   });
 
@@ -148,7 +146,6 @@ export function AddProductDialog() {
         isPromotion: data.isPromotion,
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
         salesCount: 0,
-        isAvailable: data.isAvailable,
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -269,27 +266,6 @@ export function AddProductDialog() {
                     </SelectContent>
                   </Select>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="isAvailable"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>Disponível para venda</FormLabel>
-                    <FormDescription>
-                      Se desativado, o produto aparecerá como "Em falta" na loja.
-                    </FormDescription>
-                    <FormMessage />
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
                 </FormItem>
               )}
             />
