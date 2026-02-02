@@ -128,13 +128,27 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
 
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {products.map((product) => (
+            {products.map((product) => {
+              const isAvailable = product.isAvailable ?? true;
+              return (
               <Card
                 key={product.id}
-                className="cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden"
-                onClick={() => onProductClick(product)}
+                className={cn(
+                  "cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden",
+                  !isAvailable && "opacity-60 cursor-not-allowed"
+                )}
+                onClick={() => {
+                  if (isAvailable) {
+                    onProductClick(product);
+                  }
+                }}
               >
-                <div className="w-full h-48 bg-muted flex items-center justify-center overflow-hidden">
+                <div className="w-full h-48 bg-muted flex items-center justify-center overflow-hidden relative">
+                    {!isAvailable && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                            <p className="text-white font-bold text-lg">Em Falta</p>
+                        </div>
+                    )}
                     {product.imageUrl ? (
                         <Image 
                             src={product.imageUrl} 
@@ -152,7 +166,8 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                   <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
                 </div>
               </Card>
-            ))}
+              )
+            })}
         </div>
     );
 }
@@ -239,6 +254,14 @@ export function POSClient() {
   }, [products, selectedCategory, searchTerm]);
 
   const addToCart = (product: Product) => {
+    if (product.isAvailable === false) {
+      toast({
+        variant: "destructive",
+        title: "Produto Indisponível",
+        description: `O produto "${product.name}" está em falta e não pode ser adicionado.`,
+      });
+      return;
+    }
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {

@@ -116,7 +116,7 @@ export function StorefrontClient() {
   }, [cart]);
 
   const handleAddToCart = (product: Product) => {
-    if (!product.isAvailable) {
+    if (product.isAvailable === false) {
       toast({
        variant: 'destructive',
        title: 'Produto em Falta!',
@@ -421,5 +421,3 @@ export function StorefrontClient() {
     </div>
   );
 }
-
-  
