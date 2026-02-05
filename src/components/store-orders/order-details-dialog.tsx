@@ -72,7 +72,17 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
                          <h3 className="font-semibold flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground" />Cliente</h3>
                          <div className="pl-6 text-sm space-y-1">
                             <p>{customer.name}</p>
-                            {customer.whatsapp && <p className="text-muted-foreground">{customer.whatsapp}</p>}
+                            {customer.whatsapp && (
+                                <a 
+                                    href={`https://wa.me/${customer.whatsapp.replace(/\D/g, '')}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-blue-600 hover:underline"
+                                >
+                                    <Phone className="w-4 h-4 text-muted-foreground"/>
+                                    {customer.whatsapp}
+                                </a>
+                            )}
                          </div>
                     </div>
 
