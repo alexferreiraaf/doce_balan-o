@@ -205,6 +205,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const [selectedOptionals, setSelectedOptionals] = useState<SelectedOptional[]>([]);
   
   const availableDates = useMemo(() => getAvailableDates(), []);
+  const isPOSSale = !!cart;
 
 
   const form = useForm<TransactionFormValues>({
@@ -398,7 +399,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
             let scheduledAtTimestamp: Timestamp | undefined;
             
-            if (data.fromStorefront && data.scheduledDate && data.scheduledTime) {
+            if ((isPOSSale || data.fromStorefront) && data.scheduledDate && data.scheduledTime) {
                 const [hours, minutes] = data.scheduledTime.split(':').map(Number);
                 const scheduledDateWithTime = new Date(data.scheduledDate);
                 scheduledDateWithTime.setHours(hours, minutes, 0, 0);
@@ -566,8 +567,6 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         return prev;
     });
   }
-
-  const isPOSSale = !!cart;
 
   return (
     <>
@@ -927,7 +926,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                  </div>
               )}
               
-                {fromStorefront && (
+                {(isPOSSale || fromStorefront) && (
                 <div className="space-y-4 pt-2">
                     <Separator />
                     <FormLabel>Agendamento</FormLabel>
@@ -1009,7 +1008,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 </div>
               )}
               
-              <Collapsible className="space-y-2">
+              <Collapsible className="space-y-2" defaultOpen>
                 <CollapsibleTrigger className="flex justify-between items-center w-full pt-2">
                   <FormLabel>Opcionais</FormLabel>
                   <ChevronDown className="h-4 w-4" />
