@@ -34,7 +34,7 @@ import { getCategorySuggestions } from '@/app/actions/transactions';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
-import { AddProductDialog } from './add-product-dialog';
+import { AddProductDialog } from '../products/add-product-dialog';
 import { formatCurrency, cn } from '@/lib/utils';
 import type { Product, Transaction, Customer, Optional, SelectedOptional, CartItem } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
@@ -1048,6 +1048,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 </CollapsibleContent>
               </Collapsible>
               
+              {!fromStorefront && (
                 <FormField
                   control={form.control}
                   name="discount"
@@ -1060,7 +1061,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                       <FormMessage />
                       </FormItem>
                   )}
-              />
+                />
+              )}
 
               <FormField
                 control={form.control}
