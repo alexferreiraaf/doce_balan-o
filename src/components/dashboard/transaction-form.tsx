@@ -204,8 +204,12 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const { settings, loading: settingsLoading } = useSettings();
   const [selectedOptionals, setSelectedOptionals] = useState<SelectedOptional[]>([]);
   
-  const availableDates = useMemo(() => getAvailableDates(), []);
+  const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const isPOSSale = !!cart;
+
+  useEffect(() => {
+    setAvailableDates(getAvailableDates());
+  }, []);
 
 
   const form = useForm<TransactionFormValues>({
