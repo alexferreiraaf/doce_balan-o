@@ -3,7 +3,7 @@
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import type { AppSettings, DayOfWeek, Product } from '@/app/lib/types';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
 import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent, ChevronDown } from 'lucide-react';
@@ -35,37 +35,6 @@ const weekDayMap: Record<number, DayOfWeek> = {
   6: 'saturday',
 };
 
-const getStoreStatus = (settings?: AppSettings): { isOpen: boolean; message: string } => {
-  if (!settings?.openingHours) {
-    return { isOpen: true, message: '' }; // Default to open if not configured
-  }
-
-  const now = new Date();
-  const currentDay = weekDayMap[now.getDay()];
-  const todaySettings = settings.openingHours[currentDay];
-
-  if (!todaySettings || !todaySettings.enabled) {
-    return { isOpen: false, message: 'Hoje estamos fechados.' };
-  }
-
-  const [openHour, openMinute] = todaySettings.open.split(':').map(Number);
-  const [closeHour, closeMinute] = todaySettings.close.split(':').map(Number);
-  
-  const openTime = new Date();
-  openTime.setHours(openHour, openMinute, 0, 0);
-
-  const closeTime = new Date();
-  closeTime.setHours(closeHour, closeMinute, 0, 0);
-
-  if (now >= openTime && now < closeTime) {
-    return { isOpen: true, message: '' };
-  } else if (now < openTime) {
-    return { isOpen: false, message: `Abrimos hoje às ${todaySettings.open}.` };
-  } else {
-     return { isOpen: false, message: `Fechamos hoje às ${todaySettings.close}.` };
-  }
-};
-
 
 export function StorefrontClient() {
   const { products, loading: productsLoading } = useProducts();
@@ -78,8 +47,51 @@ export function StorefrontClient() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [showPromotions, setShowPromotions] = useState(false);
 
+  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; message: string; isStatusLoading: boolean }>({
+    isOpen: false,
+    message: 'Verificando horário...',
+    isStatusLoading: true,
+  });
+
+  useEffect(() => {
+    if (settingsLoading) return;
+
+    const getStatus = (): { isOpen: boolean; message: string } => {
+      if (!settings?.openingHours) {
+        return { isOpen: true, message: '' };
+      }
+    
+      const now = new Date();
+      const currentDay = weekDayMap[now.getDay()];
+      const todaySettings = settings.openingHours[currentDay];
+    
+      if (!todaySettings || !todaySettings.enabled) {
+        return { isOpen: false, message: 'Hoje estamos fechados.' };
+      }
+    
+      const [openHour, openMinute] = todaySettings.open.split(':').map(Number);
+      const [closeHour, closeMinute] = todaySettings.close.split(':').map(Number);
+      
+      const openTime = new Date();
+      openTime.setHours(openHour, openMinute, 0, 0);
+    
+      const closeTime = new Date();
+      closeTime.setHours(closeHour, closeMinute, 0, 0);
+    
+      if (now >= openTime && now < closeTime) {
+        return { isOpen: true, message: '' };
+      } else if (now < openTime) {
+        return { isOpen: false, message: `Abrimos hoje às ${todaySettings.open}.` };
+      } else {
+         return { isOpen: false, message: `Fechamos hoje às ${todaySettings.close}.` };
+      }
+    };
+
+    setStoreStatus({ ...getStatus(), isStatusLoading: false });
+  }, [settings, settingsLoading]);
+
+
   const loading = productsLoading || categoriesLoading || settingsLoading;
-  const storeStatus = getStoreStatus(settings);
 
   const { promotionalProducts, featuredProducts, bestSellerThreshold, regularProducts } = useMemo(() => {
     if (products.length === 0) {
@@ -124,7 +136,7 @@ export function StorefrontClient() {
      });
      return;
    }
-    if (!storeStatus.isOpen) {
+    if (storeStatus.isStatusLoading || !storeStatus.isOpen) {
        toast({
         variant: 'destructive',
         title: 'Loja Fechada!',
@@ -156,7 +168,7 @@ export function StorefrontClient() {
   };
 
   const handleFinalizeClick = () => {
-    if (!storeStatus.isOpen) {
+    if (storeStatus.isStatusLoading || !storeStatus.isOpen) {
       toast({
         variant: 'destructive',
         title: 'Loja Fechada!',
@@ -255,7 +267,7 @@ export function StorefrontClient() {
         </div>
       </header>
 
-      {!storeStatus.isOpen && (
+      {!storeStatus.isStatusLoading && !storeStatus.isOpen && (
         <Alert variant="destructive">
           <Clock className="h-4 w-4" />
           <AlertTitle>Loja Fechada</AlertTitle>
@@ -392,10 +404,10 @@ export function StorefrontClient() {
                     <span>Total</span>
                     <span>{formatCurrency(cartTotal)}</span>
                   </div>
-                  <Button size="lg" className="w-full h-12 text-lg" onClick={handleFinalizeClick} disabled={!storeStatus.isOpen}>
-                     {storeStatus.isOpen ? 'Finalizar Pedido' : 'Loja Fechada'}
+                  <Button size="lg" className="w-full h-12 text-lg" onClick={handleFinalizeClick} disabled={storeStatus.isStatusLoading || !storeStatus.isOpen}>
+                     {storeStatus.isStatusLoading ? 'Verificando...' : (storeStatus.isOpen ? 'Finalizar Pedido' : 'Loja Fechada')}
                   </Button>
-                   {!storeStatus.isOpen && <p className="text-center text-sm text-destructive">{storeStatus.message}</p>}
+                   {!storeStatus.isStatusLoading && !storeStatus.isOpen && <p className="text-center text-sm text-destructive">{storeStatus.message}</p>}
                 </div>
               </SheetFooter>
             </>
@@ -421,3 +433,5 @@ export function StorefrontClient() {
     </div>
   );
 }
+
+    
