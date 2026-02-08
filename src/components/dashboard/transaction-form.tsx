@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Package, Bike, X, Plus, ChevronsUpDown, Minus, ChevronDown, CalendarIcon } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, doc, runTransaction, getDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import axios from 'axios';
 import { addDays, format, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -121,6 +121,14 @@ const formSchema = z.object({
     message: 'O nome é obrigatório.',
     path: ['customerName'],
 }).refine(data => {
+    if (data.fromStorefront && !data.customerWhatsapp) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'O WhatsApp é obrigatório.',
+    path: ['customerWhatsapp'],
+}).refine(data => {
     if (data.fromStorefront && data.deliveryType === 'delivery' && !data.customerCep) {
         return false;
     }
@@ -208,7 +216,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const isPOSSale = !!cart;
 
   useEffect(() => {
-    setAvailableDates(getAvailableDates());
+    if (typeof window !== 'undefined') {
+        setAvailableDates(getAvailableDates());
+    }
   }, []);
 
 
@@ -374,15 +384,16 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         }
 
         let customerId: string | undefined = data.customerId;
-        let newCustomer: Customer | undefined;
+        let customerForReceipt: Customer | undefined;
 
         try {
-             // 1. Create or find customer
+            // 1. Find or Create/Update customer for storefront sales
             if (data.fromStorefront && data.customerName) {
                 const customerCollectionPath = `artifacts/${APP_ID}/customers`;
+                const customerCollection = collection(firestore, customerCollectionPath);
                 const customerData: Omit<Customer, 'id'> = {
                     name: data.customerName,
-                    whatsapp: data.customerWhatsapp || '',
+                    whatsapp: data.customerWhatsapp || '', // Zod ensures this exists
                     cep: data.customerCep || '',
                     street: data.customerStreet || '',
                     number: data.customerNumber || '',
@@ -391,11 +402,21 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     city: data.customerCity || '',
                     state: data.customerState || '',
                 };
-                
-                const customerCollection = collection(firestore, customerCollectionPath);
-                const docRef = await addDoc(customerCollection, customerData);
-                customerId = docRef.id;
-                newCustomer = { id: customerId, ...customerData };
+
+                const existingCustomer = customers.find(c => c.name.toLowerCase() === data.customerName!.toLowerCase());
+
+                if (existingCustomer) {
+                    customerId = existingCustomer.id;
+                    const customerRef = doc(firestore, customerCollectionPath, customerId);
+                    await updateDoc(customerRef, customerData);
+                    customerForReceipt = { id: customerId, ...customerData };
+                } else {
+                    const docRef = await addDoc(customerCollection, customerData);
+                    customerId = docRef.id;
+                    customerForReceipt = { id: customerId, ...customerData };
+                }
+            } else if (data.customerId) {
+                customerForReceipt = customers.find(c => c.id === data.customerId);
             }
             
             // 2. Prepare transaction data
@@ -474,7 +495,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
-                customerId: customerId || null,
+                customerId: customerId || undefined,
                 dateMs: Date.now(),
             };
             
@@ -513,8 +534,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             
             if (data.type === 'income' && onSaleFinalized) {
                 const createdTransaction: Transaction = {
-                    ...(transactionData as Omit<Transaction, 'id' | 'timestamp'>),
+                    ...(transactionData as Omit<Transaction, 'id' | 'timestamp' | 'customerId'>),
                     id: newTransactionRef.id,
+                    customerId: customerId || undefined,
                     timestamp: {
                       toDate: () => new Date(),
                       toMillis: () => Date.now(),
@@ -522,7 +544,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                       seconds: Math.floor(Date.now() / 1000)
                     },
                   };
-                onSaleFinalized(createdTransaction, newCustomer);
+                onSaleFinalized(createdTransaction, customerForReceipt);
             }
 
             form.reset({type: data.type, description: '', amount: 0, quantity: 1, deliveryFee: 0, discount: 0, additionalDescription: '', additionalValue: 0, hasDownPayment: 'no', downPayment: 0, deliveryType: data.fromStorefront ? 'pickup' : undefined});
