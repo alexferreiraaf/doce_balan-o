@@ -20,6 +20,8 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { ThemeToggle } from '../layout/theme-toggle';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
+import { useUser, useAuth } from '@/firebase';
+import { signInAnonymously } from 'firebase/auth';
 
 interface CartItem extends Product {
   quantity: number;
@@ -46,6 +48,22 @@ export function StorefrontClient() {
   const { toast } = useToast();
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [showPromotions, setShowPromotions] = useState(false);
+  
+  const { user } = useUser();
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (auth && !user) {
+      signInAnonymously(auth).catch((error) => {
+        console.error('Failed to sign in anonymously', error);
+        toast({
+          variant: 'destructive',
+          title: 'Erro de conexão',
+          description: 'Não foi possível conectar à loja. Tente recarregar a página.',
+        });
+      });
+    }
+  }, [auth, user, toast]);
 
   const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; message: string; isStatusLoading: boolean }>({
     isOpen: false,
@@ -54,7 +72,10 @@ export function StorefrontClient() {
   });
 
   useEffect(() => {
-    if (settingsLoading) return;
+    if (settingsLoading) {
+      setStoreStatus(prev => ({...prev, isStatusLoading: true}));
+      return;
+    }
 
     const getStatus = (): { isOpen: boolean; message: string } => {
       if (!settings?.openingHours) {
@@ -433,5 +454,3 @@ export function StorefrontClient() {
     </div>
   );
 }
-
-    
