@@ -2,7 +2,7 @@
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(admin)/loading-component';
 import { SummaryReport } from './summary-report';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { addDays, format, addMonths, subMonths } from 'date-fns';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,8 +13,15 @@ import { ReportCard } from './simple-report';
 
 export function ReportsClient() {
   const { transactions, loading } = useTransactions();
-  const [startDate, setStartDate] = useState<Date | undefined>(addDays(new Date(), -30));
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  useEffect(() => {
+    // Set initial dates on the client side to avoid hydration mismatch
+    setStartDate(addDays(new Date(), -30));
+    setEndDate(new Date());
+  }, []);
+
 
   const filteredTransactions = useMemo(() => {
     if (!startDate || !endDate) {
@@ -57,7 +64,7 @@ export function ReportsClient() {
   };
 
 
-  if (loading) {
+  if (loading || !startDate || !endDate) {
     return <Loading />;
   }
   
