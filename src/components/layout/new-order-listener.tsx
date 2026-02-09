@@ -45,32 +45,45 @@ export function NewOrderListener() {
     const title = 'Novo Pedido Recebido!';
     const body = `Pedido: ${order.description}\nValor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.amount)}`;
     
-    // Play sound regardless of notification type
     if (audioRef.current) {
       audioRef.current.play().catch(error => {
         console.log("Falha ao tocar áudio de notificação:", error.message);
       });
     }
 
-    // Use system notification if permission is granted
-    try {
-      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(title, {
-          body,
-          icon: '/icons/icon-192x192.png',
-          tag: order.id, // Use a tag to prevent multiple notifications for the same order
+    // Post message to service worker to show the notification from a more robust context
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            payload: {
+                title,
+                options: {
+                    body,
+                    icon: '/icons/icon-192x192.png',
+                    tag: order.id,
+                    badge: '/icons/icon-96x96.png' // Badge for Android notifications
+                }
+            }
         });
-
-        notification.onclick = () => {
-          window.focus();
-          // You could also navigate: router.push('/store-orders');
-        };
-      }
-    } catch (error) {
-        console.error("Falha ao exibir notificação do sistema:", error);
+    } else {
+        // Fallback for when service worker isn't active
+        try {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification(title, {
+                    body,
+                    icon: '/icons/icon-192x192.png',
+                    tag: order.id,
+                });
+                notification.onclick = () => {
+                    window.focus();
+                };
+            }
+        } catch (error) {
+            console.error("Falha ao exibir notificação do sistema (fallback):", error);
+        }
     }
 
-    // Always show toast as an in-app indicator
+    // Always show toast as an in-app indicator when the app is active
     toast({
       title: (
         <div className="flex items-center gap-2">
