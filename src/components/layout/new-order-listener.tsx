@@ -53,17 +53,21 @@ export function NewOrderListener() {
     }
 
     // Use system notification if permission is granted
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      const notification = new Notification(title, {
-        body,
-        icon: '/icons/icon-192x192.png',
-        tag: order.id, // Use a tag to prevent multiple notifications for the same order
-      });
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+          body,
+          icon: '/icons/icon-192x192.png',
+          tag: order.id, // Use a tag to prevent multiple notifications for the same order
+        });
 
-      notification.onclick = () => {
-        window.focus();
-        // You could also navigate: router.push('/store-orders');
-      };
+        notification.onclick = () => {
+          window.focus();
+          // You could also navigate: router.push('/store-orders');
+        };
+      }
+    } catch (error) {
+        console.error("Falha ao exibir notificação do sistema:", error);
     }
 
     // Always show toast as an in-app indicator
