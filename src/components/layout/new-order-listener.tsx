@@ -52,21 +52,25 @@ export function NewOrderListener() {
     }
 
     // Post message to service worker to show the notification from a more robust context
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-            type: 'SHOW_NOTIFICATION',
-            payload: {
-                title,
-                options: {
-                    body,
-                    icon: '/icons/icon-192x192.png',
-                    tag: order.id,
-                    badge: '/icons/icon-96x96.png' // Badge for Android notifications
-                }
-            }
-        });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        if(registration.active) {
+            registration.active.postMessage({
+              type: 'SHOW_NOTIFICATION',
+              payload: {
+                  title,
+                  options: {
+                      body,
+                      icon: '/icons/icon-192x192.png',
+                      tag: order.id,
+                      badge: '/icons/icon-96x96.png' // Badge for Android notifications
+                  }
+              }
+            });
+          }
+      });
     } else {
-        // Fallback for when service worker isn't active
+        // Fallback for when service worker isn't active/supported
         try {
             if ('Notification' in window && Notification.permission === 'granted') {
                 const notification = new Notification(title, {
