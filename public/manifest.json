@@ -1,11 +1,6 @@
 {
-  "theme_color": "#D94686",
-  "background_color": "#F7EBF1",
-  "display": "standalone",
-  "scope": "/",
-  "start_url": "/",
-  "name": "Do\u00e7uras da Fran",
-  "short_name": "Do\u00e7uras da Fran",
+  "name": "Doçuras da Fran",
+  "short_name": "Doçuras",
   "description": "Seu assistente financeiro para confeitarias.",
   "icons": [
     {
@@ -14,19 +9,14 @@
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-256x256.png",
-      "sizes": "256x256",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png"
-    },
-    {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "theme_color": "#D94686",
+  "background_color": "#FDF1F7",
+  "start_url": "/pdv",
+  "display": "standalone",
+  "orientation": "portrait"
 }
