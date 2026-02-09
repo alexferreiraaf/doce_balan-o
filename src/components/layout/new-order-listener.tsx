@@ -14,7 +14,7 @@ export function NewOrderListener() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { addPendingOrder } = useNotificationStore();
+  const { addPendingOrder, newOrdersBadgeCount } = useNotificationStore();
   const isInitialDataLoaded = useRef(false);
 
   useEffect(() => {
@@ -24,6 +24,22 @@ export function NewOrderListener() {
       audioRef.current.load();
     }
   }, []);
+
+  // Effect to update the app badge
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'setAppBadge' in navigator) {
+        if (newOrdersBadgeCount > 0) {
+            (navigator as any).setAppBadge(newOrdersBadgeCount).catch((error: any) => {
+              console.error('Failed to set app badge:', error);
+            });
+        } else {
+            (navigator as any).clearAppBadge().catch((error: any) => {
+              console.error('Failed to clear app badge:', error);
+            });
+        }
+    }
+  }, [newOrdersBadgeCount]);
+
 
   const showNotification = (order: Transaction) => {
     const title = 'Novo Pedido Recebido!';
@@ -84,7 +100,10 @@ export function NewOrderListener() {
         }
       });
 
-      isInitialDataLoaded.current = true;
+      // After the initial data is loaded and processed, set the flag
+      if (!isInitialDataLoaded.current) {
+        isInitialDataLoaded.current = true;
+      }
 
     }, (error) => {
       console.error("Erro ao escutar novos pedidos:", error);

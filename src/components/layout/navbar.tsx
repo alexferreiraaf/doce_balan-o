@@ -45,7 +45,7 @@ const registrationLinks = [
 
 const reportsLinks = [
     { href: '/reports', label: 'Visão Geral', icon: TrendingUp },
-    { href: 'src/app/(admin)/transactions/page.tsx', label: 'Lançamentos', icon: List },
+    { href: '/transactions', label: 'Lançamentos', icon: List },
 ];
 
 const mobileNavLinks = [
@@ -223,7 +223,7 @@ export function Navbar() {
                   size="sm"
                   className={cn(
                     'text-primary-foreground/80 hover:bg-primary-foreground/20 hover:text-primary-foreground rounded-full px-3',
-                     reportsLinks.some(l => pathname.startsWith(l.href)) && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
+                     reportsLinks.some(l => pathname.startsWith(l.href.replace('src/app/(admin)', ''))) && 'bg-primary-foreground/10 text-primary-foreground font-semibold'
                   )}
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
@@ -233,7 +233,7 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 {reportsLinks.map(({ href, label, icon: Icon }) => (
-                  <DropdownMenuItem key={href} onSelect={() => router.push(href)}>
+                  <DropdownMenuItem key={href} onSelect={() => router.push(href.replace('src/app/(admin)', '').replace('/page.tsx', ''))}>
                     <Icon className="mr-2 h-4 w-4" />
                     <span>{label}</span>
                   </DropdownMenuItem>
@@ -330,7 +330,7 @@ export function Navbar() {
             <NavButton key={link.href} href={link.href} label={link.label} icon={link.icon} onClick={() => router.push(link.href)} />
         ))}
         
-        <MobileMenuButton label="Relatórios" icon={TrendingUp} links={reportsLinks} activePaths={reportsLinks.map(l => l.href)} />
+        <MobileMenuButton label="Relatórios" icon={TrendingUp} links={reportsLinks} activePaths={reportsLinks.map(l => l.href.replace('src/app/(admin)', '').replace('/page.tsx', ''))} />
         <MobileMenuButton label="Cadastros" icon={Archive} links={registrationLinks} activePaths={registrationLinks.map(l => l.href)} />
         <NavButton label="Pedidos" icon={FileText} id="store-orders" onClick={handleStoreOrdersClick} />
 
