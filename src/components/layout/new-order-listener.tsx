@@ -25,6 +25,44 @@ export function NewOrderListener() {
     }
   }, []);
 
+  const showNotification = (order: Transaction) => {
+    const title = 'Novo Pedido Recebido!';
+    const body = `Pedido: ${order.description}\nValor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.amount)}`;
+    
+    // Play sound regardless of notification type
+    if (audioRef.current) {
+      audioRef.current.play().catch(error => {
+        console.log("Falha ao tocar áudio de notificação:", error.message);
+      });
+    }
+
+    // Use system notification if permission is granted
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        body,
+        icon: '/icons/icon-192x192.png',
+        tag: order.id, // Use a tag to prevent multiple notifications for the same order
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        // You could also navigate: router.push('/store-orders');
+      };
+    }
+
+    // Always show toast as an in-app indicator
+    toast({
+      title: (
+        <div className="flex items-center gap-2">
+          <BellRing className="h-5 w-5 text-primary" />
+          <span className="font-bold">{title}</span>
+        </div>
+      ),
+      description: `Novo pedido: ${order.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.amount)}`,
+      duration: 20000,
+    });
+  };
+
   useEffect(() => {
     if (!firestore || !storefrontUserId) {
       return;
@@ -37,36 +75,15 @@ export function NewOrderListener() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
-        // Only act on new documents added *after* the initial data is loaded.
         if (change.type === 'added' && isInitialDataLoaded.current) {
-          const newOrder = change.doc.data() as Transaction;
+          const newOrder = { id: change.doc.id, ...change.doc.data() } as Transaction;
+          
+          showNotification(newOrder);
 
-          // Play sound
-          if (audioRef.current) {
-            audioRef.current.play().catch(error => {
-              console.log("Falha ao tocar áudio de notificação (geralmente por falta de interação do usuário):", error.message);
-            });
-          }
-
-          // Show toast notification
-          toast({
-            title: (
-              <div className="flex items-center gap-2">
-                <BellRing className="h-5 w-5 text-primary" />
-                <span className="font-bold">Novo Pedido Recebido!</span>
-              </div>
-            ),
-            description: `Novo pedido: ${newOrder.description}. Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newOrder.amount)}`,
-            duration: 20000,
-          });
-
-          // Increment visual badge counter
           addPendingOrder();
         }
       });
 
-      // After the first snapshot is processed (even if it's empty),
-      // we can mark the initial data as loaded.
       isInitialDataLoaded.current = true;
 
     }, (error) => {

@@ -45,7 +45,7 @@ const registrationLinks = [
 
 const reportsLinks = [
     { href: '/reports', label: 'Visão Geral', icon: TrendingUp },
-    { href: '/transactions', label: 'Lançamentos', icon: List },
+    { href: 'src/app/(admin)/transactions/page.tsx', label: 'Lançamentos', icon: List },
 ];
 
 const mobileNavLinks = [
@@ -60,6 +60,32 @@ export function Navbar() {
   const router = useRouter();
   const { toast } = useToast();
   const { newOrdersBadgeCount, resetNewOrdersBadge } = useNotificationStore();
+  const [notificationPermission, setNotificationPermission] = useState('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleRequestNotificationPermission = () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+        Notification.requestPermission().then(permission => {
+            setNotificationPermission(permission);
+            if (permission === 'granted') {
+                toast({ title: 'Notificações ativadas!', description: 'Você será avisado de novos pedidos.' });
+                 new Notification('Tudo pronto!', {
+                    body: 'Você receberá as notificações de novos pedidos por aqui.',
+                    icon: '/icons/icon-192x192.png',
+                });
+            } else {
+                toast({ variant: 'destructive', title: 'Notificações bloqueadas', description: 'Você precisará ativar as permissões nas configurações do seu navegador.' });
+            }
+        });
+    } else {
+        toast({ variant: 'destructive', title: 'Navegador incompatível', description: 'Seu navegador não suporta notificações.' });
+    }
+  };
 
 
   const handleLogout = async () => {
@@ -279,6 +305,12 @@ export function Navbar() {
                           <Settings className="mr-2 h-4 w-4" />
                           Configurações da Loja
                         </DropdownMenuItem>
+                        {notificationPermission !== 'granted' && (
+                            <DropdownMenuItem onSelect={handleRequestNotificationPermission}>
+                                <Bell className="mr-2 h-4 w-4" />
+                                <span>Ativar Notificações</span>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />
