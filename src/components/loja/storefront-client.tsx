@@ -175,6 +175,7 @@ export function StorefrontClient() {
       }
       return [...currentCart, { ...product, quantity: 1 }];
     });
+    setIsCartOpen(true);
   };
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
@@ -425,6 +426,9 @@ export function StorefrontClient() {
                     <span>Total</span>
                     <span>{formatCurrency(cartTotal)}</span>
                   </div>
+                  <Button variant="outline" size="lg" className="w-full h-12 text-lg" onClick={() => setIsCartOpen(false)}>
+                    Continuar Comprando
+                  </Button>
                   <Button size="lg" className="w-full h-12 text-lg" onClick={handleFinalizeClick} disabled={storeStatus.isStatusLoading || !storeStatus.isOpen}>
                      {storeStatus.isStatusLoading ? 'Verificando...' : (storeStatus.isOpen ? 'Finalizar Pedido' : 'Loja Fechada')}
                   </Button>
