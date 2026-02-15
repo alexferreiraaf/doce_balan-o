@@ -51,6 +51,12 @@ export function StorefrontClient() {
   
   const { user } = useUser();
   const auth = useAuth();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   useEffect(() => {
     if (auth && !user) {
@@ -72,7 +78,7 @@ export function StorefrontClient() {
   });
 
   useEffect(() => {
-    if (settingsLoading) {
+    if (!isClient || settingsLoading) {
       setStoreStatus(prev => ({...prev, isStatusLoading: true}));
       return;
     }
@@ -109,7 +115,7 @@ export function StorefrontClient() {
     };
 
     setStoreStatus({ ...getStatus(), isStatusLoading: false });
-  }, [settings, settingsLoading]);
+  }, [settings, settingsLoading, isClient]);
 
 
   const loading = productsLoading || categoriesLoading || settingsLoading;
