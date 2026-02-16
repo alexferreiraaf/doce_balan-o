@@ -213,12 +213,14 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const [selectedOptionals, setSelectedOptionals] = useState<SelectedOptional[]>([]);
   
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
+  const [isClient, setIsClient] = useState(false);
   const isPOSSale = !!cart;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
         setAvailableDates(getAvailableDates());
     }
+    setIsClient(true);
   }, []);
 
 
@@ -952,7 +954,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                  </div>
               )}
               
-                {(isPOSSale || fromStorefront) && (
+                {(isPOSSale || fromStorefront) && isClient && (
                 <div className="space-y-4 pt-2">
                     <Separator />
                     <FormLabel>Agendamento</FormLabel>
