@@ -1,11 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transaction } from '@/app/lib/types';
-import { formatCurrency } from '@/lib/utils';
-import { TrendingDown, TrendingUp, Clock } from 'lucide-react';
+import { PieChart as PieChartIcon } from 'lucide-react';
 
 interface SalesChartProps {
   transactions: Transaction[];
@@ -68,12 +67,21 @@ export function SalesChart({ transactions }: SalesChartProps) {
                     <Cell key={`cell-${index}`} fill={COLOR_MAP[entry.name]} />
                   ))}
                 </Pie>
+                <Legend
+                  verticalAlign="bottom"
+                  wrapperStyle={{
+                    paddingTop: "20px",
+                    lineHeight: "24px",
+                  }}
+                  iconSize={10}
+                />
               </PieChart>
             </ResponsiveContainer>
         ) : (
             <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
-                <p>Ainda não há dados suficientes para exibir o gráfico.</p>
-                <p className="text-sm">Registre suas receitas e despesas para começar.</p>
+                <PieChartIcon className="w-12 h-12 mb-4 text-primary/30" />
+                <p className="font-semibold">Sem dados para o gráfico</p>
+                <p className="text-sm">O balanço geral aparecerá aqui assim que você registrar suas transações.</p>
             </div>
         )}
       </CardContent>
