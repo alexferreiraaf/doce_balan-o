@@ -497,7 +497,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
-                customerId: customerId || undefined,
+                customerId: customerId || null,
                 dateMs: Date.now(),
             };
             
@@ -538,7 +538,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 const createdTransaction: Transaction = {
                     ...(transactionData as Omit<Transaction, 'id' | 'timestamp' | 'customerId'>),
                     id: newTransactionRef.id,
-                    customerId: customerId || undefined,
+                    customerId: customerId || null,
                     timestamp: {
                       toDate: () => new Date(),
                       toMillis: () => Date.now(),
