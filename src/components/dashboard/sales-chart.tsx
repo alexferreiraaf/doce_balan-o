@@ -5,33 +5,38 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transaction } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { TrendingDown, TrendingUp } from 'lucide-react';
+import { TrendingDown, TrendingUp, Clock } from 'lucide-react';
 
 interface SalesChartProps {
   transactions: Transaction[];
 }
 
-const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
+// Map data names to specific colors for consistency
+const COLOR_MAP: Record<string, string> = {
+  'Receitas Pagas': 'hsl(var(--chart-5))', // Green
+  'A Receber': 'hsl(var(--chart-3))',      // Yellowish/Pinkish
+  'Despesas': 'hsl(var(--chart-4))',     // Red
+};
+
 
 export function SalesChart({ transactions }: SalesChartProps) {
   const chartData = useMemo(() => {
-    const income = transactions
+    const incomePaid = transactions
       .filter(t => t.type === 'income' && t.status === 'paid')
+      .reduce((acc, t) => acc + t.amount, 0);
+
+    const incomePending = transactions
+      .filter(t => t.type === 'income' && t.status === 'pending')
       .reduce((acc, t) => acc + t.amount, 0);
       
     const expense = transactions
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => acc + t.amount, 0);
-
-    const data = [
-      { name: 'Receitas', value: income },
-      { name: 'Despesas', value: expense },
-    ];
     
-    // Don't show chart if there's no data
-    if (income === 0 && expense === 0) {
-        return [];
-    }
+    const data = [];
+    if (incomePaid > 0) data.push({ name: 'Receitas Pagas', value: incomePaid });
+    if (incomePending > 0) data.push({ name: 'A Receber', value: incomePending });
+    if (expense > 0) data.push({ name: 'Despesas', value: expense });
 
     return data;
   }, [transactions]);
@@ -49,15 +54,14 @@ export function SalesChart({ transactions }: SalesChartProps) {
 
   const CustomLegend = ({ payload }: any) => {
     return (
-      <ul className="flex justify-center gap-4 mt-4">
-        {payload.map((entry: any, index: number) => {
-          const Icon = entry.value === 'Receitas' ? TrendingUp : TrendingDown;
-          return (
-          <li key={`item-${index}`} className={`flex items-center gap-2 text-sm text-muted-foreground`}>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-            {entry.value}: {formatCurrency(chartData.find(d => d.name === entry.value)?.value || 0)}
+      <ul className="flex justify-center gap-4 mt-4 flex-wrap">
+        {payload.map((entry: any, index: number) => (
+          <li key={`item-${index}`} className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span>{entry.value}:</span>
+            <span className="font-semibold">{formatCurrency(entry.payload.value)}</span>
           </li>
-        )})}
+        ))}
       </ul>
     );
   };
@@ -66,7 +70,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
   return (
     <Card className="col-span-1 md:col-span-2">
       <CardHeader>
-        <CardTitle>Balanço Geral (Receitas vs Despesas)</CardTitle>
+        <CardTitle>Balanço Geral</CardTitle>
       </CardHeader>
       <CardContent className="h-[350px]">
         {chartData.length > 0 ? (
@@ -83,7 +87,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
                   strokeWidth={2}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={COLOR_MAP[entry.name]} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
