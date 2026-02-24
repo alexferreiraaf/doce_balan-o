@@ -16,13 +16,21 @@ interface CategorySummary {
 
 export function SummaryReport({ transactions }: SummaryReportProps) {
   const summary = useMemo(() => {
-    const paidIncome = transactions.filter(t => t.type === 'income' && t.status === 'paid');
+    // Corrected logic to identify paid and pending transactions consistently
+    const paidIncome = transactions.filter(
+      t => t.type === 'income' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
+    );
     const expenses = transactions.filter(t => t.type === 'expense');
-    const pending = transactions.filter(t => t.status === 'pending');
+    const pending = transactions.filter(
+      t => t.type === 'income' && (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado'))
+    );
 
     const totalIncome = paidIncome.reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = expenses.reduce((sum, t) => sum + t.amount, 0);
-    const totalPending = pending.reduce((sum, t) => sum + t.amount, 0);
+    const totalPending = pending.reduce((sum, t) => {
+        const remainingAmount = t.amount - (t.downPayment || 0);
+        return sum + remainingAmount;
+    }, 0);
     const balance = totalIncome - totalExpense;
 
     const groupByCategory = (trans: Transaction[]) => {
