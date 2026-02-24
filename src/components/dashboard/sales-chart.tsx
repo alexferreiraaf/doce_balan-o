@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transaction } from '@/app/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -13,8 +13,8 @@ interface SalesChartProps {
 
 // Map data names to specific colors for consistency
 const COLOR_MAP: Record<string, string> = {
-  'Receitas Pagas': 'hsl(var(--chart-5))', // Green
-  'A Receber': 'hsl(var(--chart-3))',      // Yellowish/Pinkish
+  'Receitas Pagas': 'hsl(var(--chart-1))', // Primary Pink
+  'A Receber': 'hsl(var(--chart-3))',      // Lighter Pink
   'Despesas': 'hsl(var(--chart-4))',     // Red
 };
 
@@ -41,32 +41,6 @@ export function SalesChart({ transactions }: SalesChartProps) {
     return data;
   }, [transactions]);
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="rounded-md border bg-background p-2 shadow-sm">
-          <p className="font-bold">{`${payload[0].name}: ${formatCurrency(payload[0].value)}`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomLegend = ({ payload }: any) => {
-    return (
-      <ul className="flex justify-center gap-4 mt-4 flex-wrap">
-        {payload.map((entry: any, index: number) => (
-          <li key={`item-${index}`} className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-            <span>{entry.value}:</span>
-            <span className="font-semibold">{formatCurrency(entry.payload.value)}</span>
-          </li>
-        ))}
-      </ul>
-    );
-  };
-
-
   return (
     <Card className="col-span-1 md:col-span-2">
       <CardHeader>
@@ -81,17 +55,19 @@ export function SalesChart({ transactions }: SalesChartProps) {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={100}
+                  innerRadius={80}
+                  outerRadius={110}
                   fill="#8884d8"
                   dataKey="value"
-                  strokeWidth={2}
+                  stroke="hsl(var(--background))"
+                  strokeWidth={4}
+                  paddingAngle={5}
+                  cornerRadius={8}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLOR_MAP[entry.name]} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend content={<CustomLegend />}/>
               </PieChart>
             </ResponsiveContainer>
         ) : (
