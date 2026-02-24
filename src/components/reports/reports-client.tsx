@@ -10,16 +10,24 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ReportCard } from './simple-report';
+import { ExpenseCategoryChart } from './expense-category-chart';
+import { FinancialFlowChart } from './financial-flow-chart';
+import { storefrontUserId } from '@/firebase/config';
+import { useUser } from '@/firebase';
 
 export function ReportsClient() {
-  const { transactions, loading } = useTransactions();
+  const { user } = useUser();
+  const userIdsToFetch = [user?.uid, storefrontUserId].filter(Boolean) as string[];
+  const { transactions, loading } = useTransactions({ userIds: userIdsToFetch });
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     // Set initial dates on the client side to avoid hydration mismatch
-    setStartDate(addDays(new Date(), -30));
-    setEndDate(new Date());
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    setStartDate(firstDayOfMonth);
+    setEndDate(today);
   }, []);
 
 
@@ -40,12 +48,12 @@ export function ReportsClient() {
 
   const summary = useMemo(() => {
     const income = filteredTransactions
-      .filter((t) => t.type === 'income' && t.status === 'paid')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t) => t.type === 'income' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado')))
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
 
     const expense = filteredTransactions
       .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
       
     return { income, expense, balance: income - expense };
   }, [filteredTransactions]);
@@ -131,6 +139,11 @@ export function ReportsClient() {
       <ReportCard title={reportTitle} summary={summary} />
       
       <SummaryReport transactions={filteredTransactions} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ExpenseCategoryChart transactions={filteredTransactions} />
+        <FinancialFlowChart transactions={filteredTransactions} />
+      </div>
 
     </div>
   );
