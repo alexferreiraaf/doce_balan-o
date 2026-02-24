@@ -22,15 +22,15 @@ export function SalesChart({ transactions }: SalesChartProps) {
   const chartData = useMemo(() => {
     const incomePaid = transactions
       .filter(t => t.type === 'income' && t.status === 'paid')
-      .reduce((acc, t) => acc + t.amount, 0);
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
 
     const incomePending = transactions
       .filter(t => t.type === 'income' && t.status === 'pending')
-      .reduce((acc, t) => acc + t.amount, 0);
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
       
     const expense = transactions
       .filter(t => t.type === 'expense')
-      .reduce((acc, t) => acc + t.amount, 0);
+      .reduce((acc, t) => acc + (t.amount || 0), 0);
     
     const data = [];
     if (incomePaid > 0) data.push({ name: 'Receitas Pagas', value: incomePaid });
