@@ -20,11 +20,11 @@ const COLOR_MAP: Record<string, string> = {
 export function SalesChart({ transactions }: SalesChartProps) {
   const chartData = useMemo(() => {
     const incomePaid = transactions
-      .filter(t => t.type === 'income' && t.status === 'paid')
+      .filter(t => t.type === 'income' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado')))
       .reduce((acc, t) => acc + (t.amount || 0), 0);
 
     const incomePending = transactions
-      .filter(t => t.type === 'income' && t.status === 'pending')
+      .filter(t => t.type === 'income' && (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado')))
       .reduce((acc, t) => acc + (t.amount || 0), 0);
       
     const expense = transactions
