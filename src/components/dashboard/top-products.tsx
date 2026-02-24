@@ -6,16 +6,38 @@ import { useMemo } from 'react';
 import { Skeleton } from '../ui/skeleton';
 import Link from 'next/link';
 import { Button } from '../ui/button';
+import type { Transaction } from '@/app/lib/types';
 
-export function TopProducts() {
+interface TopProductsProps {
+  transactions: Transaction[];
+}
+
+export function TopProducts({ transactions }: TopProductsProps) {
   const { products, loading } = useProducts();
 
   const topProducts = useMemo(() => {
-    if (!products) return [];
-    return [...products]
+    if (!products || !transactions) return [];
+
+    const salesCountInPeriod: { [productId: string]: number } = {};
+
+    transactions.forEach(transaction => {
+      if (transaction.type === 'income' && transaction.cartItems) {
+        transaction.cartItems.forEach(item => {
+          salesCountInPeriod[item.id] = (salesCountInPeriod[item.id] || 0) + item.quantity;
+        });
+      }
+    });
+
+    return products
+      .map(product => ({
+        ...product,
+        salesCount: salesCountInPeriod[product.id] || 0
+      }))
+      .filter(product => product.salesCount > 0)
       .sort((a, b) => (b.salesCount || 0) - (a.salesCount || 0))
       .slice(0, 5);
-  }, [products]);
+  }, [products, transactions]);
+
 
   if (loading) {
     return (
@@ -64,7 +86,7 @@ export function TopProducts() {
         ) : (
           <div className="text-center text-muted-foreground py-4">
             <Package className="w-8 h-8 mx-auto mb-2" />
-            <p>Ainda não há dados de vendas para mostrar os produtos mais vendidos.</p>
+            <p>Nenhuma venda registrada neste período para mostrar os produtos mais vendidos.</p>
           </div>
         )}
       </CardContent>

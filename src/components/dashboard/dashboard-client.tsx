@@ -1,7 +1,8 @@
 'use client';
-import { useMemo } from 'react';
-import { Wallet, TrendingUp, TrendingDown, List, Info } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Wallet, TrendingUp, TrendingDown, List, Info, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { addMonths, subMonths, format } from 'date-fns';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
@@ -18,6 +19,9 @@ import { SalesChart } from './sales-chart';
 import { TopProducts } from './top-products';
 import { AddProductDialog } from './add-product-dialog';
 import { AddCustomerDialog } from './add-customer-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { cn } from '@/lib/utils';
+import { Calendar } from '../ui/calendar';
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -25,12 +29,36 @@ export function DashboardClient() {
   const userIdsToFetch = [user?.uid, storefrontUserId].filter(Boolean) as string[];
   const { transactions, loading } = useTransactions({ userIds: userIdsToFetch });
 
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  useEffect(() => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    setStartDate(firstDayOfMonth);
+    setEndDate(today);
+  }, []);
+
+  const filteredTransactions = useMemo(() => {
+    if (!startDate || !endDate) {
+      return [];
+    }
+    const toDate = new Date(endDate);
+    toDate.setHours(23, 59, 59, 999);
+
+    return transactions.filter((t) => {
+      const transactionDateMs = t.dateMs;
+      if (!transactionDateMs || typeof transactionDateMs !== 'number') return false;
+      return transactionDateMs >= startDate.getTime() && transactionDateMs <= toDate.getTime();
+    });
+  }, [transactions, startDate, endDate]);
+
   const { totalIncome, totalExpense, balance } = useMemo(() => {
-    const incomePaid = transactions
+    const incomePaid = filteredTransactions
       .filter((t) => t.type === 'income' && t.status === 'paid')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const expense = transactions
+    const expense = filteredTransactions
       .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
       
@@ -39,14 +67,27 @@ export function DashboardClient() {
       totalExpense: expense,
       balance: incomePaid - expense,
     };
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   const recentTransactions = useMemo(() => {
-      return transactions.slice(0, 5);
-  }, [transactions]);
+      return filteredTransactions.sort((a, b) => b.dateMs - a.dateMs).slice(0, 5);
+  }, [filteredTransactions]);
+
+  const handleMonthChange = (direction: 'next' | 'prev') => {
+    const operation = direction === 'next' ? addMonths : subMonths;
+    const currentStartDate = startDate || new Date();
+    
+    const newStartDate = operation(currentStartDate, 1);
+    newStartDate.setDate(1); 
+    
+    const newEndDate = new Date(newStartDate.getFullYear(), newStartDate.getMonth() + 1, 0);
+    
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+  };
 
 
-  if (loading) {
+  if (loading || !startDate || !endDate) {
     return <Loading />;
   }
 
@@ -63,6 +104,57 @@ export function DashboardClient() {
                     <AddProductDialog />
                     <AddCustomerDialog />
                 </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/y") : <span>Data Inicial</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/y") : <span>Data Final</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}>
+                  <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}>
+                  <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
@@ -87,8 +179,8 @@ export function DashboardClient() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <SalesChart transactions={transactions} />
-                <TopProducts />
+                <SalesChart transactions={filteredTransactions} />
+                <TopProducts transactions={filteredTransactions} />
             </div>
             
             {showStorefrontIdAlert && (
@@ -123,7 +215,7 @@ export function DashboardClient() {
             </Card>
 
 
-            <DangerZone transactions={transactions} />
+            <DangerZone transactions={filteredTransactions} />
             
         </div>
     </div>
