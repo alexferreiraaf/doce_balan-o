@@ -14,6 +14,10 @@ import { RecentTransactionsList } from './recent-transactions-list';
 import { InputWithCopy } from '../ui/input';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { storefrontUserId } from '@/firebase/config';
+import { SalesChart } from './sales-chart';
+import { TopProducts } from './top-products';
+import { AddProductDialog } from './add-product-dialog';
+import { AddCustomerDialog } from './add-customer-dialog';
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -52,6 +56,15 @@ export function DashboardClient() {
     <>
      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6 md:space-y-8">
+            
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                <div className="flex items-center gap-2">
+                    <AddProductDialog />
+                    <AddCustomerDialog />
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 <StatCard
                 title="Balanço (Pago)"
@@ -71,6 +84,11 @@ export function DashboardClient() {
                 colorClass="border-red-400 text-gray-700"
                 icon={TrendingDown}
                 />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <SalesChart transactions={transactions} />
+                <TopProducts />
             </div>
             
             {showStorefrontIdAlert && (
