@@ -25,17 +25,17 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
       t => t.type === 'income' && (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado'))
     );
 
-    const totalIncome = paidIncome.reduce((sum, t) => sum + t.amount, 0);
-    const totalExpense = expenses.reduce((sum, t) => sum + t.amount, 0);
+    const totalIncome = paidIncome.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalPending = pending.reduce((sum, t) => {
-        const remainingAmount = t.amount - (t.downPayment || 0);
+        const remainingAmount = Number(t.amount || 0) - Number(t.downPayment || 0);
         return sum + remainingAmount;
     }, 0);
     const balance = totalIncome - totalExpense;
 
     const groupByCategory = (trans: Transaction[]) => {
       return trans.reduce((acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        acc[t.category] = (acc[t.category] || 0) + Number(t.amount || 0);
         return acc;
       }, {} as Record<string, number>);
     };

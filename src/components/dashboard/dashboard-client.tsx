@@ -58,11 +58,11 @@ export function DashboardClient() {
   const { totalIncome, totalExpense, balance } = useMemo(() => {
     const incomePaid = filteredTransactions
       .filter((t) => t.type === 'income' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado')))
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
     const expense = filteredTransactions
       .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
       
     return {
       totalIncome: incomePaid,

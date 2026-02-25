@@ -24,7 +24,7 @@ export function ExpenseCategoryChart({ transactions }: ExpenseCategoryChartProps
     
     const categoryTotals = expenses.reduce((acc, t) => {
       const category = t.category || 'Outros Gastos';
-      acc[category] = (acc[category] || 0) + t.amount;
+      acc[category] = (acc[category] || 0) + Number(t.amount || 0);
       return acc;
     }, {} as Record<string, number>);
 
