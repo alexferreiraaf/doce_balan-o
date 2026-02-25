@@ -46,7 +46,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
   const PLACEHOLDER_COLORS = ['hsl(var(--muted-foreground) / 0.3)', 'hsl(var(--muted-foreground) / 0.1)'];
 
   return (
-    <Card className="col-span-1 md:col-span-2">
+    <Card>
       <CardHeader>
         <CardTitle>Balanço Geral</CardTitle>
       </CardHeader>

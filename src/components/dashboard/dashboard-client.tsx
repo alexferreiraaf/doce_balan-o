@@ -22,6 +22,8 @@ import { AddCustomerDialog } from './add-customer-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { cn } from '@/lib/utils';
 import { Calendar } from '../ui/calendar';
+import { ExpenseCategoryChart } from '@/components/reports/expense-category-chart';
+import { FinancialFlowChart } from '@/components/reports/financial-flow-chart';
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -178,9 +180,11 @@ export function DashboardClient() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <SalesChart transactions={filteredTransactions} />
                 <TopProducts transactions={filteredTransactions} />
+                <FinancialFlowChart transactions={filteredTransactions} />
+                <ExpenseCategoryChart transactions={filteredTransactions} />
             </div>
             
             {showStorefrontIdAlert && (

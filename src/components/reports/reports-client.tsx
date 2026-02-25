@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ReportCard } from './simple-report';
-import { ExpenseCategoryChart } from './expense-category-chart';
-import { FinancialFlowChart } from './financial-flow-chart';
 import { storefrontUserId } from '@/firebase/config';
 import { useUser } from '@/firebase';
 
@@ -139,11 +137,6 @@ export function ReportsClient() {
       <ReportCard title={reportTitle} summary={summary} />
       
       <SummaryReport transactions={filteredTransactions} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ExpenseCategoryChart transactions={filteredTransactions} />
-        <FinancialFlowChart transactions={filteredTransactions} />
-      </div>
 
     </div>
   );
