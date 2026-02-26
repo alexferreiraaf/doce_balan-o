@@ -21,7 +21,7 @@ import { AddCustomerDialog } from './add-customer-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { cn } from '@/lib/utils';
 import { Calendar } from '../ui/calendar';
-import { SalesChart } from './sales-chart';
+import { SalesBarChart } from './sales-bar-chart';
 import { ExpenseCategoryChart } from './expense-category-chart';
 
 export function DashboardClient() {
@@ -48,14 +48,19 @@ export function DashboardClient() {
     const toTime = new Date(endDate).setHours(23, 59, 59, 999);
 
     return transactions.filter((t) => {
-      // Busca a data em milissegundos de várias formas possíveis para garantir retrocompatibilidade
-      let transactionTime = Number(t.dateMs);
+      // Lógica de data ultra-resiliente para transações legadas e novas
+      let transactionTime = 0;
       
-      if (!transactionTime && t.timestamp) {
+      if (t.dateMs) {
+        transactionTime = Number(t.dateMs);
+      } else if (t.timestamp) {
+        // Tenta converter o objeto de Timestamp do Firebase
         if (typeof t.timestamp.toMillis === 'function') {
           transactionTime = t.timestamp.toMillis();
         } else if (t.timestamp.seconds) {
           transactionTime = t.timestamp.seconds * 1000;
+        } else if (t.timestamp instanceof Date) {
+          transactionTime = t.timestamp.getTime();
         }
       }
       
@@ -65,7 +70,6 @@ export function DashboardClient() {
   }, [transactions, startDate, endDate]);
 
   const { totalIncome, totalExpense, balance } = useMemo(() => {
-    // Lógica unificada para identificar transações pagas (novas e legadas)
     const incomePaid = filteredTransactions
       .filter((t) => 
         t.type === 'income' && 
@@ -73,14 +77,25 @@ export function DashboardClient() {
       )
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+    // Soma também as entradas de vendas pendentes (fiado com entrada)
+    const downPayments = filteredTransactions
+      .filter((t) => 
+        t.type === 'income' && 
+        (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado')) &&
+        t.downPayment && Number(t.downPayment) > 0
+      )
+      .reduce((sum, t) => sum + (Number(t.downPayment) || 0), 0);
+
     const expense = filteredTransactions
       .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
       
+    const finalIncome = incomePaid + downPayments;
+
     return {
-      totalIncome: incomePaid,
+      totalIncome: finalIncome,
       totalExpense: expense,
-      balance: incomePaid - expense,
+      balance: finalIncome - expense,
     };
   }, [filteredTransactions]);
 
@@ -202,14 +217,14 @@ export function DashboardClient() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1">
-                    <SalesChart transactions={filteredTransactions} />
-                </div>
-                <div className="lg:col-span-1">
-                    <ExpenseCategoryChart transactions={filteredTransactions} />
+                <div className="lg:col-span-2">
+                    <SalesBarChart transactions={filteredTransactions} />
                 </div>
                 <div className="lg:col-span-1">
                     <TopProducts transactions={filteredTransactions} />
+                </div>
+                <div className="lg:col-span-1">
+                    <ExpenseCategoryChart transactions={filteredTransactions} />
                 </div>
             </div>
             
