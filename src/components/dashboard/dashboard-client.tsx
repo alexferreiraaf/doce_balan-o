@@ -22,7 +22,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { cn, parseToNumber } from '@/lib/utils';
 import { Calendar } from '../ui/calendar';
 import { SalesBarChart } from './sales-bar-chart';
-import { ExpenseCategoryChart } from './expense-category-chart';
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -213,16 +212,9 @@ export function DashboardClient() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    <SalesBarChart transactions={filteredTransactions} />
-                </div>
-                <div className="lg:col-span-1">
-                    <TopProducts transactions={filteredTransactions} />
-                </div>
-                <div className="lg:col-span-1">
-                    <ExpenseCategoryChart transactions={filteredTransactions} />
-                </div>
+            {/* GRÁFICO ÚNICO: RESUMO DE VENDAS */}
+            <div className="grid grid-cols-1 gap-6">
+                <SalesBarChart transactions={filteredTransactions} />
             </div>
             
             {showStorefrontIdAlert && (
@@ -239,23 +231,25 @@ export function DashboardClient() {
               </Alert>
             )}
 
-            <Card className="shadow-md">
-                <CardHeader>
-                <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
-                    <List className="w-5 h-5 mr-2 text-primary" />
-                    Lançamentos Recentes
-                    </CardTitle>
-                    <Button asChild variant="link" className="text-primary font-bold">
-                    <Link href="/transactions">Ver Todos</Link>
-                    </Button>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <RecentTransactionsList transactions={recentTransactions} />
-                </CardContent>
-            </Card>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <TopProducts transactions={filteredTransactions} />
+                <Card className="shadow-md">
+                    <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                        <List className="w-5 h-5 mr-2 text-primary" />
+                        Lançamentos Recentes
+                        </CardTitle>
+                        <Button asChild variant="link" className="text-primary font-bold">
+                        <Link href="/transactions">Ver Todos</Link>
+                        </Button>
+                    </div>
+                    </CardHeader>
+                    <CardContent>
+                    <RecentTransactionsList transactions={recentTransactions} />
+                    </CardContent>
+                </Card>
+            </div>
 
             <DangerZone transactions={filteredTransactions} />
             

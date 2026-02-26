@@ -40,37 +40,36 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
   }, []);
 
   const chartData = useMemo(() => {
-    let paidIncome = 0;
-    let pendingIncome = 0;
-    let expenses = 0;
+    let paidSales = 0;
+    let pendingSales = 0;
 
     transactions.forEach((t) => {
+      // Focar apenas no que foi vendido (entradas)
+      if (t.type !== 'income') return;
+
       const amount = parseToNumber(t.amount);
       const downPayment = parseToNumber(t.downPayment);
 
-      if (t.type === 'income') {
-        const isPaid = t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado');
-        
-        if (isPaid) {
-          paidIncome += amount;
-        } else {
-          paidIncome += downPayment;
-          pendingIncome += (amount - downPayment);
-        }
-      } else if (t.type === 'expense') {
-        expenses += amount;
+      const isPaid = t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado');
+      
+      if (isPaid) {
+        paidSales += amount;
+      } else {
+        // Se for fiado ou pendente, o que foi pago de entrada entra como Pago
+        // O restante entra como Pendente
+        paidSales += downPayment;
+        pendingSales += (amount - downPayment);
       }
     });
 
-    // Se tudo for zero ou NaN, retorna vazio para mostrar o placeholder
-    if (paidIncome <= 0 && pendingIncome <= 0 && expenses <= 0) return [];
+    // Se tudo for zero, retorna vazio para mostrar o desenho informativo
+    if (paidSales <= 0 && pendingSales <= 0) return [];
 
     return [
       {
-        name: 'Fluxo Financeiro',
-        'Receitas Pagas': Number(paidIncome.toFixed(2)),
-        'A Receber': Number(pendingIncome.toFixed(2)),
-        'Despesas': Number(expenses.toFixed(2)),
+        name: 'Resumo de Vendas',
+        'Vendas Pagas': Number(paidSales.toFixed(2)),
+        'A Receber': Number(pendingSales.toFixed(2)),
       }
     ];
   }, [transactions]);
@@ -82,7 +81,7 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg text-primary">
           <BarChart3 className="w-5 h-5" />
-          Fluxo Financeiro
+          Resumo Financeiro de Vendas
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -95,14 +94,13 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
                 <YAxis hide />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend iconType="circle" />
-                <Bar name="Receitas Pagas" dataKey="Receitas Pagas" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar name="A Receber" dataKey="A Receber" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                <Bar name="Despesas" dataKey="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar name="Vendas Pagas" dataKey="Vendas Pagas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar name="A Receber (Fiado)" dataKey="A Receber" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-              <div className="relative w-32 h-32 opacity-20 group">
+              <div className="relative w-32 h-32 opacity-20">
                 <svg viewBox="0 0 100 100" className="w-full h-full text-primary">
                   <rect x="10" y="60" width="20" height="30" fill="currentColor" />
                   <rect x="40" y="40" width="20" height="50" fill="currentColor" />
@@ -112,8 +110,8 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
                 <TrendingUp className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary animate-pulse" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-bold text-muted-foreground">Aguardando Lançamentos</p>
-                <p className="text-xs text-muted-foreground/60 max-w-[200px]">As barras de entradas e saídas aparecerão aqui assim que você selecionar um mês com vendas.</p>
+                <p className="text-sm font-bold text-muted-foreground">Aguardando Vendas</p>
+                <p className="text-xs text-muted-foreground/60 max-w-[200px]">As barras de vendas aparecerão aqui assim que você selecionar um mês com registros.</p>
               </div>
             </div>
           )}
