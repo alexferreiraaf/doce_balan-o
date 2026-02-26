@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload }: any) => {
             {payload[0].name}
           </span>
           <span className="font-bold text-primary">
-            {formatCurrency(Number(payload[0].value))}
+            {formatCurrency(Number(payload[0].value) || 0)}
           </span>
         </div>
       </div>
@@ -43,33 +43,36 @@ export function SalesChart({ transactions }: SalesChartProps) {
   }, []);
 
   const chartData = useMemo(() => {
-    // Lógica unificada para identificar transações pagas e pendentes
+    // Cálculo de Receitas Pagas (inclui lógica de compatibilidade para vendas antigas)
     const paidIncome = transactions
       .filter((t) => 
         t.type === 'income' && 
         (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
       )
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+    // Cálculo de Valores a Receber (Vendas Fiado Pendentes)
     const pendingIncome = transactions
       .filter((t) => 
         t.type === 'income' && 
         (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado'))
       )
       .reduce((sum, t) => {
-        const total = Number(t.amount || 0);
-        const downPayment = Number(t.downPayment || 0);
+        const total = Number(t.amount) || 0;
+        const downPayment = Number(t.downPayment) || 0;
         return sum + (total - downPayment);
       }, 0);
       
+    // Cálculo de Despesas
     const expense = transactions
       .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
     const data = [];
-    if (paidIncome > 0) data.push({ name: 'Receitas Pagas', value: paidIncome });
-    if (pendingIncome > 0) data.push({ name: 'A Receber', value: pendingIncome });
-    if (expense > 0) data.push({ name: 'Despesas', value: expense });
+    // Só adicionamos ao gráfico se o valor for maior que zero (para não poluir a legenda)
+    if (paidIncome > 0) data.push({ name: 'Receitas Pagas', value: parseFloat(paidIncome.toFixed(2)) });
+    if (pendingIncome > 0) data.push({ name: 'A Receber', value: parseFloat(pendingIncome.toFixed(2)) });
+    if (expense > 0) data.push({ name: 'Despesas', value: parseFloat(expense.toFixed(2)) });
 
     return data;
   }, [transactions]);

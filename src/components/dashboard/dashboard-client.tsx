@@ -43,15 +43,23 @@ export function DashboardClient() {
     if (!startDate || !endDate) {
       return [];
     }
-    const toDate = new Date(endDate);
-    toDate.setHours(23, 59, 59, 999);
+    const fromTime = startDate.getTime();
+    const toTime = new Date(endDate).setHours(23, 59, 59, 999);
 
     return transactions.filter((t) => {
-      // Fallback crucial: Se não tiver dateMs, tenta converter o timestamp do Firebase
-      const transactionDateMs = t.dateMs || (t.timestamp && typeof t.timestamp.toMillis === 'function' ? t.timestamp.toMillis() : null);
+      // Busca a data em milissegundos de várias formas possíveis para garantir retrocompatibilidade
+      let transactionTime = t.dateMs;
       
-      if (!transactionDateMs || typeof transactionDateMs !== 'number') return false;
-      return transactionDateMs >= startDate.getTime() && transactionDateMs <= toDate.getTime();
+      if (!transactionTime && t.timestamp) {
+        if (typeof t.timestamp.toMillis === 'function') {
+          transactionTime = t.timestamp.toMillis();
+        } else if (t.timestamp.seconds) {
+          transactionTime = t.timestamp.seconds * 1000;
+        }
+      }
+      
+      if (!transactionTime || typeof transactionTime !== 'number') return false;
+      return transactionTime >= fromTime && transactionTime <= toTime;
     });
   }, [transactions, startDate, endDate]);
 
@@ -61,11 +69,11 @@ export function DashboardClient() {
         t.type === 'income' && 
         (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
       )
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
     const expense = filteredTransactions
       .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
       
     return {
       totalIncome: incomePaid,
@@ -76,8 +84,8 @@ export function DashboardClient() {
 
   const recentTransactions = useMemo(() => {
       return [...filteredTransactions].sort((a, b) => {
-          const dateA = a.dateMs || (a.timestamp?.toMillis?.() || 0);
-          const dateB = b.dateMs || (b.timestamp?.toMillis?.() || 0);
+          const dateA = a.dateMs || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0);
+          const dateB = b.dateMs || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0);
           return dateB - dateA;
       }).slice(0, 5);
   }, [filteredTransactions]);
