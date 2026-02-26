@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { Transaction } from '@/app/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, parseToNumber } from '@/lib/utils';
 import { Tag } from 'lucide-react';
 
 interface ExpenseCategoryChartProps {
@@ -43,13 +43,14 @@ export function ExpenseCategoryChart({ transactions }: ExpenseCategoryChartProps
     
     const grouped = expenses.reduce((acc, t) => {
       const category = t.category || 'Outros';
-      const amount = Number(t.amount) || 0;
+      const amount = parseToNumber(t.amount);
       acc[category] = (acc[category] || 0) + amount;
       return acc;
     }, {} as Record<string, number>);
 
     return Object.entries(grouped)
       .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
+      .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [transactions]);
 

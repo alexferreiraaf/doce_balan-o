@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { Transaction } from '@/app/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, parseToNumber } from '@/lib/utils';
 import { BarChart3, TrendingUp } from 'lucide-react';
 
 interface SalesBarChartProps {
@@ -45,18 +45,15 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
     let expenses = 0;
 
     transactions.forEach((t) => {
-      // Conversão ultra-segura para número (evita erros com dados legados)
-      const amount = typeof t.amount === 'string' ? parseFloat(t.amount) : (Number(t.amount) || 0);
-      const downPayment = typeof t.downPayment === 'string' ? parseFloat(t.downPayment) : (Number(t.downPayment) || 0);
+      const amount = parseToNumber(t.amount);
+      const downPayment = parseToNumber(t.downPayment);
 
       if (t.type === 'income') {
-        // Lógica unificada de pagamento: status 'paid' OU transação antiga não-fiado
         const isPaid = t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado');
         
         if (isPaid) {
           paidIncome += amount;
         } else {
-          // Para pendentes, a entrada já é considerada receita paga
           paidIncome += downPayment;
           pendingIncome += (amount - downPayment);
         }
@@ -65,12 +62,12 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
       }
     });
 
-    // Só exibe no gráfico se houver algum valor maior que zero
-    if (paidIncome === 0 && pendingIncome === 0 && expenses === 0) return [];
+    // Se tudo for zero ou NaN, retorna vazio para mostrar o placeholder
+    if (paidIncome <= 0 && pendingIncome <= 0 && expenses <= 0) return [];
 
     return [
       {
-        name: 'Balanço Geral',
+        name: 'Fluxo Financeiro',
         'Receitas Pagas': Number(paidIncome.toFixed(2)),
         'A Receber': Number(pendingIncome.toFixed(2)),
         'Despesas': Number(expenses.toFixed(2)),
@@ -116,7 +113,7 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-bold text-muted-foreground">Aguardando Lançamentos</p>
-                <p className="text-xs text-muted-foreground/60 max-w-[200px]">As barras de entradas e saídas aparecerão aqui assim que você registrar uma venda ou gasto.</p>
+                <p className="text-xs text-muted-foreground/60 max-w-[200px]">As barras de entradas e saídas aparecerão aqui assim que você selecionar um mês com vendas.</p>
               </div>
             </div>
           )}

@@ -19,7 +19,7 @@ import { TopProducts } from './top-products';
 import { AddProductDialog } from './add-product-dialog';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { cn } from '@/lib/utils';
+import { cn, parseToNumber } from '@/lib/utils';
 import { Calendar } from '../ui/calendar';
 import { SalesBarChart } from './sales-bar-chart';
 import { ExpenseCategoryChart } from './expense-category-chart';
@@ -48,13 +48,11 @@ export function DashboardClient() {
     const toTime = new Date(endDate).setHours(23, 59, 59, 999);
 
     return transactions.filter((t) => {
-      // Lógica de data ultra-resiliente para transações legadas e novas
       let transactionTime = 0;
       
       if (t.dateMs) {
-        transactionTime = Number(t.dateMs);
+        transactionTime = parseToNumber(t.dateMs);
       } else if (t.timestamp) {
-        // Tenta converter o objeto de Timestamp do Firebase
         if (typeof t.timestamp.toMillis === 'function') {
           transactionTime = t.timestamp.toMillis();
         } else if (t.timestamp.seconds) {
@@ -75,20 +73,19 @@ export function DashboardClient() {
         t.type === 'income' && 
         (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
       )
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      .reduce((sum, t) => sum + parseToNumber(t.amount), 0);
 
-    // Soma também as entradas de vendas pendentes (fiado com entrada)
     const downPayments = filteredTransactions
       .filter((t) => 
         t.type === 'income' && 
         (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado')) &&
-        t.downPayment && Number(t.downPayment) > 0
+        t.downPayment && parseToNumber(t.downPayment) > 0
       )
-      .reduce((sum, t) => sum + (Number(t.downPayment) || 0), 0);
+      .reduce((sum, t) => sum + parseToNumber(t.downPayment), 0);
 
     const expense = filteredTransactions
       .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      .reduce((sum, t) => sum + parseToNumber(t.amount), 0);
       
     const finalIncome = incomePaid + downPayments;
 
@@ -101,8 +98,8 @@ export function DashboardClient() {
 
   const recentTransactions = useMemo(() => {
       return [...filteredTransactions].sort((a, b) => {
-          const dateA = Number(a.dateMs) || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0);
-          const dateB = Number(b.dateMs) || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0);
+          const dateA = parseToNumber(a.dateMs) || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0);
+          const dateB = parseToNumber(b.dateMs) || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0);
           return dateB - dateA;
       }).slice(0, 5);
   }, [filteredTransactions]);
