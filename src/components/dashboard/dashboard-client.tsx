@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { cn } from '@/lib/utils';
 import { Calendar } from '../ui/calendar';
 import { SalesChart } from './sales-chart';
+import { ExpenseCategoryChart } from './expense-category-chart';
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -48,7 +49,7 @@ export function DashboardClient() {
 
     return transactions.filter((t) => {
       // Busca a data em milissegundos de várias formas possíveis para garantir retrocompatibilidade
-      let transactionTime = t.dateMs;
+      let transactionTime = Number(t.dateMs);
       
       if (!transactionTime && t.timestamp) {
         if (typeof t.timestamp.toMillis === 'function') {
@@ -58,12 +59,13 @@ export function DashboardClient() {
         }
       }
       
-      if (!transactionTime || typeof transactionTime !== 'number') return false;
+      if (!transactionTime || isNaN(transactionTime)) return false;
       return transactionTime >= fromTime && transactionTime <= toTime;
     });
   }, [transactions, startDate, endDate]);
 
   const { totalIncome, totalExpense, balance } = useMemo(() => {
+    // Lógica unificada para identificar transações pagas (novas e legadas)
     const incomePaid = filteredTransactions
       .filter((t) => 
         t.type === 'income' && 
@@ -84,8 +86,8 @@ export function DashboardClient() {
 
   const recentTransactions = useMemo(() => {
       return [...filteredTransactions].sort((a, b) => {
-          const dateA = a.dateMs || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0);
-          const dateB = b.dateMs || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0);
+          const dateA = Number(a.dateMs) || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0);
+          const dateB = Number(b.dateMs) || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0);
           return dateB - dateA;
       }).slice(0, 5);
   }, [filteredTransactions]);
@@ -111,8 +113,7 @@ export function DashboardClient() {
   const showStorefrontIdAlert = user?.uid && !storefrontUserId;
 
   return (
-    <>
-     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6 md:space-y-8">
             
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -200,9 +201,16 @@ export function DashboardClient() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SalesChart transactions={filteredTransactions} />
-                <TopProducts transactions={filteredTransactions} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                    <SalesChart transactions={filteredTransactions} />
+                </div>
+                <div className="lg:col-span-1">
+                    <ExpenseCategoryChart transactions={filteredTransactions} />
+                </div>
+                <div className="lg:col-span-1">
+                    <TopProducts transactions={filteredTransactions} />
+                </div>
             </div>
             
             {showStorefrontIdAlert && (
@@ -241,6 +249,5 @@ export function DashboardClient() {
             
         </div>
     </div>
-    </>
   );
 }

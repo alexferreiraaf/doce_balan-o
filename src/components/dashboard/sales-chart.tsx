@@ -12,9 +12,9 @@ interface SalesChartProps {
 }
 
 const COLORS = [
-  'hsl(var(--chart-5))', // Verde para Receitas Pagas
-  'hsl(var(--chart-2))', // Amarelo/Laranja para A Receber
-  'hsl(var(--chart-4))', // Vermelho para Despesas
+  '#10b981', // Verde (chart-5) - Receitas Pagas
+  '#f59e0b', // Amarelo (chart-2) - A Receber
+  '#ef4444', // Vermelho (chart-4) - Despesas
 ];
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -43,7 +43,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
   }, []);
 
   const chartData = useMemo(() => {
-    // Cálculo de Receitas Pagas (inclui lógica de compatibilidade para vendas antigas)
+    // Cálculo robusto garantindo que os valores sejam números
     const paidIncome = transactions
       .filter((t) => 
         t.type === 'income' && 
@@ -51,7 +51,6 @@ export function SalesChart({ transactions }: SalesChartProps) {
       )
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-    // Cálculo de Valores a Receber (Vendas Fiado Pendentes)
     const pendingIncome = transactions
       .filter((t) => 
         t.type === 'income' && 
@@ -63,16 +62,14 @@ export function SalesChart({ transactions }: SalesChartProps) {
         return sum + (total - downPayment);
       }, 0);
       
-    // Cálculo de Despesas
     const expense = transactions
       .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
     const data = [];
-    // Só adicionamos ao gráfico se o valor for maior que zero (para não poluir a legenda)
-    if (paidIncome > 0) data.push({ name: 'Receitas Pagas', value: parseFloat(paidIncome.toFixed(2)) });
-    if (pendingIncome > 0) data.push({ name: 'A Receber', value: parseFloat(pendingIncome.toFixed(2)) });
-    if (expense > 0) data.push({ name: 'Despesas', value: parseFloat(expense.toFixed(2)) });
+    if (paidIncome > 0) data.push({ name: 'Receitas Pagas', value: Number(paidIncome.toFixed(2)) });
+    if (pendingIncome > 0) data.push({ name: 'A Receber', value: Number(pendingIncome.toFixed(2)) });
+    if (expense > 0) data.push({ name: 'Despesas', value: Number(expense.toFixed(2)) });
 
     return data;
   }, [transactions]);
@@ -119,16 +116,16 @@ export function SalesChart({ transactions }: SalesChartProps) {
           ) : (
             <div className="flex flex-col items-center justify-center text-center space-y-4">
               <div className="relative w-32 h-32 opacity-20">
-                <svg viewBox="0 0 100 100" className="w-full h-full">
+                <svg viewBox="0 0 100 100" className="w-full h-full text-primary">
                   <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="none" strokeDasharray="180 100" />
                   <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="none" strokeDasharray="60 200" strokeDashoffset="-190" />
                   <path d="M50 50 L50 10 M50 50 L85 70" stroke="currentColor" strokeWidth="2" />
                 </svg>
-                <TrendingUp className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8" />
+                <TrendingUp className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-muted-foreground">Aguardando dados...</p>
-                <p className="text-xs text-muted-foreground/70">Registre vendas ou despesas para ver o gráfico.</p>
+                <p className="text-xs text-muted-foreground/70">As vendas deste mês aparecerão aqui automaticamente.</p>
               </div>
             </div>
           )}
