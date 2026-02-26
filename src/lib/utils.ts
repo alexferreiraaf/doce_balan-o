@@ -14,8 +14,8 @@ export function formatCurrency(value: number) {
 }
 
 /**
- * Converte qualquer valor (string, número, nulo) para um número válido.
- * Lida com formatos brasileiros (vírgula), símbolos de moeda e textos.
+ * Converte qualquer valor para um número válido.
+ * Extremamente robusto para lidar com formatos de texto antigos do banco de dados.
  */
 export function parseToNumber(value: any): number {
   if (value === null || value === undefined) return 0;
@@ -23,20 +23,22 @@ export function parseToNumber(value: any): number {
   
   try {
     let str = String(value).trim();
-    // Remove símbolos de moeda e espaços
-    str = str.replace(/[R$\s]/g, '');
+    // Se for um objeto do Firebase ou algo estranho, retorna 0
+    if (str === "[object Object]") return 0;
+
+    // Remove R$, espaços e pontos de milhar (ex: 1.234,56 -> 1234,56)
+    str = str.replace(/R\$/g, '').replace(/\s/g, '');
     
-    // Trata o formato de vírgula decimal (25,00 -> 25.00)
-    if (str.includes(',') && !str.includes('.')) {
-      str = str.replace(',', '.');
-    } else if (str.includes(',') && str.includes('.')) {
-      // Caso complexo como 1.234,56 -> remove o ponto de milhar e troca a vírgula
-      if (str.indexOf('.') < str.indexOf(',')) {
-        str = str.replace(/\./g, '').replace(',', '.');
-      } else {
-        // Caso 1,234.56 -> remove a vírgula de milhar
-        str = str.replace(/,/g, '');
-      }
+    // Se tem vírgula e ponto, remove o ponto (milhar) e troca a vírgula por ponto (decimal)
+    if (str.includes(',') && str.includes('.')) {
+        if (str.indexOf('.') < str.indexOf(',')) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else {
+            str = str.replace(/,/g, '');
+        }
+    } else if (str.includes(',')) {
+        // Se tem apenas vírgula, troca por ponto
+        str = str.replace(',', '.');
     }
     
     const parsed = parseFloat(str);
