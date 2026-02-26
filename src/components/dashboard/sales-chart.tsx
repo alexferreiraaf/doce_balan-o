@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { Transaction } from '@/app/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,12 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export function SalesChart({ transactions }: SalesChartProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const chartData = useMemo(() => {
     // Lógica unificada para identificar transações pagas e pendentes
     const paidIncome = transactions
@@ -68,7 +74,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
     return data;
   }, [transactions]);
 
-  const hasData = chartData.some(d => d.value > 0);
+  const hasData = chartData.length > 0;
 
   return (
     <Card className="h-full">
@@ -80,7 +86,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
       </CardHeader>
       <CardContent>
         <div className="h-64 w-full flex items-center justify-center">
-          {hasData ? (
+          {isMounted && hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -109,7 +115,6 @@ export function SalesChart({ transactions }: SalesChartProps) {
             </ResponsiveContainer>
           ) : (
             <div className="flex flex-col items-center justify-center text-center space-y-4">
-              {/* Desenho de Placeholder do Gráfico */}
               <div className="relative w-32 h-32 opacity-20">
                 <svg viewBox="0 0 100 100" className="w-full h-full">
                   <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="none" strokeDasharray="180 100" />

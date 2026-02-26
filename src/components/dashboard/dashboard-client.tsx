@@ -47,14 +47,15 @@ export function DashboardClient() {
     toDate.setHours(23, 59, 59, 999);
 
     return transactions.filter((t) => {
-      const transactionDateMs = t.dateMs;
+      // Fallback crucial: Se não tiver dateMs, tenta converter o timestamp do Firebase
+      const transactionDateMs = t.dateMs || (t.timestamp && typeof t.timestamp.toMillis === 'function' ? t.timestamp.toMillis() : null);
+      
       if (!transactionDateMs || typeof transactionDateMs !== 'number') return false;
       return transactionDateMs >= startDate.getTime() && transactionDateMs <= toDate.getTime();
     });
   }, [transactions, startDate, endDate]);
 
   const { totalIncome, totalExpense, balance } = useMemo(() => {
-    // Lógica unificada de "Pago"
     const incomePaid = filteredTransactions
       .filter((t) => 
         t.type === 'income' && 
@@ -74,7 +75,11 @@ export function DashboardClient() {
   }, [filteredTransactions]);
 
   const recentTransactions = useMemo(() => {
-      return [...filteredTransactions].sort((a, b) => b.dateMs - a.dateMs).slice(0, 5);
+      return [...filteredTransactions].sort((a, b) => {
+          const dateA = a.dateMs || (a.timestamp?.toMillis?.() || 0);
+          const dateB = b.dateMs || (b.timestamp?.toMillis?.() || 0);
+          return dateB - dateA;
+      }).slice(0, 5);
   }, [filteredTransactions]);
 
   const handleMonthChange = (direction: 'next' | 'prev') => {
