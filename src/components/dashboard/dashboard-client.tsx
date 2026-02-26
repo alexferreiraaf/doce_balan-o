@@ -49,12 +49,15 @@ export function DashboardClient() {
     return transactions.filter((t) => {
       let transactionTime = 0;
       
-      if (t.dateMs) {
-        transactionTime = parseToNumber(t.dateMs);
-      } else if (t.timestamp) {
+      // Tentativa 1: Campo dateMs (número)
+      if (t.dateMs && typeof t.dateMs === 'number') {
+        transactionTime = t.dateMs;
+      } 
+      // Tentativa 2: Objeto Timestamp do Firebase
+      else if (t.timestamp) {
         if (typeof t.timestamp.toMillis === 'function') {
           transactionTime = t.timestamp.toMillis();
-        } else if (t.timestamp.seconds) {
+        } else if (typeof t.timestamp.seconds === 'number') {
           transactionTime = t.timestamp.seconds * 1000;
         } else if (t.timestamp instanceof Date) {
           transactionTime = t.timestamp.getTime();
