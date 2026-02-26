@@ -1,3 +1,4 @@
+
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Info, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -26,6 +27,7 @@ import { SalesBarChart } from './sales-bar-chart';
 export function DashboardClient() {
   const { user } = useUser();
   
+  // Buscamos as transações tanto do usuário logado quanto da loja (se configurado)
   const userIdsToFetch = [user?.uid, storefrontUserId].filter(Boolean) as string[];
   const { transactions, loading } = useTransactions({ userIds: userIdsToFetch });
 
@@ -40,20 +42,19 @@ export function DashboardClient() {
   }, []);
 
   const filteredTransactions = useMemo(() => {
-    if (!startDate || !endDate) {
-      return [];
-    }
+    if (!startDate || !endDate) return [];
+    
     const fromTime = startDate.getTime();
     const toTime = new Date(endDate).setHours(23, 59, 59, 999);
 
     return transactions.filter((t) => {
       let transactionTime = 0;
       
-      // Tentativa 1: Campo dateMs (número)
+      // Tentativa 1: Campo numérico direto (mais rápido)
       if (t.dateMs && typeof t.dateMs === 'number') {
         transactionTime = t.dateMs;
       } 
-      // Tentativa 2: Objeto Timestamp do Firebase
+      // Tentativa 2: Objeto Timestamp do Firebase (para vendas antigas)
       else if (t.timestamp) {
         if (typeof t.timestamp.toMillis === 'function') {
           transactionTime = t.timestamp.toMillis();
@@ -70,6 +71,7 @@ export function DashboardClient() {
   }, [transactions, startDate, endDate]);
 
   const { totalIncome, totalExpense, balance } = useMemo(() => {
+    // Calculamos o que foi PAGO (venda paga OU entrada de venda fiada)
     const incomePaid = filteredTransactions
       .filter((t) => 
         t.type === 'income' && 
@@ -98,27 +100,15 @@ export function DashboardClient() {
     };
   }, [filteredTransactions]);
 
-  const recentTransactions = useMemo(() => {
-      return [...filteredTransactions].sort((a, b) => {
-          const dateA = parseToNumber(a.dateMs) || (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0);
-          const dateB = parseToNumber(b.dateMs) || (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0);
-          return dateB - dateA;
-      }).slice(0, 5);
-  }, [filteredTransactions]);
-
   const handleMonthChange = (direction: 'next' | 'prev') => {
     const operation = direction === 'next' ? addMonths : subMonths;
     const currentStartDate = startDate || new Date();
-    
     const newStartDate = operation(currentStartDate, 1);
     newStartDate.setDate(1); 
-    
     const newEndDate = new Date(newStartDate.getFullYear(), newStartDate.getMonth() + 1, 0);
-    
     setStartDate(newStartDate);
     setEndDate(newEndDate);
   };
-
 
   if (loading || !startDate || !endDate) {
     return <Loading />;
@@ -138,50 +128,29 @@ export function DashboardClient() {
                 </div>
             </div>
 
+            {/* Seletor de Período */}
             <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end bg-card p-2 rounded-lg border shadow-sm">
               <span className="text-xs font-bold text-muted-foreground uppercase mr-2 hidden sm:inline">Período:</span>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    size="sm"
-                    className={cn(
-                      "w-[130px] justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
+                  <Button variant={"outline"} size="sm" className="w-[130px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd/MM/yy") : <span>Início</span>}
+                    {format(startDate, "dd/MM/yy")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                  />
+                  <Calendar mode="single" selected={startDate} onSelect={(d) => d && setStartDate(d)} />
                 </PopoverContent>
               </Popover>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    size="sm"
-                    className={cn(
-                      "w-[130px] justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
+                  <Button variant={"outline"} size="sm" className="w-[130px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd/MM/yy") : <span>Fim</span>}
+                    {format(endDate, "dd/MM/yy")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                  />
+                  <Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(d)} />
                 </PopoverContent>
               </Popover>
               <div className="flex items-center gap-1 ml-2 border-l pl-2">
@@ -194,6 +163,7 @@ export function DashboardClient() {
               </div>
             </div>
 
+            {/* Cards de Resumo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 <StatCard
                 title="Balanço (Pago)"
@@ -215,6 +185,7 @@ export function DashboardClient() {
                 />
             </div>
 
+            {/* ÁREA DO GRÁFICO - Único e centralizado */}
             <div className="w-full">
                 <SalesBarChart transactions={filteredTransactions} />
             </div>
@@ -248,7 +219,7 @@ export function DashboardClient() {
                     </div>
                     </CardHeader>
                     <CardContent>
-                    <RecentTransactionsList transactions={recentTransactions} />
+                    <RecentTransactionsList transactions={filteredTransactions.slice(0, 5)} />
                     </CardContent>
                 </Card>
             </div>

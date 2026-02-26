@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -23,72 +24,70 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
     let pendingTotal = 0;
 
     transactions.forEach((t) => {
-      // Focar apenas no que foi vendido (entradas)
       if (t.type !== 'income') return;
 
       const amount = parseToNumber(t.amount);
       const downPayment = parseToNumber(t.downPayment);
 
+      // Regra: É pago se status for 'paid' OU se for uma transação sem status que não seja 'fiado'
       const isPaid = t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado');
       
       if (isPaid) {
         paidTotal += amount;
       } else {
-        // Se for fiado ou pendente, o que foi pago de entrada entra como Pago
-        // O restante entra como Pendente
+        // Se for fiado ou pendente, a entrada já é considerada "Paga"
         paidTotal += downPayment;
+        // O resto é o que falta receber
         pendingTotal += (amount - downPayment);
       }
     });
 
-    if (paidTotal <= 0 && pendingTotal <= 0) return [];
+    if (paidTotal === 0 && pendingTotal === 0) return [];
 
-    // Criamos dois itens separados para garantir que o Recharts desenhe as barras corretamente
+    // Estrutura de dados simples como a sugerida: cada barra é um objeto na lista
     return [
       {
         name: 'Vendas Pagas',
         valor: Number(paidTotal.toFixed(2)),
-        color: '#10b981',
+        color: '#10b981', // Verde
       },
       {
         name: 'A Receber (Fiado)',
         valor: Number(pendingTotal.toFixed(2)),
-        color: '#f59e0b',
+        color: '#f59e0b', // Amarelo/Laranja
       }
     ];
   }, [transactions]);
 
-  const hasData = chartData.length > 0;
-
   if (!isMounted) {
-    return <div className="h-72 w-full bg-muted/10 animate-pulse rounded-lg" />;
+    return <div className="h-[300px] w-full bg-muted/10 animate-pulse rounded-lg" />;
   }
 
   return (
-    <Card className="h-full shadow-md border-primary/10">
+    <Card className="shadow-md border-primary/10">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg text-primary">
           <BarChart3 className="w-5 h-5" />
-          Resumo de Vendas
+          Resumo de Vendas do Período
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-72 w-full flex items-center justify-center pt-4">
-          {hasData ? (
+        <div className="h-[300px] w-full pt-4">
+          {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
-                margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                margin={{ top: 30, right: 30, left: 10, bottom: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
                 <XAxis 
                   dataKey="name" 
-                  axisLine={false} 
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                   tickLine={false} 
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                 />
                 <YAxis 
-                  axisLine={false} 
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                   tickLine={false} 
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                   tickFormatter={(value) => `R$ ${value}`}
@@ -98,9 +97,9 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-lg border bg-background p-2 shadow-md border-primary/20">
-                          <p className="text-xs font-bold mb-1">{payload[0].payload.name}</p>
-                          <p className="text-sm font-bold text-primary">
+                        <div className="rounded-lg border bg-background p-3 shadow-lg border-primary/20">
+                          <p className="text-xs font-bold mb-1 uppercase text-muted-foreground">{payload[0].payload.name}</p>
+                          <p className="text-lg font-bold text-primary">
                             {formatCurrency(Number(payload[0].value) || 0)}
                           </p>
                         </div>
@@ -109,7 +108,7 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
                     return null;
                   }}
                 />
-                <Bar dataKey="valor" radius={[6, 6, 0, 0]} barSize={80}>
+                <Bar dataKey="valor" radius={[6, 6, 0, 0]} barSize={60}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -117,19 +116,17 @@ export function SalesBarChart({ transactions }: SalesBarChartProps) {
                     dataKey="valor" 
                     position="top" 
                     formatter={(val: number) => formatCurrency(val)}
-                    style={{ fontSize: '10px', fontWeight: 'bold', fill: 'hsl(var(--foreground))' }}
+                    style={{ fontSize: '12px', fontWeight: 'bold', fill: 'hsl(var(--foreground))' }}
                   />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-              <div className="relative w-32 h-32 opacity-20">
-                <TrendingUp className="w-full h-full text-primary animate-pulse" />
-              </div>
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-40">
+              <TrendingUp className="w-16 h-16 text-muted-foreground" />
               <div className="space-y-1">
-                <p className="text-sm font-bold text-muted-foreground">Aguardando Vendas</p>
-                <p className="text-xs text-muted-foreground/60 max-w-[200px]">As barras de vendas aparecerão aqui assim que houver registros no período.</p>
+                <p className="text-sm font-bold text-muted-foreground">Sem vendas registradas neste período</p>
+                <p className="text-xs max-w-[250px]">As barras de desempenho aparecerão aqui assim que houver lançamentos.</p>
               </div>
             </div>
           )}
