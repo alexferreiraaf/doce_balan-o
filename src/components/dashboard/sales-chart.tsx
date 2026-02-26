@@ -12,9 +12,9 @@ interface SalesChartProps {
 }
 
 const COLORS = [
-  '#10b981', // Verde (chart-5) - Receitas Pagas
-  '#f59e0b', // Amarelo (chart-2) - A Receber
-  '#ef4444', // Vermelho (chart-4) - Despesas
+  '#10b981', // Verde - Receitas Pagas
+  '#f59e0b', // Amarelo - A Receber
+  '#ef4444', // Vermelho - Despesas
 ];
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -43,33 +43,35 @@ export function SalesChart({ transactions }: SalesChartProps) {
   }, []);
 
   const chartData = useMemo(() => {
-    // Cálculo robusto garantindo que os valores sejam números
-    const paidIncome = transactions
-      .filter((t) => 
-        t.type === 'income' && 
-        (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
-      )
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    let paidIncome = 0;
+    let pendingIncome = 0;
+    let expenses = 0;
 
-    const pendingIncome = transactions
-      .filter((t) => 
-        t.type === 'income' && 
-        (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado'))
-      )
-      .reduce((sum, t) => {
-        const total = Number(t.amount) || 0;
-        const downPayment = Number(t.downPayment) || 0;
-        return sum + (total - downPayment);
-      }, 0);
-      
-    const expense = transactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    transactions.forEach((t) => {
+      const amount = Number(t.amount) || 0;
+      const downPayment = Number(t.downPayment) || 0;
+
+      if (t.type === 'income') {
+        // Regra unificada: é pago se status for 'paid' OU se for transação antiga não-fiado
+        const isPaid = t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado');
+        
+        if (isPaid) {
+          paidIncome += amount;
+        } else {
+          // Se for fiado/pendente, o que foi pago de entrada entra como Receita Paga
+          // O restante entra como A Receber
+          paidIncome += downPayment;
+          pendingIncome += (amount - downPayment);
+        }
+      } else if (t.type === 'expense') {
+        expenses += amount;
+      }
+    });
 
     const data = [];
     if (paidIncome > 0) data.push({ name: 'Receitas Pagas', value: Number(paidIncome.toFixed(2)) });
     if (pendingIncome > 0) data.push({ name: 'A Receber', value: Number(pendingIncome.toFixed(2)) });
-    if (expense > 0) data.push({ name: 'Despesas', value: Number(expense.toFixed(2)) });
+    if (expenses > 0) data.push({ name: 'Despesas', value: Number(expenses.toFixed(2)) });
 
     return data;
   }, [transactions]);
@@ -77,7 +79,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
   const hasData = chartData.length > 0;
 
   return (
-    <Card className="h-full">
+    <Card className="h-full border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg">
           <PieChartIcon className="w-5 h-5 text-primary" />
@@ -97,8 +99,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
                   outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
-                  stroke="hsl(var(--background))"
-                  strokeWidth={2}
+                  stroke="none"
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -124,8 +125,8 @@ export function SalesChart({ transactions }: SalesChartProps) {
                 <TrendingUp className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Aguardando dados...</p>
-                <p className="text-xs text-muted-foreground/70">As vendas deste mês aparecerão aqui automaticamente.</p>
+                <p className="text-sm font-semibold text-muted-foreground">Sem dados no período</p>
+                <p className="text-xs text-muted-foreground/70">As vendas aparecerão aqui automaticamente.</p>
               </div>
             </div>
           )}

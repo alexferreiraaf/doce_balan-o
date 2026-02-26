@@ -43,7 +43,8 @@ export function ExpenseCategoryChart({ transactions }: ExpenseCategoryChartProps
     
     const grouped = expenses.reduce((acc, t) => {
       const category = t.category || 'Outros';
-      acc[category] = (acc[category] || 0) + (Number(t.amount) || 0);
+      const amount = Number(t.amount) || 0;
+      acc[category] = (acc[category] || 0) + amount;
       return acc;
     }, {} as Record<string, number>);
 
@@ -55,7 +56,7 @@ export function ExpenseCategoryChart({ transactions }: ExpenseCategoryChartProps
   const hasData = chartData.length > 0;
 
   return (
-    <Card className="h-full">
+    <Card className="h-full border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Tag className="w-5 h-5 text-primary" />
@@ -72,10 +73,11 @@ export function ExpenseCategoryChart({ transactions }: ExpenseCategoryChartProps
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  stroke="none"
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -92,7 +94,9 @@ export function ExpenseCategoryChart({ transactions }: ExpenseCategoryChartProps
             </ResponsiveContainer>
           ) : (
             <div className="flex flex-col items-center justify-center text-center space-y-2 opacity-40">
-              <Tag className="w-12 h-12 text-muted-foreground" />
+              <div className="w-20 h-20 rounded-full border-4 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                <Tag className="w-8 h-8 text-muted-foreground" />
+              </div>
               <p className="text-sm font-medium">Sem despesas no período</p>
             </div>
           )}
