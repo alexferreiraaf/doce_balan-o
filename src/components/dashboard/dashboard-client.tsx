@@ -212,8 +212,7 @@ export function DashboardClient() {
                 />
             </div>
 
-            {/* GRÁFICO ÚNICO: RESUMO DE VENDAS */}
-            <div className="grid grid-cols-1 gap-6">
+            <div className="w-full">
                 <SalesBarChart transactions={filteredTransactions} />
             </div>
             
