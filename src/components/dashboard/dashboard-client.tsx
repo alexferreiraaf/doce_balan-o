@@ -1,4 +1,3 @@
-
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Info, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -50,11 +49,11 @@ export function DashboardClient() {
     return transactions.filter((t) => {
       let transactionTime = 0;
       
-      // Tentativa 1: Campo numérico direto (mais rápido)
-      if (t.dateMs && typeof t.dateMs === 'number') {
+      // Prioridade 1: dateMs (numérico)
+      if (typeof t.dateMs === 'number') {
         transactionTime = t.dateMs;
       } 
-      // Tentativa 2: Objeto Timestamp do Firebase (para vendas antigas)
+      // Prioridade 2: timestamp original do Firebase
       else if (t.timestamp) {
         if (typeof t.timestamp.toMillis === 'function') {
           transactionTime = t.timestamp.toMillis();
@@ -70,33 +69,43 @@ export function DashboardClient() {
     });
   }, [transactions, startDate, endDate]);
 
-  const { totalIncome, totalExpense, balance } = useMemo(() => {
-    // Calculamos o que foi PAGO (venda paga OU entrada de venda fiada)
-    const incomePaid = filteredTransactions
-      .filter((t) => 
-        t.type === 'income' && 
-        (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
-      )
-      .reduce((sum, t) => sum + parseToNumber(t.amount), 0);
+  // --- PREPARAÇÃO DOS DADOS (Lógica Gemini) ---
+  const { totals, chartData } = useMemo(() => {
+    let paidIncome = 0;
+    let pendingIncome = 0;
+    let totalExpense = 0;
 
-    const downPayments = filteredTransactions
-      .filter((t) => 
-        t.type === 'income' && 
-        (t.status === 'pending' || (!t.status && t.paymentMethod === 'fiado')) &&
-        t.downPayment && parseToNumber(t.downPayment) > 0
-      )
-      .reduce((sum, t) => sum + parseToNumber(t.downPayment), 0);
+    filteredTransactions.forEach(t => {
+      const amount = parseToNumber(t.amount);
+      const downPayment = parseToNumber(t.downPayment);
 
-    const expense = filteredTransactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + parseToNumber(t.amount), 0);
-      
-    const finalIncome = incomePaid + downPayments;
+      if (t.type === 'income') {
+        // Regra de negócio unificada para o que é Pago ou Fiado
+        const method = String(t.paymentMethod || '').toLowerCase();
+        const status = String(t.status || '').toLowerCase();
+        const isPaid = status === 'paid' || (status !== 'pending' && method !== 'fiado');
+
+        if (isPaid) {
+          paidIncome += amount;
+        } else {
+          paidIncome += downPayment;
+          pendingIncome += (amount - downPayment);
+        }
+      } else {
+        totalExpense += amount;
+      }
+    });
 
     return {
-      totalIncome: finalIncome,
-      totalExpense: expense,
-      balance: finalIncome - expense,
+      totals: {
+        income: paidIncome,
+        expense: totalExpense,
+        balance: paidIncome - totalExpense
+      },
+      chartData: {
+        paid: paidIncome,
+        pending: pendingIncome
+      }
     };
   }, [filteredTransactions]);
 
@@ -167,27 +176,27 @@ export function DashboardClient() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                 <StatCard
                 title="Balanço (Pago)"
-                value={balance}
-                colorClass={balance >= 0 ? 'border-green-500 text-green-700' : 'border-red-500 text-red-700'}
+                value={totals.balance}
+                colorClass={totals.balance >= 0 ? 'border-green-500 text-green-700' : 'border-red-500 text-red-700'}
                 icon={Wallet}
                 />
                 <StatCard
                 title="Entradas (Pagas)"
-                value={totalIncome}
+                value={totals.income}
                 colorClass="border-blue-400 text-blue-700"
                 icon={TrendingUp}
                 />
                 <StatCard
                 title="Saídas (Gastos)"
-                value={totalExpense}
+                value={totals.expense}
                 colorClass="border-red-400 text-red-700"
                 icon={TrendingDown}
                 />
             </div>
 
-            {/* ÁREA DO GRÁFICO - Único e centralizado */}
+            {/* GRÁFICO CENTRALIZADO (Lógica Gemini Adaptada) */}
             <div className="w-full">
-                <SalesBarChart transactions={filteredTransactions} />
+                <SalesBarChart data={chartData} />
             </div>
             
             {showStorefrontIdAlert && (
