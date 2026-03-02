@@ -7,83 +7,77 @@ import { formatCurrency } from '@/lib/utils';
 import { BarChart3, TrendingUp } from 'lucide-react';
 
 interface SalesBarChartProps {
-  data: {
-    paid: number;
-    pending: number;
-  };
+  chartData: any[];
 }
 
-export function SalesBarChart({ data }: SalesBarChartProps) {
+export function SalesBarChart({ chartData }: SalesBarChartProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Prepara os dados exatamente como a lógica sugerida (Gemini)
-  const chartData = (data.paid > 0 || data.pending > 0) ? [
-    {
-      name: 'Resumo de Vendas',
-      'Vendas Pagas': Number(data.paid.toFixed(2)),
-      'A Receber (Fiado)': Number(data.pending.toFixed(2)),
-    }
-  ] : [];
-
   if (!isMounted) {
-    return <div className="h-[300px] w-full bg-muted/10 animate-pulse rounded-lg" />;
+    return <div className="h-[300px] w-full bg-muted/5 animate-pulse rounded-lg" />;
   }
 
   return (
-    <Card className="shadow-md border-primary/10">
-      <CardHeader className="pb-2 bg-muted/20">
+    <Card className="shadow-md border-primary/10 overflow-hidden">
+      <CardHeader className="pb-2 bg-muted/10 border-b">
         <CardTitle className="flex items-center gap-2 text-lg text-primary">
           <BarChart3 className="w-5 h-5" />
           Resumo Financeiro de Vendas
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">
-        <div className="h-[300px] w-full min-h-[300px]">
-          {chartData.length > 0 ? (
+      <CardContent className="pt-6 px-2 sm:px-6">
+        <div className="w-full h-[300px] min-h-[300px]">
+          {chartData && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
-                margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis 
-                  axisLine={false} 
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" opacity={0.5} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={{ stroke: '#666' }} 
                   tickLine={false} 
-                  width={80} 
-                  tickFormatter={(value) => `R$${value}`}
+                  tick={{ fill: '#888', fontSize: 12 }} 
+                />
+                <YAxis 
+                  axisLine={{ stroke: '#666' }} 
+                  tickLine={false} 
+                  width={70} 
+                  tick={{ fill: '#888', fontSize: 11 }}
+                  tickFormatter={(val) => `R$${val}`}
                 />
                 <Tooltip 
                   formatter={(value: number) => formatCurrency(value)}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  contentStyle={{ backgroundColor: '#1f1f1f', border: '1px solid #333', borderRadius: '8px', color: '#fff' }}
                 />
-                <Legend iconType="circle" verticalAlign="top" align="right" height={36}/>
+                <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
                 <Bar 
-                  dataKey="Vendas Pagas" 
+                  dataKey="Pagas" 
                   fill="#10b981" 
-                  radius={[4, 4, 0, 0]}
-                  barSize={60}
+                  radius={[4, 4, 0, 0]} 
+                  barSize={50} 
                   isAnimationActive={false} 
                 />
                 <Bar 
-                  dataKey="A Receber (Fiado)" 
+                  dataKey="Pendentes" 
                   fill="#f59e0b" 
-                  radius={[4, 4, 0, 0]}
-                  barSize={60}
-                  isAnimationActive={false}
+                  radius={[4, 4, 0, 0]} 
+                  barSize={50} 
+                  isAnimationActive={false} 
                 />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-40">
-              <TrendingUp className="w-16 h-16 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-30">
+              <TrendingUp className="w-12 h-12 text-muted-foreground" />
               <div className="space-y-1">
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Aguardando Lançamentos</p>
-                <p className="text-xs">As barras aparecerão aqui assim que houver vendas no mês.</p>
+                <p className="text-sm font-bold uppercase">Sem vendas registradas</p>
+                <p className="text-xs">Navegue pelos meses para ver seu desempenho.</p>
               </div>
             </div>
           )}
