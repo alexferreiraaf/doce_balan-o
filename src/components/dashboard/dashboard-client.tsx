@@ -20,6 +20,8 @@ import { AddCustomerDialog } from './add-customer-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { parseToNumber } from '@/lib/utils';
+import { SalesChart } from './sales-chart';
+import { ExpenseCategoryChart } from './expense-category-chart';
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -63,7 +65,7 @@ export function DashboardClient() {
       const downPayment = parseToNumber(t.downPayment);
       
       if (t.type === 'income') {
-        const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.status !== 'pending' && t.paymentMethod !== null);
+        const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.paymentMethod !== null);
         if (isPaid) { 
           paidVal += amount; 
         } else { 
@@ -124,6 +126,11 @@ export function DashboardClient() {
                 <StatCard title="Balanço (Pago)" value={totals.balance} colorClass={totals.balance >= 0 ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'} icon={Wallet} />
                 <StatCard title="Entradas (Pagas)" value={totals.income} colorClass="border-blue-500 text-blue-600" icon={TrendingUp} />
                 <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SalesChart transactions={filteredTransactions} />
+                <ExpenseCategoryChart transactions={filteredTransactions} />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
