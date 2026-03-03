@@ -42,6 +42,7 @@ export function DashboardClient() {
     const toTime = endDate.getTime() + 86399999;
     
     return transactions.filter((t) => {
+      // Filtro inteligente: busca por dateMs ou tenta converter o timestamp do Firebase
       const transactionTime = t.dateMs || (t.timestamp?.toMillis ? t.timestamp.toMillis() : new Date(t.timestamp as any).getTime());
       return transactionTime >= fromTime && transactionTime <= toTime;
     });
@@ -57,10 +58,13 @@ export function DashboardClient() {
       const downPayment = parseToNumber(t.downPayment);
       
       if (t.type === 'income') {
+        // Um pedido é considerado pago se o status for 'paid' OU se for uma venda manual (não fiado)
         const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.status !== 'pending' && t.paymentMethod !== null);
+        
         if (isPaid) { 
           paidVal += amount; 
         } else { 
+          // Se for fiado/pendente, a entrada já é lucro pago, o resto é pendente
           paidVal += downPayment; 
           pendingVal += (amount - downPayment); 
         }
@@ -72,7 +76,6 @@ export function DashboardClient() {
     return { income: paidVal, expense: expenseVal, balance: paidVal - expenseVal, pending: pendingVal };
   }, [filteredTransactions]);
 
-  // Preparação dos dados para o gráfico de barras
   const chartData = useMemo(() => {
     if (!startDate) return [];
     const monthName = format(startDate, 'MMMM', { locale: ptBR });
@@ -130,7 +133,6 @@ export function DashboardClient() {
                 <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
             </div>
 
-            {/* Gráfico de Barras com dados reais */}
             <SalesBarChart chartData={chartData} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
