@@ -15,7 +15,7 @@ export function formatCurrency(value: number) {
 
 /**
  * Converte qualquer valor para um número válido de forma extremamente robusta.
- * Lida com R$, vírgulas, pontos e textos vindo do banco de dados.
+ * Garante que NUNCA retorne NaN para não quebrar os gráficos.
  */
 export function parseToNumber(value: any): number {
   if (value === null || value === undefined) return 0;
@@ -25,21 +25,20 @@ export function parseToNumber(value: any): number {
     let str = String(value).trim();
     if (!str || str === "[object Object]") return 0;
 
-    // Remove R$, espaços e qualquer caractere que não seja número, ponto ou vírgula
+    // Remove R$, espaços e caracteres não numéricos, exceto separadores
     str = str.replace(/[^\d,.-]/g, '');
     
-    // Lógica para formato brasileiro (1.234,56) vs americano (1,234.56)
     const lastComma = str.lastIndexOf(',');
     const lastDot = str.lastIndexOf('.');
     
     if (lastComma > lastDot) {
-      // Formato BR: remove o ponto de milhar e troca a vírgula decimal por ponto
+      // Formato BR: 1.234,56
       str = str.replace(/\./g, '').replace(',', '.');
     } else if (lastDot > lastComma && lastComma !== -1) {
-      // Formato US: apenas remove as vírgulas
+      // Formato US: 1,234.56
       str = str.replace(/,/g, '');
     } else if (lastComma !== -1) {
-      // Apenas vírgula: troca por ponto
+      // Apenas vírgula: 1234,56
       str = str.replace(',', '.');
     }
     

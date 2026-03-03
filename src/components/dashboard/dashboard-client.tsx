@@ -30,7 +30,6 @@ export function DashboardClient() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
-  // Inicialização de data no cliente para evitar erros de hidratação
   useEffect(() => {
     const today = new Date();
     setStartDate(startOfMonth(today));
@@ -41,12 +40,10 @@ export function DashboardClient() {
     if (!startDate || !endDate || !transactions) return [];
     
     const fromTime = startDate.getTime();
-    const toTime = endDate.getTime() + 86399999; // Final do dia
+    const toTime = endDate.getTime() + 86399999;
     
     return transactions.filter((t) => {
       let transactionTime = 0;
-      
-      // Busca a data de forma agressiva em qualquer campo disponível
       if (t.dateMs && typeof t.dateMs === 'number') {
         transactionTime = t.dateMs;
       } else if (t.timestamp && typeof t.timestamp.toMillis === 'function') {
@@ -54,7 +51,6 @@ export function DashboardClient() {
       } else if (t.timestamp) {
         transactionTime = new Date(t.timestamp as any).getTime();
       }
-      
       return transactionTime >= fromTime && transactionTime <= toTime;
     });
   }, [transactions, startDate, endDate]);
@@ -69,13 +65,10 @@ export function DashboardClient() {
       const downPayment = parseToNumber(t.downPayment);
       
       if (t.type === 'income') {
-        // Regra: Pago se status for 'paid' OU se for venda antiga sem 'fiado'
         const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.status !== 'pending' && t.paymentMethod !== null);
-        
         if (isPaid) { 
           paidVal += amount; 
         } else { 
-          // Para fiado: a entrada é paga, o resto é pendente
           paidVal += downPayment; 
           pendingVal += (amount - downPayment); 
         }
@@ -98,11 +91,15 @@ export function DashboardClient() {
     const monthName = format(startDate, 'MMMM', { locale: ptBR });
     const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
     
+    // Adicionada segurança extra contra NaN antes do toFixed
+    const incomeSafe = isNaN(totals.income) ? 0 : totals.income;
+    const pendingSafe = isNaN(totals.pending) ? 0 : totals.pending;
+
     return [
       {
         name: capitalizedMonth,
-        Pagas: Number(totals.income.toFixed(2)),
-        Pendentes: Number(totals.pending.toFixed(2)),
+        Pagas: Number(incomeSafe.toFixed(2)),
+        Pendentes: Number(pendingSafe.toFixed(2)),
       }
     ];
   }, [totals, startDate]);
@@ -152,7 +149,6 @@ export function DashboardClient() {
                 <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
             </div>
 
-            {/* O Gráfico agora recebe dados protegidos e tem altura garantida */}
             <SalesBarChart chartData={chartData} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

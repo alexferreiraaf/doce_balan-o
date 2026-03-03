@@ -21,13 +21,14 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
     setIsMounted(true);
   }, []);
 
+  // Essencial para evitar erros de hidratação no Next.js
   if (!isMounted) {
-    return <div className="w-full h-[350px] bg-muted/10 animate-pulse rounded-lg" />;
+    return <div className="w-full h-[350px] bg-muted/5 animate-pulse rounded-lg" />;
   }
 
-  // Proteção contra crash: verifica se chartData existe e tem o primeiro item com segurança
-  const hasValues = chartData && chartData.length > 0 && 
-    ((chartData[0]?.Pagas || 0) > 0 || (chartData[0]?.Pendentes || 0) > 0);
+  // Verifica se existem dados reais para exibir
+  const hasData = chartData && chartData.length > 0 && 
+    (chartData.some(d => (d.Pagas || 0) > 0 || (d.Pendentes || 0) > 0));
 
   return (
     <Card className="shadow-md border-primary/10 overflow-hidden my-6">
@@ -38,15 +39,14 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        {/* div com altura fixa garantida para evitar gráfico invisível */}
-        <div className="w-full h-[350px] min-h-[350px] flex items-center justify-center bg-card">
-          {hasValues ? (
+        <div className="w-full h-[350px] min-h-[350px] flex items-center justify-center">
+          {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
                 margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.2} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                 <XAxis 
                   dataKey="name" 
                   stroke="#888888"
@@ -78,7 +78,7 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                   name="Vendas Recebidas" 
                   fill="#10b981" 
                   radius={[4, 4, 0, 0]} 
-                  isAnimationActive={false} 
+                  isAnimationActive={false} // Desativado para máxima estabilidade
                 />
                 <Bar 
                   dataKey="Pendentes" 
@@ -92,8 +92,8 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
           ) : (
             <div className="flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg bg-muted/5 w-full h-full p-8">
               <BarChart3 className="w-12 h-12 mb-2 opacity-20 text-primary" />
-              <p className="font-bold text-center">Nenhuma venda encontrada para este período</p>
-              <p className="text-xs text-center px-4">As barras coloridas aparecerão assim que você registrar vendas.</p>
+              <p className="font-bold text-center">Nenhuma venda encontrada para este mês</p>
+              <p className="text-xs text-center px-4">As barras coloridas aparecerão assim que você registrar vendas no período selecionado.</p>
             </div>
           )}
         </div>
