@@ -37,7 +37,7 @@ export function DashboardClient() {
   }, []);
 
   const filteredTransactions = useMemo(() => {
-    if (!startDate || !endDate || !transactions) return [];
+    if (!startDate || !endDate || !Array.isArray(transactions)) return [];
     
     const fromTime = startDate.getTime();
     const toTime = endDate.getTime() + 86399999;
@@ -48,8 +48,8 @@ export function DashboardClient() {
         transactionTime = t.dateMs;
       } else if (t.timestamp && typeof t.timestamp.toMillis === 'function') {
         transactionTime = t.timestamp.toMillis();
-      } else if (t.timestamp) {
-        transactionTime = new Date(t.timestamp as any).getTime();
+      } else {
+        transactionTime = new Date(t.dateMs || 0).getTime();
       }
       return transactionTime >= fromTime && transactionTime <= toTime;
     });
@@ -91,15 +91,15 @@ export function DashboardClient() {
     const monthName = format(startDate, 'MMMM', { locale: ptBR });
     const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
     
-    // Adicionada segurança extra contra NaN antes do toFixed
-    const incomeSafe = isNaN(totals.income) ? 0 : totals.income;
-    const pendingSafe = isNaN(totals.pending) ? 0 : totals.pending;
+    // Garante valores numéricos limpos para o gráfico
+    const incomeSafe = parseToNumber(totals.income);
+    const pendingSafe = parseToNumber(totals.pending);
 
     return [
       {
         name: capitalizedMonth,
-        Pagas: Number(incomeSafe.toFixed(2)),
-        Pendentes: Number(pendingSafe.toFixed(2)),
+        Pagas: incomeSafe,
+        Pendentes: pendingSafe,
       }
     ];
   }, [totals, startDate]);

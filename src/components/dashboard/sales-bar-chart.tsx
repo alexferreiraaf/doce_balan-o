@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3 } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, parseToNumber } from '@/lib/utils';
 
 interface SalesBarChartProps {
   chartData: {
@@ -21,14 +21,13 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
     setIsMounted(true);
   }, []);
 
-  // Essencial para evitar erros de hidratação no Next.js
   if (!isMounted) {
-    return <div className="w-full h-[350px] bg-muted/5 animate-pulse rounded-lg" />;
+    return <div className="w-full h-[350px] bg-muted/10 animate-pulse rounded-lg" />;
   }
 
-  // Verifica se existem dados reais para exibir
-  const hasData = chartData && chartData.length > 0 && 
-    (chartData.some(d => (d.Pagas || 0) > 0 || (d.Pendentes || 0) > 0));
+  // Verifica se existem dados válidos para exibir
+  const hasData = Array.isArray(chartData) && chartData.length > 0 && 
+    chartData.some(d => parseToNumber(d.Pagas) > 0 || parseToNumber(d.Pendentes) > 0);
 
   return (
     <Card className="shadow-md border-primary/10 overflow-hidden my-6">
@@ -39,7 +38,7 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="w-full h-[350px] min-h-[350px] flex items-center justify-center">
+        <div className="w-full h-[350px] flex items-center justify-center bg-card rounded-md">
           {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
@@ -49,14 +48,14 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#888888"
-                  fontSize={14}
-                  fontWeight="bold"
+                  stroke="currentColor"
+                  fontSize={12}
                   tickLine={false}
                   axisLine={false}
+                  dy={10}
                 />
                 <YAxis 
-                  stroke="#888888"
+                  stroke="currentColor"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
@@ -70,7 +69,7 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                     borderRadius: '8px',
                     color: 'hsl(var(--foreground))'
                   }}
-                  formatter={(value: any) => [formatCurrency(Number(value) || 0), ""]}
+                  formatter={(value: any) => [formatCurrency(parseToNumber(value)), ""]}
                 />
                 <Legend verticalAlign="top" height={36} iconType="circle" />
                 <Bar 
@@ -78,7 +77,7 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                   name="Vendas Recebidas" 
                   fill="#10b981" 
                   radius={[4, 4, 0, 0]} 
-                  isAnimationActive={false} // Desativado para máxima estabilidade
+                  isAnimationActive={false}
                 />
                 <Bar 
                   dataKey="Pendentes" 
@@ -90,10 +89,10 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg bg-muted/5 w-full h-full p-8">
-              <BarChart3 className="w-12 h-12 mb-2 opacity-20 text-primary" />
-              <p className="font-bold text-center">Nenhuma venda encontrada para este mês</p>
-              <p className="text-xs text-center px-4">As barras coloridas aparecerão assim que você registrar vendas no período selecionado.</p>
+            <div className="flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
+              <BarChart3 className="w-12 h-12 mb-3 opacity-20 text-primary" />
+              <p className="font-bold">Nenhuma venda encontrada para este mês</p>
+              <p className="text-xs max-w-[250px] mt-1">Seus lançamentos de entrada aparecerão aqui como barras coloridas assim que registrados.</p>
             </div>
           )}
         </div>
