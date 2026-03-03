@@ -28,18 +28,18 @@ export function parseToNumber(value: any): number {
     // Remove R$, espaços e qualquer caractere que não seja número, ponto ou vírgula
     str = str.replace(/[^\d,.-]/g, '');
     
-    // Tratamento de formato brasileiro (1.234,56)
-    if (str.includes(',') && str.includes('.')) {
-        if (str.indexOf('.') < str.indexOf(',')) {
-            // Caso 1.234,56 -> 1234.56
-            str = str.replace(/\./g, '').replace(',', '.');
-        } else {
-            // Caso 1,234.56 -> 1234.56
-            str = str.replace(/,/g, '');
-        }
-    } else if (str.includes(',')) {
-        // Caso 25,50 -> 25.50
-        str = str.replace(',', '.');
+    // Se houver vírgula e ponto (ex: 1.234,56), remove o ponto e troca a vírgula por ponto
+    const lastComma = str.lastIndexOf(',');
+    const lastDot = str.lastIndexOf('.');
+    
+    if (lastComma > lastDot) {
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else if (lastDot > lastComma && lastComma !== -1) {
+      // Formato americano com vírgula 1,234.56
+      str = str.replace(/,/g, '');
+    } else if (lastComma !== -1) {
+      // Apenas vírgula como separador decimal
+      str = str.replace(',', '.');
     }
     
     const parsed = parseFloat(str);

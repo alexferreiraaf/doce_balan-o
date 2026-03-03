@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -42,7 +42,6 @@ export function DashboardClient() {
     const toTime = endDate.getTime() + 86399999;
     
     return transactions.filter((t) => {
-      // Filtro robusto para encontrar datas em diversos formatos (dateMs ou timestamp Firebase)
       let transactionTime = 0;
       if (t.dateMs && typeof t.dateMs === 'number') {
         transactionTime = t.dateMs;
@@ -65,7 +64,6 @@ export function DashboardClient() {
       const downPayment = parseToNumber(t.downPayment);
       
       if (t.type === 'income') {
-        // Lógica de pagamento unificada
         const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.status !== 'pending' && t.paymentMethod !== null);
         
         if (isPaid) { 
@@ -79,7 +77,12 @@ export function DashboardClient() {
       }
     });
 
-    return { income: paidVal, expense: expenseVal, balance: paidVal - expenseVal, pending: pendingVal };
+    return { 
+      income: paidVal, 
+      expense: expenseVal, 
+      balance: paidVal - expenseVal, 
+      pending: pendingVal 
+    };
   }, [filteredTransactions]);
 
   const chartData = useMemo(() => {
@@ -90,8 +93,8 @@ export function DashboardClient() {
     return [
       {
         name: capitalizedMonth,
-        Pagas: totals.income,
-        Pendentes: totals.pending,
+        Pagas: Number(totals.income.toFixed(2)),
+        Pendentes: Number(totals.pending.toFixed(2)),
       }
     ];
   }, [totals, startDate]);

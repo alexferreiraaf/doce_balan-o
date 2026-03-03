@@ -21,16 +21,13 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
     setIsMounted(true);
   }, []);
 
-  // Previne erros de hidratação
   if (!isMounted) {
     return <div className="w-full h-[350px] bg-muted/10 animate-pulse rounded-lg" />;
   }
 
-  // Verifica se temos dados reais para exibir (totais > 0)
-  const hasData = Array.isArray(chartData) && 
-                  chartData.length > 0 && 
-                  chartData[0] && 
-                  (Number(chartData[0].Pagas || 0) > 0 || Number(chartData[0].Pendentes || 0) > 0);
+  // Verifica se há dados reais (qualquer valor > 0)
+  const hasValues = chartData && chartData.length > 0 && 
+    (chartData[0].Pagas > 0 || chartData[0].Pendentes > 0);
 
   return (
     <Card className="shadow-md border-primary/10 overflow-hidden my-6">
@@ -41,25 +38,24 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        {/* Forçamos uma altura fixa para evitar que o ResponsiveContainer colapse para 0 */}
-        <div className="w-full h-[350px] min-h-[350px] relative">
-          {hasData ? (
+        <div className="w-full h-[350px] min-h-[350px] flex items-center justify-center">
+          {hasValues ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
                 margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.1)" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.2} />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#888888"
+                  stroke="currentColor"
                   fontSize={14}
                   fontWeight="bold"
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis 
-                  stroke="#888888"
+                  stroke="currentColor"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
@@ -67,7 +63,12 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px' }}
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))', 
+                    borderRadius: '8px',
+                    color: 'hsl(var(--foreground))'
+                  }}
                   formatter={(value: any) => [formatCurrency(Number(value) || 0), ""]}
                 />
                 <Legend verticalAlign="top" height={36} iconType="circle" />
@@ -83,15 +84,15 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                   name="Vendas no Fiado" 
                   fill="#f59e0b" 
                   radius={[4, 4, 0, 0]} 
-                  isAnimationActive={false}
+                  isAnimationActive={false} 
                 />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg bg-muted/5">
+            <div className="flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg bg-muted/5 w-full h-full">
               <BarChart3 className="w-12 h-12 mb-2 opacity-20 text-primary" />
-              <p className="font-bold">Aguardando lançamentos...</p>
-              <p className="text-xs">As barras aparecerão quando houver vendas no período selecionado.</p>
+              <p className="font-bold text-center">Nenhuma venda encontrada para este mês</p>
+              <p className="text-xs text-center px-4">As barras coloridas aparecerão assim que você registrar vendas.</p>
             </div>
           )}
         </div>
