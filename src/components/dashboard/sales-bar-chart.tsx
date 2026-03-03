@@ -21,27 +21,16 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) return <div className="h-[350px] w-full bg-muted/10 animate-pulse rounded-lg" />;
+  // Previne erros de hidratação e garante que o gráfico só renderize no cliente
+  if (!isMounted) {
+    return <div className="w-full h-[350px] bg-muted/10 animate-pulse rounded-lg" />;
+  }
 
-  // Verificação de segurança para evitar que a tela fique branca (crash)
-  const hasData = Array.isArray(chartData) && chartData.length > 0 && 
-                  chartData[0] && (chartData[0].Pagas > 0 || chartData[0].Pendentes > 0);
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border rounded shadow-lg text-black">
-          <p className="font-bold border-b mb-2">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.name}: {formatCurrency(entry.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  // Verifica se temos dados válidos para exibir
+  const hasData = Array.isArray(chartData) && 
+                  chartData.length > 0 && 
+                  chartData[0] && 
+                  (Number(chartData[0].Pagas || 0) > 0 || Number(chartData[0].Pendentes || 0) > 0);
 
   return (
     <Card className="shadow-md border-primary/10 overflow-hidden my-6">
@@ -52,8 +41,8 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        {/* Altura fixa de 350px para garantir visibilidade */}
-        <div className="w-full h-[350px] min-h-[350px]">
+        {/* Forçamos uma altura fixa e overflow-hidden para evitar colapsos de layout */}
+        <div className="w-full h-[350px] min-h-[350px] relative overflow-hidden">
           {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
@@ -75,18 +64,22 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                   axisLine={false}
                   tickFormatter={(value) => `R$${value}`}
                 />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="top" height={36} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px', color: '#000' }}
+                  formatter={(value: any) => [formatCurrency(Number(value) || 0), ""]}
+                />
+                <Legend verticalAlign="top" height={36} iconType="circle" />
                 <Bar 
                   dataKey="Pagas" 
-                  name="Vendas Pagas" 
+                  name="Vendas Recebidas" 
                   fill="#10b981" 
                   radius={[4, 4, 0, 0]} 
                   isAnimationActive={false}
                 />
                 <Bar 
                   dataKey="Pendentes" 
-                  name="A Receber" 
+                  name="Vendas a Receber" 
                   fill="#f59e0b" 
                   radius={[4, 4, 0, 0]} 
                   isAnimationActive={false}
@@ -95,9 +88,9 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
             </ResponsiveContainer>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg bg-muted/5">
-              <BarChart3 className="w-12 h-12 mb-2 opacity-20" />
-              <p className="font-medium">Nenhuma venda registrada para este mês.</p>
-              <p className="text-xs">O gráfico aparecerá assim que houver lançamentos.</p>
+              <BarChart3 className="w-12 h-12 mb-2 opacity-20 text-primary" />
+              <p className="font-bold">Sem vendas neste mês</p>
+              <p className="text-xs">As barras aparecerão quando houver lançamentos em Fevereiro.</p>
             </div>
           )}
         </div>

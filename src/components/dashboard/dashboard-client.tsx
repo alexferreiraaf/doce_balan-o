@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -42,8 +42,15 @@ export function DashboardClient() {
     const toTime = endDate.getTime() + 86399999;
     
     return transactions.filter((t) => {
-      // Filtro inteligente: busca por dateMs ou tenta converter o timestamp do Firebase
-      const transactionTime = t.dateMs || (t.timestamp?.toMillis ? t.timestamp.toMillis() : new Date(t.timestamp as any).getTime());
+      // Filtro robusto para encontrar datas em diversos formatos (dateMs ou timestamp Firebase)
+      let transactionTime = 0;
+      if (t.dateMs && typeof t.dateMs === 'number') {
+        transactionTime = t.dateMs;
+      } else if (t.timestamp && typeof t.timestamp.toMillis === 'function') {
+        transactionTime = t.timestamp.toMillis();
+      } else if (t.timestamp) {
+        transactionTime = new Date(t.timestamp as any).getTime();
+      }
       return transactionTime >= fromTime && transactionTime <= toTime;
     });
   }, [transactions, startDate, endDate]);
@@ -58,13 +65,12 @@ export function DashboardClient() {
       const downPayment = parseToNumber(t.downPayment);
       
       if (t.type === 'income') {
-        // Um pedido é considerado pago se o status for 'paid' OU se for uma venda manual (não fiado)
+        // Lógica de pagamento unificada
         const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.status !== 'pending' && t.paymentMethod !== null);
         
         if (isPaid) { 
           paidVal += amount; 
         } else { 
-          // Se for fiado/pendente, a entrada já é lucro pago, o resto é pendente
           paidVal += downPayment; 
           pendingVal += (amount - downPayment); 
         }
@@ -79,9 +85,11 @@ export function DashboardClient() {
   const chartData = useMemo(() => {
     if (!startDate) return [];
     const monthName = format(startDate, 'MMMM', { locale: ptBR });
+    const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    
     return [
       {
-        name: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+        name: capitalizedMonth,
         Pagas: totals.income,
         Pendentes: totals.pending,
       }
