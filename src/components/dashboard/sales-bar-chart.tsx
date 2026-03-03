@@ -21,12 +21,12 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
     setIsMounted(true);
   }, []);
 
-  // Previne erros de hidratação e garante que o gráfico só renderize no cliente
+  // Previne erros de hidratação
   if (!isMounted) {
     return <div className="w-full h-[350px] bg-muted/10 animate-pulse rounded-lg" />;
   }
 
-  // Verifica se temos dados válidos para exibir
+  // Verifica se temos dados reais para exibir (totais > 0)
   const hasData = Array.isArray(chartData) && 
                   chartData.length > 0 && 
                   chartData[0] && 
@@ -41,24 +41,25 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        {/* Forçamos uma altura fixa e overflow-hidden para evitar colapsos de layout */}
-        <div className="w-full h-[350px] min-h-[350px] relative overflow-hidden">
+        {/* Forçamos uma altura fixa para evitar que o ResponsiveContainer colapse para 0 */}
+        <div className="w-full h-[350px] min-h-[350px] relative">
           {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
-                margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.1)" />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#6b7280"
-                  fontSize={12}
+                  stroke="#888888"
+                  fontSize={14}
+                  fontWeight="bold"
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis 
-                  stroke="#6b7280"
+                  stroke="#888888"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
@@ -66,7 +67,7 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                 />
                 <Tooltip 
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px', color: '#000' }}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px' }}
                   formatter={(value: any) => [formatCurrency(Number(value) || 0), ""]}
                 />
                 <Legend verticalAlign="top" height={36} iconType="circle" />
@@ -75,11 +76,11 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                   name="Vendas Recebidas" 
                   fill="#10b981" 
                   radius={[4, 4, 0, 0]} 
-                  isAnimationActive={false}
+                  isAnimationActive={false} 
                 />
                 <Bar 
                   dataKey="Pendentes" 
-                  name="Vendas a Receber" 
+                  name="Vendas no Fiado" 
                   fill="#f59e0b" 
                   radius={[4, 4, 0, 0]} 
                   isAnimationActive={false}
@@ -89,8 +90,8 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg bg-muted/5">
               <BarChart3 className="w-12 h-12 mb-2 opacity-20 text-primary" />
-              <p className="font-bold">Sem vendas neste mês</p>
-              <p className="text-xs">As barras aparecerão quando houver lançamentos em Fevereiro.</p>
+              <p className="font-bold">Aguardando lançamentos...</p>
+              <p className="text-xs">As barras aparecerão quando houver vendas no período selecionado.</p>
             </div>
           )}
         </div>
