@@ -21,10 +21,18 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) return null;
+  // Evita erro de hidratação no Next.js
+  if (!isMounted) {
+    return (
+      <Card className="w-full shadow-md border-primary/10">
+        <div style={{ height: '350px' }} className="w-full bg-muted/10 animate-pulse" />
+      </Card>
+    );
+  }
 
+  // Verifica se há dados reais para desenhar as barras
   const hasData = Array.isArray(chartData) && chartData.length > 0 && 
-    chartData.some(d => parseToNumber(d.Pagas) > 0 || parseToNumber(d.Pendentes) > 0);
+    (parseToNumber(chartData[0]?.Pagas) > 0 || parseToNumber(chartData[0]?.Pendentes) > 0);
 
   return (
     <Card className="w-full shadow-md border-primary/10">
@@ -35,7 +43,7 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="w-full bg-background/50 rounded-lg p-4" style={{ height: '350px', minHeight: '350px' }}>
+        <div style={{ width: '100%', height: '350px', minHeight: '350px' }}>
           {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -67,7 +75,6 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                   fill="#10b981" 
                   radius={[4, 4, 0, 0]} 
                   barSize={60}
-                  isAnimationActive={true}
                 />
                 <Bar 
                   dataKey="Pendentes" 
@@ -75,15 +82,14 @@ export function SalesBarChart({ chartData }: SalesBarChartProps) {
                   fill="#f59e0b" 
                   radius={[4, 4, 0, 0]} 
                   barSize={60}
-                  isAnimationActive={true} 
                 />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2">
+            <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg space-y-2">
               <BarChart3 className="w-12 h-12 opacity-20" />
-              <p className="font-medium text-sm">Nenhuma venda registrada para este mês.</p>
-              <p className="text-xs">As barras aparecerão quando você realizar uma venda.</p>
+              <p className="font-medium text-sm">Nenhuma venda registrada para este período.</p>
+              <p className="text-xs">As barras aparecerão assim que você realizar uma venda.</p>
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { addMonths, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
+import { addMonths, subMonths, format, startOfMonth, endOfMonth, isDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -86,7 +86,7 @@ export function DashboardClient() {
   }, [filteredTransactions]);
 
   const chartData = useMemo(() => {
-    if (!startDate) return [];
+    if (!startDate || !isDate(startDate)) return [];
     const monthName = format(startDate, 'MMMM', { locale: ptBR });
     return [
       {
