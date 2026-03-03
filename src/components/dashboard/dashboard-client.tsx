@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { addMonths, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
@@ -44,7 +45,7 @@ export function DashboardClient() {
     return transactions.filter((t) => {
       let transactionTime = t.dateMs;
       
-      // Fallback ultra-robusto para datas
+      // Fallback robusto para encontrar vendas antigas que não tem dateMs
       if (!transactionTime) {
         if (t.timestamp) {
           if (typeof t.timestamp === 'object' && t.timestamp.toMillis) {
@@ -59,7 +60,7 @@ export function DashboardClient() {
       
       if (!transactionTime || isNaN(transactionTime)) return false;
       
-      return transactionTime >= fromTime && transactionTime <= (toTime + 86399999); // Inclui o dia todo do fim
+      return transactionTime >= fromTime && transactionTime <= (toTime + 86399999);
     });
   }, [transactions, startDate, endDate]);
 
@@ -85,9 +86,10 @@ export function DashboardClient() {
       }
     });
 
+    // Lógica sugerida pelo usuário: Preparação de dados simplificada
     const dataForChart = [
       {
-        name: startDate ? format(startDate, 'MMMM', { locale: undefined }) : 'Mês',
+        name: startDate ? format(startDate, 'MMMM', { locale: ptBR }) : 'Mês',
         'Pagas': Number(paidVal.toFixed(2)),
         'Pendentes': Number(pendingVal.toFixed(2)),
       }
@@ -162,6 +164,7 @@ export function DashboardClient() {
                 <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
             </div>
 
+            {/* O Gráfico agora recebe os dados já calculados e tem altura fixa */}
             <SalesBarChart chartData={chartDataArray} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

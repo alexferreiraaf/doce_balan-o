@@ -15,31 +15,30 @@ export function formatCurrency(value: number) {
 
 /**
  * Converte qualquer valor para um número válido de forma extremamente robusta.
- * Lida com R$, vírgulas, pontos, textos e formatos do Firebase.
+ * Lida com R$, vírgulas, pontos e textos vindos do banco de dados.
  */
 export function parseToNumber(value: any): number {
   if (value === null || value === undefined) return 0;
   if (typeof value === 'number') return isNaN(value) ? 0 : value;
   
   try {
-    if (typeof value === 'object' && value.seconds) {
-        return value.seconds;
-    }
-
     let str = String(value).trim();
     if (!str || str === "[object Object]") return 0;
 
-    // Remove R$, espaços e qualquer caractere que não seja número, ponto, vírgula ou sinal de menos
+    // Remove R$, espaços e qualquer caractere que não seja número, ponto ou vírgula
     str = str.replace(/[^\d,.-]/g, '');
     
     // Tratamento de formato brasileiro (1.234,56)
     if (str.includes(',') && str.includes('.')) {
         if (str.indexOf('.') < str.indexOf(',')) {
+            // Caso 1.234,56 -> 1234.56
             str = str.replace(/\./g, '').replace(',', '.');
         } else {
+            // Caso 1,234.56 -> 1234.56
             str = str.replace(/,/g, '');
         }
     } else if (str.includes(',')) {
+        // Caso 25,50 -> 25.50
         str = str.replace(',', '.');
     }
     
