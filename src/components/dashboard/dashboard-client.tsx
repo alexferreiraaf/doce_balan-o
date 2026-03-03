@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { addMonths, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -38,33 +38,15 @@ export function DashboardClient() {
 
   const filteredTransactions = useMemo(() => {
     if (!startDate || !endDate || !transactions) return [];
-    
     const fromTime = startDate.getTime();
     const toTime = endDate.getTime();
-
     return transactions.filter((t) => {
-      let transactionTime = t.dateMs;
-      
-      // Fallback robusto para encontrar vendas antigas que não tem dateMs
-      if (!transactionTime) {
-        if (t.timestamp) {
-          if (typeof t.timestamp === 'object' && t.timestamp.toMillis) {
-            transactionTime = t.timestamp.toMillis();
-          } else if (t.timestamp.seconds) {
-            transactionTime = t.timestamp.seconds * 1000;
-          } else {
-            transactionTime = new Date(t.timestamp).getTime();
-          }
-        }
-      }
-      
-      if (!transactionTime || isNaN(transactionTime)) return false;
-      
+      const transactionTime = t.dateMs || (t.timestamp ? (t.timestamp.toMillis ? t.timestamp.toMillis() : new Date(t.timestamp).getTime()) : 0);
       return transactionTime >= fromTime && transactionTime <= (toTime + 86399999);
     });
   }, [transactions, startDate, endDate]);
 
-  const { totals, chartDataArray } = useMemo(() => {
+  const totals = useMemo(() => {
     let paidVal = 0;
     let pendingVal = 0;
     let expenseVal = 0;
@@ -72,38 +54,15 @@ export function DashboardClient() {
     filteredTransactions.forEach(t => {
       const amount = parseToNumber(t.amount);
       const downPayment = parseToNumber(t.downPayment);
-
       if (t.type === 'income') {
         const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.status !== 'pending');
-        if (isPaid) {
-          paidVal += amount;
-        } else {
-          paidVal += downPayment;
-          pendingVal += (amount - downPayment);
-        }
-      } else {
-        expenseVal += amount;
-      }
+        if (isPaid) { paidVal += amount; } 
+        else { paidVal += downPayment; pendingVal += (amount - downPayment); }
+      } else { expenseVal += amount; }
     });
 
-    // Lógica sugerida pelo usuário: Preparação de dados simplificada
-    const dataForChart = [
-      {
-        name: startDate ? format(startDate, 'MMMM', { locale: ptBR }) : 'Mês',
-        'Pagas': Number(paidVal.toFixed(2)),
-        'Pendentes': Number(pendingVal.toFixed(2)),
-      }
-    ];
-
-    return {
-      totals: {
-        income: paidVal,
-        expense: expenseVal,
-        balance: paidVal - expenseVal
-      },
-      chartDataArray: dataForChart
-    };
-  }, [filteredTransactions, startDate]);
+    return { income: paidVal, expense: expenseVal, balance: paidVal - expenseVal, pending: pendingVal };
+  }, [filteredTransactions]);
 
   const handleMonthChange = (direction: 'next' | 'prev') => {
     const operation = direction === 'next' ? addMonths : subMonths;
@@ -113,9 +72,7 @@ export function DashboardClient() {
     setEndDate(endOfMonth(next));
   };
 
-  if (loading || !startDate || !endDate) {
-    return <Loading />;
-  }
+  if (loading || !startDate || !endDate) return <Loading />;
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -131,25 +88,13 @@ export function DashboardClient() {
             <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm w-fit ml-auto">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-[120px] justify-start text-xs">
+                  <Button variant="outline" size="sm" className="w-[120px] justify-start text-xs font-bold">
                     <CalendarIcon className="mr-2 h-3 w-3" />
-                    {format(startDate, "dd/MM/yy")}
+                    {format(startDate, "MMMM / yyyy", { locale: ptBR })}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
                   <Calendar mode="single" selected={startDate} onSelect={(d) => d && setStartDate(startOfMonth(d))} />
-                </PopoverContent>
-              </Popover>
-              <span className="text-muted-foreground">-</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-[120px] justify-start text-xs">
-                    <CalendarIcon className="mr-2 h-3 w-3" />
-                    {format(endDate, "dd/MM/yy")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(endOfMonth(d))} />
                 </PopoverContent>
               </Popover>
               <div className="flex items-center gap-1 ml-2 border-l pl-2">
@@ -164,8 +109,8 @@ export function DashboardClient() {
                 <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
             </div>
 
-            {/* O Gráfico agora recebe os dados já calculados e tem altura fixa */}
-            <SalesBarChart chartData={chartDataArray} />
+            {/* CHAMADA DO GRÁFICO DE TESTE */}
+            <SalesBarChart chartData={[]} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <TopProducts transactions={filteredTransactions} />
