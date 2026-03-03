@@ -40,7 +40,7 @@ export function DashboardClient() {
     if (!startDate || !endDate || !Array.isArray(transactions)) return [];
     
     const fromTime = startDate.getTime();
-    const toTime = endDate.getTime() + 86399999;
+    const toTime = endDate.getTime() + 86399999; // Fim do dia
     
     return transactions.filter((t) => {
       let transactionTime = 0;
@@ -65,10 +65,13 @@ export function DashboardClient() {
       const downPayment = parseToNumber(t.downPayment);
       
       if (t.type === 'income') {
+        // Regra: se status for 'paid' ou se for transação manual não-fiado
         const isPaid = t.status === 'paid' || (t.paymentMethod !== 'fiado' && t.status !== 'pending' && t.paymentMethod !== null);
+        
         if (isPaid) { 
           paidVal += amount; 
         } else { 
+          // Se for pendente/fiado, soma a entrada como recebido e o resto como pendente
           paidVal += downPayment; 
           pendingVal += (amount - downPayment); 
         }

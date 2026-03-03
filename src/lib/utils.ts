@@ -18,7 +18,6 @@ export function parseToNumber(value: any): number {
     if (!str || str === "[object Object]") return 0;
 
     // Remove R$, espaços e caracteres não numéricos, exceto o que pode ser separador decimal/milhar
-    // Mantém apenas números, vírgulas, pontos e o sinal de menos
     str = str.replace(/[^\d,.-]/g, '');
     
     // Identifica se o formato é brasileiro (vírgula como decimal) ou americano (ponto como decimal)
@@ -26,10 +25,10 @@ export function parseToNumber(value: any): number {
     const lastDot = str.lastIndexOf('.');
     
     if (lastComma > lastDot) {
-      // Formato BR: 1.234,56 ou 1234,56
+      // Formato BR: 1.234,56 ou 1234,56 -> transforma em 1234.56
       str = str.replace(/\./g, '').replace(',', '.');
     } else if (lastDot > lastComma && lastComma !== -1) {
-      // Formato US: 1,234.56
+      // Formato US: 1,234.56 -> transforma em 1234.56
       str = str.replace(/,/g, '');
     } else if (lastComma !== -1 && lastDot === -1) {
       // Apenas vírgula: 1234,56
