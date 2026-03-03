@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { addMonths, subMonths, format, startOfMonth, endOfMonth, isDate } from 'date-fns';
+import { addMonths, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -19,7 +19,6 @@ import { AddProductDialog } from './add-product-dialog';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
-import { SalesBarChart } from './sales-bar-chart';
 import { parseToNumber } from '@/lib/utils';
 
 export function DashboardClient() {
@@ -57,7 +56,6 @@ export function DashboardClient() {
 
   const totals = useMemo(() => {
     let paidVal = 0;
-    let pendingVal = 0;
     let expenseVal = 0;
 
     filteredTransactions.forEach(t => {
@@ -70,7 +68,6 @@ export function DashboardClient() {
           paidVal += amount; 
         } else { 
           paidVal += downPayment; 
-          pendingVal += (amount - downPayment); 
         }
       } else { 
         expenseVal += amount; 
@@ -80,22 +77,9 @@ export function DashboardClient() {
     return { 
       income: paidVal, 
       expense: expenseVal, 
-      balance: paidVal - expenseVal, 
-      pending: pendingVal 
+      balance: paidVal - expenseVal
     };
   }, [filteredTransactions]);
-
-  const chartData = useMemo(() => {
-    if (!startDate || !isDate(startDate)) return [];
-    const monthName = format(startDate, 'MMMM', { locale: ptBR });
-    return [
-      {
-        name: monthName.charAt(0).toUpperCase() + monthName.slice(1),
-        Pagas: parseToNumber(totals.income),
-        Pendentes: parseToNumber(totals.pending),
-      }
-    ];
-  }, [totals, startDate]);
 
   const handleMonthChange = (direction: 'next' | 'prev') => {
     const operation = direction === 'next' ? addMonths : subMonths;
@@ -141,8 +125,6 @@ export function DashboardClient() {
                 <StatCard title="Entradas (Pagas)" value={totals.income} colorClass="border-blue-500 text-blue-600" icon={TrendingUp} />
                 <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
             </div>
-
-            <SalesBarChart chartData={chartData} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <TopProducts transactions={filteredTransactions} />
@@ -155,7 +137,7 @@ export function DashboardClient() {
                         <Button asChild variant="link" size="sm"><Link href="/transactions">Ver Todos</Link></Button>
                     </CardHeader>
                     <CardContent>
-                      <RecentTransactionsList transactions={filteredTransactions.slice(0, 5)} />
+                      <RecentTransactionsList transactions={filteredTransactions.slice(0, 10)} />
                     </CardContent>
                 </Card>
             </div>
