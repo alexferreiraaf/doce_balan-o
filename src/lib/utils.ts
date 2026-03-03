@@ -22,6 +22,10 @@ export function parseToNumber(value: any): number {
   if (typeof value === 'number') return isNaN(value) ? 0 : value;
   
   try {
+    if (typeof value === 'object' && value.seconds) {
+        return value.seconds;
+    }
+
     let str = String(value).trim();
     if (!str || str === "[object Object]") return 0;
 

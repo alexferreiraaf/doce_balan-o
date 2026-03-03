@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { addMonths, subMonths, format } from 'date-fns';
+import { addMonths, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import { StatCard } from './stat-card';
@@ -23,7 +23,7 @@ import { parseToNumber } from '@/lib/utils';
 
 export function DashboardClient() {
   const { user } = useUser();
-  const userIdsToFetch = [user?.uid, storefrontUserId].filter(Boolean) as string[];
+  const userIdsToFetch = useMemo(() => [user?.uid, storefrontUserId].filter(Boolean) as string[], [user?.uid]);
   const { transactions, loading } = useTransactions({ userIds: userIdsToFetch });
 
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -31,28 +31,35 @@ export function DashboardClient() {
 
   useEffect(() => {
     const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    setStartDate(firstDayOfMonth);
-    setEndDate(today);
+    setStartDate(startOfMonth(today));
+    setEndDate(endOfMonth(today));
   }, []);
 
   const filteredTransactions = useMemo(() => {
-    if (!startDate || !endDate) return [];
+    if (!startDate || !endDate || !transactions) return [];
     
     const fromTime = startDate.getTime();
-    const toTime = new Date(endDate).setHours(23, 59, 59, 999);
+    const toTime = endDate.getTime();
 
     return transactions.filter((t) => {
       let transactionTime = t.dateMs;
-      if (!transactionTime && t.timestamp) {
-        // Fallback robusto para qualquer formato de timestamp do Firebase
-        if (typeof t.timestamp === 'string') {
-          transactionTime = new Date(t.timestamp).getTime();
-        } else {
-          transactionTime = t.timestamp.toMillis ? t.timestamp.toMillis() : (t.timestamp.seconds * 1000);
+      
+      // Fallback ultra-robusto para datas
+      if (!transactionTime) {
+        if (t.timestamp) {
+          if (typeof t.timestamp === 'object' && t.timestamp.toMillis) {
+            transactionTime = t.timestamp.toMillis();
+          } else if (t.timestamp.seconds) {
+            transactionTime = t.timestamp.seconds * 1000;
+          } else {
+            transactionTime = new Date(t.timestamp).getTime();
+          }
         }
       }
-      return transactionTime >= fromTime && transactionTime <= toTime;
+      
+      if (!transactionTime || isNaN(transactionTime)) return false;
+      
+      return transactionTime >= fromTime && transactionTime <= (toTime + 86399999); // Inclui o dia todo do fim
     });
   }, [transactions, startDate, endDate]);
 
@@ -80,7 +87,7 @@ export function DashboardClient() {
 
     const dataForChart = [
       {
-        name: 'Vendas do Período',
+        name: startDate ? format(startDate, 'MMMM', { locale: undefined }) : 'Mês',
         'Pagas': Number(paidVal.toFixed(2)),
         'Pendentes': Number(pendingVal.toFixed(2)),
       }
@@ -94,15 +101,14 @@ export function DashboardClient() {
       },
       chartDataArray: dataForChart
     };
-  }, [filteredTransactions]);
+  }, [filteredTransactions, startDate]);
 
   const handleMonthChange = (direction: 'next' | 'prev') => {
     const operation = direction === 'next' ? addMonths : subMonths;
     const current = startDate || new Date();
     const next = operation(current, 1);
-    next.setDate(1);
-    setStartDate(next);
-    setEndDate(new Date(next.getFullYear(), next.getMonth() + 1, 0));
+    setStartDate(startOfMonth(next));
+    setEndDate(endOfMonth(next));
   };
 
   if (loading || !startDate || !endDate) {
@@ -129,7 +135,7 @@ export function DashboardClient() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar mode="single" selected={startDate} onSelect={(d) => d && setStartDate(d)} />
+                  <Calendar mode="single" selected={startDate} onSelect={(d) => d && setStartDate(startOfMonth(d))} />
                 </PopoverContent>
               </Popover>
               <span className="text-muted-foreground">-</span>
@@ -141,7 +147,7 @@ export function DashboardClient() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(d)} />
+                  <Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(endOfMonth(d))} />
                 </PopoverContent>
               </Popover>
               <div className="flex items-center gap-1 ml-2 border-l pl-2">
