@@ -14,7 +14,7 @@ export function formatCurrency(value: number) {
 }
 
 /**
- * Converte qualquer valor para um número válido de forma extremamente robusto.
+ * Converte qualquer valor para um número válido de forma extremamente robusta.
  * Lida com R$, vírgulas, pontos, textos e formatos do Firebase.
  */
 export function parseToNumber(value: any): number {
@@ -28,17 +28,14 @@ export function parseToNumber(value: any): number {
     // Remove R$, espaços e qualquer caractere que não seja número, ponto, vírgula ou sinal de menos
     str = str.replace(/[^\d,.-]/g, '');
     
-    // Se houver vírgula e ponto, tratamos o formato brasileiro (1.234,56)
+    // Tratamento de formato brasileiro (1.234,56)
     if (str.includes(',') && str.includes('.')) {
         if (str.indexOf('.') < str.indexOf(',')) {
-            // Caso 1.234,56 -> remove ponto, troca vírgula por ponto
             str = str.replace(/\./g, '').replace(',', '.');
         } else {
-            // Caso 1,234.56 -> remove vírgula
             str = str.replace(/,/g, '');
         }
     } else if (str.includes(',')) {
-        // Apenas vírgula -> troca por ponto decimal
         str = str.replace(',', '.');
     }
     

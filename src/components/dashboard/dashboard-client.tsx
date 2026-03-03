@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { Wallet, TrendingUp, TrendingDown, List, Info, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { addMonths, subMonths, format } from 'date-fns';
 
@@ -12,8 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { DangerZone } from './danger-zone';
 import { RecentTransactionsList } from './recent-transactions-list';
-import { InputWithCopy } from '../ui/input';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { storefrontUserId } from '@/firebase/config';
 import { TopProducts } from './top-products';
 import { AddProductDialog } from './add-product-dialog';
@@ -47,13 +45,17 @@ export function DashboardClient() {
     return transactions.filter((t) => {
       let transactionTime = t.dateMs;
       if (!transactionTime && t.timestamp) {
-        transactionTime = t.timestamp.toMillis ? t.timestamp.toMillis() : (t.timestamp.seconds * 1000);
+        // Fallback robusto para qualquer formato de timestamp do Firebase
+        if (typeof t.timestamp === 'string') {
+          transactionTime = new Date(t.timestamp).getTime();
+        } else {
+          transactionTime = t.timestamp.toMillis ? t.timestamp.toMillis() : (t.timestamp.seconds * 1000);
+        }
       }
       return transactionTime >= fromTime && transactionTime <= toTime;
     });
   }, [transactions, startDate, endDate]);
 
-  // PREPARAÇÃO DOS DADOS (Lógica sugerida para o gráfico aparecer)
   const { totals, chartDataArray } = useMemo(() => {
     let paidVal = 0;
     let pendingVal = 0;
@@ -76,14 +78,13 @@ export function DashboardClient() {
       }
     });
 
-    // Formata o array exatamente como o Recharts espera
-    const dataForChart = (paidVal > 0 || pendingVal > 0) ? [
+    const dataForChart = [
       {
         name: 'Vendas do Período',
         'Pagas': Number(paidVal.toFixed(2)),
         'Pendentes': Number(pendingVal.toFixed(2)),
       }
-    ] : [];
+    ];
 
     return {
       totals: {
