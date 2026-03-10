@@ -2,8 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // 1. REGRA ADMINISTRATIVA (Prioridade Máxima)
-    // Permite que QUALQUER usuário autenticado gerencie todos os dados do app.
-    // Isso é essencial para que o admin possa editar pedidos criados pela loja online.
+    // Se o usuário estiver logado, ele tem poder total sobre todos os documentos do app.
     match /artifacts/docuras-da-fran-default/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
@@ -34,7 +33,7 @@ service cloud.firestore {
     }
     
     // 3. REGRAS DE CONSULTA GLOBAL (Collection Groups)
-    // Necessário para o Dashboard e Relatórios que buscam transações de múltiplos caminhos.
+    // Necessário para buscas transversais em subcoleções.
     match /{path=**}/transactions/{id} {
       allow read, write: if request.auth != null;
     }
