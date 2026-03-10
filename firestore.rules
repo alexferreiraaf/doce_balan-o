@@ -11,49 +11,46 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Allow signed-in users to list/read/delete transactions (for admin panel to manage store orders),
-    // but only the owner can update.
-    // Anyone can create a transaction (for storefront orders).
+    // Permitir que usuários logados (administradores) listem, leiam, excluam e atualizem transações.
+    // Isso é necessário para que o painel administrativo possa gerenciar pedidos da loja
+    // que foram criados sob o ID do usuário da vitrine.
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow list, get, delete: if isSignedIn();
-      allow update: if isOwner(userId);
-      allow create: if true; // Allows storefront to create orders for any user
+      allow list, get, delete, update: if isSignedIn();
+      allow create: if true; // Permite que a loja crie pedidos anonimamente
     }
 
-    // PUBLIC COLLECTIONS
-    // Allow anyone to read products, but only signed-in users can manage them.
+    // COLEÇÕES PÚBLICAS
+    // Permite que qualquer pessoa veja produtos, mas apenas administradores gerenciem.
     match /artifacts/{appId}/products/{productId} {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
-    // Allow anyone to read customers, but only signed-in users can manage them.
+    // Permite que qualquer pessoa veja clientes (necessário para o checkout), mas apenas administradores gerenciem.
     match /artifacts/{appId}/customers/{customerId} {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
     
-    // Allow anyone to read categories, but only signed-in users can manage them.
+    // Permite que qualquer pessoa veja categorias, mas apenas administradores gerenciem.
     match /artifacts/{appId}/product-categories/{categoryId} {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
-    // Allow anyone to read optionals, but only signed-in users can manage them.
+    // Permite que qualquer pessoa veja opcionais, mas apenas administradores gerenciem.
     match /artifacts/{appId}/optionals/{optionalId} {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
-    // Settings can be read by anyone (for PIX key) but only managed by signed-in users.
+    // Configurações podem ser lidas por qualquer um (para chave PIX), mas editadas apenas por administradores.
     match /artifacts/{appId}/settings/app {
       allow get: if true;
       allow write: if isSignedIn();
     }
     
-    // This collection group query allows an admin to query across all users' transactions.
-    // We only need to check if the user is signed in, as the client-side logic
-    // will handle filtering for specific user IDs.
+    // Consulta de grupo de coleções para o administrador.
     match /{path=**}/transactions/{transactionId} {
       allow list: if isSignedIn();
     }
