@@ -7,14 +7,15 @@ service cloud.firestore {
      * REGRAS DE SEGURANÇA - DOÇURAS DA FRAN
      */
 
-    // Permissão administrativa total para usuários logados
-    // Qualquer pessoa autenticada pode gerenciar todos os dados do app em /artifacts/
-    match /artifacts/docuras-da-fran-default/{allPaths=**} {
+    // 1. REGRA ADMINISTRATIVA (Prioridade Máxima)
+    // Permite que QUALQUER usuário autenticado gerencie todos os dados do app.
+    // Isso é essencial para que o admin possa editar pedidos criados pela loja online.
+    match /artifacts/docuras-da-fran-default/{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Regras específicas para a Loja Online (Visitantes Anônimos)
-    // Visitantes podem ler produtos, categorias e configurações
+    // 2. REGRAS DA LOJA ONLINE (Acesso Público/Anônimo)
+    // Visitantes precisam ler produtos e configurações para navegar na loja.
     match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
     }
@@ -28,17 +29,18 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Visitantes podem criar e atualizar seus próprios dados de cliente
+    // Visitantes podem criar e atualizar seus próprios dados de cliente (para checkout).
     match /artifacts/docuras-da-fran-default/customers/{id} {
       allow read, write: if true;
     }
 
-    // Visitantes podem criar novos pedidos
+    // Visitantes podem criar novos pedidos (transactions).
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
     }
     
-    // Suporte para consultas em nível de grupo de coleções (Collection Group Queries)
+    // 3. REGRAS DE CONSULTA GLOBAL (Collection Groups)
+    // Necessário para o Dashboard e Relatórios que buscam transações de múltiplos caminhos.
     match /{path=**}/transactions/{id} {
       allow read, write: if request.auth != null;
     }
