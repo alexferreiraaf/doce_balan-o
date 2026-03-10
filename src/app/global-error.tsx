@@ -19,10 +19,11 @@ export default function GlobalError({
   // Função segura para tentar recuperar o app
   const handleReset = () => {
     try {
-      if (typeof reset === 'function') {
+      // Verifica se reset é realmente uma função antes de chamar
+      if (reset && typeof reset === 'function') {
         reset();
       } else {
-        // Fallback se o Next.js não fornecer a função reset
+        // Fallback: recarregar a página inteira
         window.location.reload();
       }
     } catch (e) {

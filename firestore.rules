@@ -5,8 +5,9 @@ service cloud.firestore {
 
     /**
      * 1. REGRA MESTRE DE ADMINISTRADOR (USUÁRIOS AUTENTICADOS)
-     * Concede acesso TOTAL a qualquer pessoa logada no sistema.
-     * Isso garante que você gerencie produtos, clientes e TODOS os pedidos sem erros de permissão.
+     * Esta regra concede acesso TOTAL a qualquer pessoa logada no sistema.
+     * Isso garante que você, como admin, possa gerenciar produtos, clientes e TODOS os pedidos
+     * (mesmo os criados pela loja online) sem erros de permissão.
      */
     match /artifacts/docuras-da-fran-default/{allPaths=**} {
       allow read, write: if request.auth != null;
@@ -37,7 +38,7 @@ service cloud.firestore {
     }
 
     // Visitantes podem CRIAR pedidos (transações) anonimamente.
-    // O Admin (pela regra mestre acima) tem permissão de UPDATE/DELETE.
+    // O Administrador logado tem permissão de UPDATE/DELETE via Regra Mestre acima.
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
     }
