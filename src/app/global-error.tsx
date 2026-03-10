@@ -18,13 +18,15 @@ export default function GlobalError({
 
   // Função segura para tentar recuperar o app
   const handleReset = () => {
-    if (typeof reset === 'function') {
-      try {
+    try {
+      // Verifica se reset existe e é uma função antes de chamar
+      if (reset && typeof reset === 'function') {
         reset();
-      } catch (e) {
+      } else {
+        // Fallback: recarrega a página se a função de reset do Next.js falhar
         window.location.reload();
       }
-    } else {
+    } catch (e) {
       window.location.reload();
     }
   };
@@ -37,7 +39,7 @@ export default function GlobalError({
             <WhiskIcon className="w-24 h-24 text-primary mx-auto mb-4 animate-bounce" />
             <h1 className="text-2xl font-bold text-primary mb-2">Ops! Algo deu errado.</h1>
             <p className="text-muted-foreground mb-6">
-              Ocorreu um erro inesperado ao carregar os dados. Por favor, tente recarregar a página.
+              Ocorreu um erro inesperado ao processar sua solicitação. Por favor, tente recarregar a página.
             </p>
             <div className="space-y-3">
               <Button onClick={handleReset} className="w-full h-12 text-lg font-bold">
@@ -49,7 +51,7 @@ export default function GlobalError({
             </div>
             {process.env.NODE_ENV === 'development' && (
               <pre className="mt-6 p-4 bg-muted text-[10px] text-left overflow-auto rounded max-h-40">
-                {error.message}
+                {error?.message || 'Erro desconhecido'}
               </pre>
             )}
           </div>

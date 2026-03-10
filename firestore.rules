@@ -3,20 +3,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: O usuário está autenticado no sistema?
-    function isAuthenticated() {
-      return request.auth != null && request.auth.uid != null;
-    }
-
-    // 1. REGRA DE ADMINISTRADOR (ACESSO TOTAL)
-    // Se o usuário estiver logado, ele tem permissão total sobre todos os artefatos.
-    // Isso garante que o admin possa editar pedidos da loja, cadastros e relatórios.
+    // 1. REGRA DE ADMIN (USUÁRIOS AUTENTICADOS)
+    // Qualquer pessoa logada tem permissão TOTAL de leitura e escrita 
+    // em qualquer documento dentro da pasta do aplicativo.
     match /artifacts/docuras-da-fran-default/{allPaths=**} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if request.auth != null && request.auth.uid != null;
     }
 
-    // 2. REGRAS PÚBLICAS (PARA A LOJA ONLINE)
-    // Permite que clientes não logados acessem informações básicas para fazer pedidos.
+    // 2. REGRAS PÚBLICAS (PARA A LOJA ONLINE - VISITANTES)
+    // Permite que clientes não logados acessem o cardápio e criem pedidos.
+    
     match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
     }
@@ -34,14 +30,13 @@ service cloud.firestore {
     }
 
     // Permite que a loja crie pedidos (transações) anonimamente.
-    // O admin terá acesso a esses pedidos pela Regra 1 acima.
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
     }
     
-    // Suporte para consultas em nível de grupo de coleções (usado em relatórios)
+    // Suporte para consultas em nível de grupo de coleções
     match /{path=**}/transactions/{id} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if request.auth != null;
     }
   }
 }

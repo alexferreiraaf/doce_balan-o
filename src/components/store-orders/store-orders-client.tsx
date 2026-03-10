@@ -48,7 +48,7 @@ interface StoreOrdersClientProps {
 export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
   const { transactions: allTransactions, loading: transactionsLoading } = useTransactions({ userIds });
   const { customers, loading: customersLoading } = useCustomers();
-  const { isUserLoading } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -65,28 +65,33 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
     };
   }, [allTransactions]);
 
-  const updateOrderStatus = (transaction: Transaction, newStatus: TransactionStatus) => {
-    if (isUserLoading || !firestore) {
-        toast({ variant: "destructive", title: "Erro", description: "Usuário ou serviço indisponível." });
+  const updateOrderStatus = async (transaction: Transaction, newStatus: TransactionStatus) => {
+    if (!user || !firestore) {
+        toast({ variant: "destructive", title: "Erro", description: "Sua sessão expirou. Faça login novamente." });
         return;
     }
     
-    // Construção robusta da referência do documento usando o APP_ID e o userId da transação
-    const transactionRef = doc(firestore, "artifacts", APP_ID, "users", transaction.userId, "transactions", transaction.id);
+    // Caminho absoluto para evitar qualquer erro de permissão por contexto de caminho
+    const docPath = `artifacts/${APP_ID}/users/${transaction.userId}/transactions/${transaction.id}`;
+    const transactionRef = doc(firestore, docPath);
     const updateData = { status: newStatus };
     
-    updateDoc(transactionRef, updateData)
-      .then(() => {
-        toast({ title: "Sucesso!", description: `Pedido movido para: ${newStatus === 'preparing' ? 'Em Preparo' : newStatus === 'ready' ? 'Pronto' : 'Finalizado'}` });
-      })
-      .catch((error) => {
-        console.error("Erro ao atualizar status:", error);
+    try {
+      await updateDoc(transactionRef, updateData);
+      toast({ title: "Pedido Atualizado", description: `Status alterado com sucesso.` });
+    } catch (error: any) {
+      console.error("Erro Firestore:", error);
+      // Se for erro de permissão, emite para o listener global que captura e exibe detalhadamente
+      if (error.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: transactionRef.path,
+            path: docPath,
             operation: 'update',
             requestResourceData: updateData,
         }));
-      });
+      } else {
+        toast({ variant: "destructive", title: "Erro ao atualizar", description: "Não foi possível mudar o status do pedido." });
+      }
+    }
   };
 
   if (loading) {
