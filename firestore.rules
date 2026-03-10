@@ -3,46 +3,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: O usuário está autenticado?
-    function isLogged() {
+    // Helper: O usuário está autenticado no sistema?
+    function isAuthenticated() {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // 1. ACESSO TOTAL PARA ADMINISTRADOR
-    // Qualquer usuário logado tem permissão total em todos os artefatos do app.
-    // Isso garante que o Kanban e os relatórios funcionem sem erros de permissão.
-    match /artifacts/{appId}/{document=**} {
-      allow read, write: if isLogged();
+    // 1. REGRA DE ADMINISTRADOR (ACESSO TOTAL)
+    // Se o usuário estiver logado, ele tem permissão total sobre todos os artefatos.
+    // Isso garante que o admin possa editar pedidos da loja, cadastros e relatórios.
+    match /artifacts/docuras-da-fran-default/{allPaths=**} {
+      allow read, write: if isAuthenticated();
     }
 
-    // 2. ACESSO PÚBLICO (LOJA VIRTUAL)
-    // Permissões específicas para clientes não logados.
-    
-    match /artifacts/{appId}/products/{productId} {
+    // 2. REGRAS PÚBLICAS (PARA A LOJA ONLINE)
+    // Permite que clientes não logados acessem informações básicas para fazer pedidos.
+    match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
     }
-    match /artifacts/{appId}/product-categories/{categoryId} {
+    match /artifacts/docuras-da-fran-default/product-categories/{id} {
       allow read: if true;
     }
-    match /artifacts/{appId}/optionals/{optionalId} {
+    match /artifacts/docuras-da-fran-default/optionals/{id} {
       allow read: if true;
     }
-    match /artifacts/{appId}/settings/app {
+    match /artifacts/docuras-da-fran-default/settings/app {
       allow read: if true;
     }
-    match /artifacts/{appId}/customers/{customerId} {
+    match /artifacts/docuras-da-fran-default/customers/{id} {
       allow read, write: if true;
     }
 
-    // Pedidos (Transações)
-    // Permite que a loja crie pedidos anonimamente.
-    match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
+    // Permite que a loja crie pedidos (transações) anonimamente.
+    // O admin terá acesso a esses pedidos pela Regra 1 acima.
+    match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
     }
     
-    // Suporte para consultas em nível de grupo de coleções
-    match /{path=**}/transactions/{transactionId} {
-      allow read, write: if isLogged();
+    // Suporte para consultas em nível de grupo de coleções (usado em relatórios)
+    match /{path=**}/transactions/{id} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

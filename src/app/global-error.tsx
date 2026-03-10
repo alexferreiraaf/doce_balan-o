@@ -12,13 +12,18 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error(error);
+    // Log do erro para monitoramento
+    console.error('Erro Crítico Detectado:', error);
   }, [error]);
 
+  // Função segura para tentar recuperar o app
   const handleReset = () => {
     if (typeof reset === 'function') {
-      reset();
+      try {
+        reset();
+      } catch (e) {
+        window.location.reload();
+      }
     } else {
       window.location.reload();
     }
@@ -26,17 +31,27 @@ export default function GlobalError({
 
   return (
     <html>
-      <body>
+      <body className="font-sans antialiased">
         <div className="min-h-screen bg-background flex flex-col justify-center items-center p-4">
-          <div className="w-full max-w-sm text-center">
-            <WhiskIcon className="w-24 h-24 text-destructive mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-destructive">Ops! Algo deu errado.</h1>
-            <p className="text-muted-foreground mt-2 mb-6">
-              Ocorreu um erro inesperado. Nossa equipe já foi notificada. Por favor, tente recarregar a página.
+          <div className="w-full max-w-sm text-center bg-card p-8 rounded-xl shadow-xl border border-border">
+            <WhiskIcon className="w-24 h-24 text-primary mx-auto mb-4 animate-bounce" />
+            <h1 className="text-2xl font-bold text-primary mb-2">Ops! Algo deu errado.</h1>
+            <p className="text-muted-foreground mb-6">
+              Ocorreu um erro inesperado ao carregar os dados. Por favor, tente recarregar a página.
             </p>
-            <Button onClick={handleReset}>
-              Recarregar a página
-            </Button>
+            <div className="space-y-3">
+              <Button onClick={handleReset} className="w-full h-12 text-lg font-bold">
+                Recarregar a página
+              </Button>
+              <Button variant="ghost" onClick={() => window.location.href = '/pdv'} className="w-full">
+                Ir para o PDV
+              </Button>
+            </div>
+            {process.env.NODE_ENV === 'development' && (
+              <pre className="mt-6 p-4 bg-muted text-[10px] text-left overflow-auto rounded max-h-40">
+                {error.message}
+              </pre>
+            )}
           </div>
         </div>
       </body>
