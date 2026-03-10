@@ -4,21 +4,20 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * 1. REGRA MESTRE DE ADMINISTRADOR (USUÁRIOS AUTENTICADOS)
-     * Esta regra concede acesso TOTAL a qualquer pessoa logada no sistema.
-     * Isso garante que você, como admin, possa gerenciar produtos, clientes e TODOS os pedidos
-     * (mesmo os criados pela loja online) sem erros de permissão.
+     * 1. ACESSO ADMINISTRATIVO TOTAL
+     * Se o usuário estiver autenticado (logado), ele tem permissão total
+     * para ler e escrever em QUALQUER documento dentro do app.
      */
     match /artifacts/docuras-da-fran-default/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
 
     /**
-     * 2. REGRAS PÚBLICAS (PARA A LOJA ONLINE - VISITANTES ANÔNIMOS)
-     * Permite que clientes não logados vejam o cardápio e criem pedidos.
+     * 2. REGRAS PARA A LOJA ONLINE (VISITANTES ANÔNIMOS)
+     * Permite que clientes não logados interajam com o cardápio e façam pedidos.
      */
     
-    // Visitantes podem ler produtos, categorias, opcionais e configurações para ver o cardápio
+    // Visitantes podem ver produtos, categorias e configurações
     match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
     }
@@ -32,18 +31,17 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Visitantes podem criar/atualizar seu cadastro de cliente na loja
+    // Visitantes podem criar e atualizar seus próprios dados de cliente
     match /artifacts/docuras-da-fran-default/customers/{id} {
       allow read, write: if true;
     }
 
-    // Visitantes podem CRIAR pedidos (transações) anonimamente.
-    // O Administrador logado tem permissão de UPDATE/DELETE via Regra Mestre acima.
+    // Visitantes podem CRIAR pedidos (transações)
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
     }
     
-    // Suporte para consultas em nível de grupo de coleções (relatórios e dashboard)
+    // Suporte para consultas em nível de grupo de coleções
     match /{path=**}/transactions/{id} {
       allow read, write: if request.auth != null;
     }

@@ -16,10 +16,9 @@ export default function GlobalError({
     console.error('Erro Crítico Detectado:', error);
   }, [error]);
 
-  // Função segura para tentar recuperar o app
+  // Função segura para tentar recuperar o app sem quebrar se 'reset' não for uma função
   const handleReset = () => {
     try {
-      // Verifica se reset é realmente uma função antes de chamar
       if (reset && typeof reset === 'function') {
         reset();
       } else {
@@ -27,8 +26,8 @@ export default function GlobalError({
         window.location.reload();
       }
     } catch (e) {
-      // Fallback final: forçar navegação para a home
-      window.location.assign('/');
+      // Fallback final: forçar navegação para o PDV
+      window.location.href = '/pdv';
     }
   };
 
