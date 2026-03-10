@@ -3,16 +3,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. REGRA DE ADMIN (USUÁRIOS AUTENTICADOS)
-    // Qualquer pessoa logada tem permissão TOTAL de leitura e escrita 
-    // em qualquer documento dentro da pasta do aplicativo.
+    /**
+     * 1. REGRA DE ADMINISTRADOR (USUÁRIOS AUTENTICADOS)
+     * Concede acesso total a qualquer pessoa que tenha feito login no sistema.
+     * Isso permite que o admin gerencie produtos, clientes e TODOS os pedidos (incluindo os da loja).
+     */
     match /artifacts/docuras-da-fran-default/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid != null;
+      allow read, write: if request.auth != null;
     }
 
-    // 2. REGRAS PÚBLICAS (PARA A LOJA ONLINE - VISITANTES)
-    // Permite que clientes não logados acessem o cardápio e criem pedidos.
+    /**
+     * 2. REGRAS PÚBLICAS (PARA A LOJA ONLINE - VISITANTES ANÔNIMOS)
+     * Permite que clientes não logados acessem o cardápio e criem pedidos.
+     */
     
+    // Visitantes podem ler produtos, categorias e opcionais para ver o cardápio
     match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
     }
@@ -25,16 +30,20 @@ service cloud.firestore {
     match /artifacts/docuras-da-fran-default/settings/app {
       allow read: if true;
     }
+
+    // Visitantes podem criar/atualizar seu próprio cadastro de cliente na loja
     match /artifacts/docuras-da-fran-default/customers/{id} {
       allow read, write: if true;
     }
 
-    // Permite que a loja crie pedidos (transações) anonimamente.
+    // Visitantes podem CRIAR pedidos (transações) anonimamente através da loja.
+    // O Admin (acima) tem permissão de UPDATE para gerenciar esses pedidos no Kanban.
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
+      allow read, update, delete: if request.auth != null;
     }
     
-    // Suporte para consultas em nível de grupo de coleções
+    // Suporte para consultas em nível de grupo de coleções (usado em relatórios e dashboard)
     match /{path=**}/transactions/{id} {
       allow read, write: if request.auth != null;
     }

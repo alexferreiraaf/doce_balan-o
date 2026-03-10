@@ -71,18 +71,16 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
         return;
     }
     
-    // Caminho absoluto para evitar qualquer erro de permissão por contexto de caminho
     const docPath = `artifacts/${APP_ID}/users/${transaction.userId}/transactions/${transaction.id}`;
     const transactionRef = doc(firestore, docPath);
     const updateData = { status: newStatus };
     
     try {
       await updateDoc(transactionRef, updateData);
-      toast({ title: "Pedido Atualizado", description: `Status alterado com sucesso.` });
+      toast({ title: "Pedido Atualizado", description: `O status agora é: ${newStatus === 'preparing' ? 'Em Preparo' : newStatus === 'ready' ? 'Pronto' : 'Finalizado'}.` });
     } catch (error: any) {
-      console.error("Erro Firestore:", error);
-      // Se for erro de permissão, emite para o listener global que captura e exibe detalhadamente
-      if (error.code === 'permission-denied') {
+      console.error("Erro ao atualizar status:", error);
+      if (error.code === 'permission-denied' || error.message?.includes('permission')) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docPath,
             operation: 'update',
