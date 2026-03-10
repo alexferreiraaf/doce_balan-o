@@ -4,6 +4,10 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 
+/**
+ * Componente de tratamento de erros críticos globais.
+ * Blinda a aplicação contra falhas no processo de recuperação.
+ */
 export default function GlobalError({
   error,
   reset,
@@ -12,25 +16,25 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log do erro para monitoramento
-    console.error('Erro Crítico Detectado:', error);
+    // Log do erro para monitoramento em desenvolvimento
+    console.error('Erro Crítico Detectado pelo Sistema:', error);
   }, [error]);
 
   /**
-   * Função segura para tentar recuperar o app sem quebrar se 'reset' não for uma função.
-   * Resolve o erro 'reset is not a function' reportado.
+   * Tenta recuperar o estado da aplicação de forma segura.
+   * Evita o erro 'reset is not a function' recorrente no Next.js.
    */
   const handleReset = () => {
     try {
-      // Verificação robusta: reset pode não ser uma função em certos contextos do Next.js
+      // Verificação de segurança: nem sempre o Next.js injeta a função 'reset'
       if (typeof reset === 'function') {
         reset();
       } else {
-        // Fallback: recarregar a página inteira
+        // Fallback: Recarregamento total da página
         window.location.reload();
       }
     } catch (e) {
-      // Fallback final: forçar navegação para uma rota segura (PDV)
+      // Fallback final: Redireciona para o início do PDV
       window.location.href = '/pdv';
     }
   };
@@ -55,8 +59,8 @@ export default function GlobalError({
             </div>
             {process.env.NODE_ENV === 'development' && (
               <div className="mt-6 p-4 bg-muted text-[10px] text-left overflow-auto rounded max-h-40">
-                <p className="font-bold mb-1">Log de Erro:</p>
-                <pre>{error?.message || 'Erro desconhecido'}</pre>
+                <p className="font-bold mb-1">Log de Erro para Debug:</p>
+                <pre className="whitespace-pre-wrap">{error?.message || 'Erro desconhecido'}</pre>
               </div>
             )}
           </div>
