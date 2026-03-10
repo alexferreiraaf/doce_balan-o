@@ -71,7 +71,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
         return;
     }
     
-    // Construção robusta da referência do documento
+    // Construção robusta da referência do documento usando o APP_ID e o userId da transação
     const transactionRef = doc(firestore, "artifacts", APP_ID, "users", transaction.userId, "transactions", transaction.id);
     const updateData = { status: newStatus };
     

@@ -9,8 +9,8 @@ service cloud.firestore {
     }
 
     // 1. ACESSO ADMINISTRATIVO GLOBAL
-    // Permite que qualquer usuário logado (você, o administrador) tenha acesso total
-    // a todos os dados do aplicativo. Isso é essencial para o Kanban e gestão financeira.
+    // Permite que qualquer usuário logado (o administrador) tenha acesso total
+    // a todos os dados do aplicativo, independentemente do sub-caminho.
     match /artifacts/{appId}/{document=**} {
       allow read, write: if isLogged();
     }
@@ -18,7 +18,6 @@ service cloud.firestore {
     // 2. ACESSO PÚBLICO / LOJA VIRTUAL
     // Permissões específicas para clientes que acessam o cardápio sem login.
     
-    // Produtos, Categorias e Opcionais: Leitura pública para exibir o cardápio.
     match /artifacts/{appId}/products/{productId} {
       allow read: if true;
     }
@@ -28,24 +27,22 @@ service cloud.firestore {
     match /artifacts/{appId}/optionals/{optionalId} {
       allow read: if true;
     }
-
-    // Configurações da Loja: Leitura pública para verificar horário e chave PIX.
     match /artifacts/{appId}/settings/app {
       allow read: if true;
     }
-
-    // Clientes: Permite que a loja identifique ou cadastre clientes pelo WhatsApp.
     match /artifacts/{appId}/customers/{customerId} {
       allow read, create, update: if true;
     }
 
-    // Pedidos (Transações): Clientes anônimos podem criar pedidos.
-    // O gerenciamento (leitura/atualização) é feito pelo Admin via regra global acima.
+    // Pedidos (Transações)
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
+      // Clientes anônimos podem criar pedidos (Storefront)
       allow create: if true;
+      // O Admin logado pode gerenciar todos os pedidos (Kanban/Painel)
+      allow read, update, delete: if isLogged();
     }
     
-    // Suporte para consultas em nível de grupo de coleções (Necessário para o Painel)
+    // Suporte para consultas em nível de grupo de coleções
     match /{path=**}/transactions/{transactionId} {
       allow read, write: if isLogged();
     }
