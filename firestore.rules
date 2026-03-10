@@ -2,14 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // 1. ACESSO ADMINISTRATIVO (Usuários Logados)
-    // Qualquer usuário autenticado (você) tem permissão total em todos os dados do app.
-    // Isso permite gerenciar produtos, clientes e pedidos (mesmo os da loja online).
+    // Permissão total para o administrador em qualquer documento do app.
     match /artifacts/docuras-da-fran-default/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
 
     // 2. ACESSO PÚBLICO (Loja Online / Visitantes)
-    // Permite que visitantes leiam dados necessários para o cardápio.
     match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
     }
@@ -22,19 +20,14 @@ service cloud.firestore {
     match /artifacts/docuras-da-fran-default/settings/app {
       allow read: if true;
     }
-
-    // Visitantes podem criar/atualizar seus dados de cliente no checkout.
     match /artifacts/docuras-da-fran-default/customers/{id} {
       allow read, write: if true;
     }
-
-    // Visitantes podem criar novos pedidos (transactions).
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
     }
     
     // 3. REGRAS DE CONSULTA GLOBAL
-    // Mantido para compatibilidade com buscas transversais.
     match /{path=**}/transactions/{id} {
       allow read, write: if request.auth != null;
     }

@@ -4,10 +4,6 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 
-/**
- * Componente de tratamento de erros críticos globais.
- * Blinda a aplicação contra falhas no processo de recuperação.
- */
 export default function GlobalError({
   error,
   reset,
@@ -16,25 +12,17 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log do erro para monitoramento em desenvolvimento
-    console.error('Erro Crítico Detectado pelo Sistema:', error);
+    console.error('Erro Crítico Detectado:', error);
   }, [error]);
 
-  /**
-   * Tenta recuperar o estado da aplicação de forma segura.
-   * Evita o erro 'reset is not a function' recorrente no Next.js.
-   */
   const handleReset = () => {
     try {
-      // Verificação de segurança: nem sempre o Next.js injeta a função 'reset'
       if (typeof reset === 'function') {
         reset();
       } else {
-        // Fallback: Recarregamento total da página
         window.location.reload();
       }
     } catch (e) {
-      // Fallback final: Redireciona para o início do PDV
       window.location.href = '/pdv';
     }
   };

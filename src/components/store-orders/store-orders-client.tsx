@@ -71,8 +71,6 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
         return;
     }
     
-    // Análise: Garantimos que o caminho use explicitamente o userId original do documento
-    // para bater com as regras de segurança do Firestore (especialmente pedidos da loja).
     const docPath = `artifacts/${APP_ID}/users/${transaction.userId}/transactions/${transaction.id}`;
     const transactionRef = doc(firestore, docPath);
     const updateData = { status: newStatus };
@@ -82,7 +80,6 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
       toast({ title: "Pedido Atualizado", description: `O status agora é: ${newStatus === 'preparing' ? 'Em Preparo' : newStatus === 'ready' ? 'Pronto' : 'Finalizado'}.` });
     } catch (error: any) {
       console.error("Erro ao atualizar status:", error);
-      // Emitimos o erro para ser capturado pelo GlobalError em caso de permissão negada
       if (error.code === 'permission-denied' || error.message?.includes('permission')) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docPath,
