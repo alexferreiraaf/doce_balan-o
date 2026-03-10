@@ -16,6 +16,14 @@ export default function GlobalError({
     console.error(error);
   }, [error]);
 
+  const handleReset = () => {
+    if (typeof reset === 'function') {
+      reset();
+    } else {
+      window.location.reload();
+    }
+  };
+
   return (
     <html>
       <body>
@@ -26,7 +34,7 @@ export default function GlobalError({
             <p className="text-muted-foreground mt-2 mb-6">
               Ocorreu um erro inesperado. Nossa equipe já foi notificada. Por favor, tente recarregar a página.
             </p>
-            <Button onClick={() => reset()}>
+            <Button onClick={handleReset}>
               Recarregar a página
             </Button>
           </div>
