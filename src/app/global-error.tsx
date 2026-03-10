@@ -16,16 +16,18 @@ export default function GlobalError({
     console.error('Erro Crítico Detectado:', error);
   }, [error]);
 
-  // Função segura para tentar recuperar o app sem quebrar se o Next.js falhar ao passar o reset
+  // Função segura para tentar recuperar o app
   const handleReset = () => {
     try {
       if (typeof reset === 'function') {
         reset();
       } else {
+        // Fallback se o Next.js não fornecer a função reset
         window.location.reload();
       }
     } catch (e) {
-      window.location.assign('/pdv');
+      // Fallback final: forçar navegação para a home
+      window.location.assign('/');
     }
   };
 
