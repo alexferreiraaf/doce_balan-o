@@ -16,7 +16,10 @@ export default function GlobalError({
     console.error('Erro Crítico Detectado:', error);
   }, [error]);
 
-  // Função segura para tentar recuperar o app sem quebrar se 'reset' não for uma função
+  /**
+   * Função segura para tentar recuperar o app sem quebrar se 'reset' não for uma função.
+   * Resolve o erro 'reset is not a function' reportado.
+   */
   const handleReset = () => {
     try {
       // Verificação robusta: reset pode não ser uma função em certos contextos do Next.js
