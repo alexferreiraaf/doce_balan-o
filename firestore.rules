@@ -3,45 +3,50 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // TRANSAÇÕES
-    // Permitir que qualquer pessoa crie (necessário para a loja virtual)
-    // Permitir que usuários logados (administradores) leiam e modifiquem TUDO
-    match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow create: if true;
-      allow read, write: if request.auth != null;
+    // Helper: O usuário está logado no sistema?
+    function isLogged() {
+      return request.auth != null;
     }
 
-    // COLEÇÕES PÚBLICAS (Produtos, Categorias, Clientes, Opcionais)
-    // Qualquer um pode ler, apenas logados podem escrever.
+    // ACESSO ADMINISTRATIVO GLOBAL
+    // Qualquer usuário autenticado (o administrador) pode ler e escrever em qualquer documento dentro de 'artifacts'.
+    // Isso resolve o erro de permissão ao gerenciar pedidos da loja no Kanban.
+    match /artifacts/{appId}/{document=**} {
+      allow read, write: if isLogged();
+    }
+
+    // ACESSO PÚBLICO (LOJA VIRTUAL)
+    // Permissões necessárias para que clientes anônimos façam pedidos e vejam o cardápio.
+    
+    // Pedidos (Transações)
+    match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
+      allow create: if true; // Clientes anônimos criam pedidos
+    }
+
+    // Cardápio (Produtos, Categorias e Opcionais)
     match /artifacts/{appId}/products/{productId} {
       allow read: if true;
-      allow write: if request.auth != null;
     }
-
-    match /artifacts/{appId}/customers/{customerId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
     match /artifacts/{appId}/product-categories/{categoryId} {
       allow read: if true;
-      allow write: if request.auth != null;
     }
-
     match /artifacts/{appId}/optionals/{optionalId} {
       allow read: if true;
-      allow write: if request.auth != null;
     }
 
-    // Configurações
+    // Clientes (Necessário para a loja identificar/cadastrar o cliente ao finalizar pedido)
+    match /artifacts/{appId}/customers/{customerId} {
+      allow read, create, update: if true;
+    }
+
+    // Configurações da Loja (PIX, Horários, etc)
     match /artifacts/{appId}/settings/app {
       allow read: if true;
-      allow write: if request.auth != null;
     }
     
-    // Suporte para consultas globais e modificações por administradores
+    // Suporte para consultas globais de administradores
     match /{path=**}/transactions/{transactionId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isLogged();
     }
   }
 }
