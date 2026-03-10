@@ -10,13 +10,13 @@ service cloud.firestore {
 
     // 1. ACESSO ADMINISTRATIVO GLOBAL
     // Permite que qualquer usuário logado (o administrador) tenha acesso total
-    // a todos os dados do aplicativo, independentemente do sub-caminho.
+    // a todos os dados dentro do caminho /artifacts/
     match /artifacts/{appId}/{document=**} {
       allow read, write: if isLogged();
     }
 
     // 2. ACESSO PÚBLICO / LOJA VIRTUAL
-    // Permissões específicas para clientes que acessam o cardápio sem login.
+    // Permissões para que clientes não logados vejam o cardápio e façam pedidos.
     
     match /artifacts/{appId}/products/{productId} {
       allow read: if true;
@@ -31,18 +31,17 @@ service cloud.firestore {
       allow read: if true;
     }
     match /artifacts/{appId}/customers/{customerId} {
-      allow read, create, update: if true;
+      allow read, write: if true;
     }
 
     // Pedidos (Transações)
+    // Permite que qualquer pessoa crie uma transação (pedido da loja)
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      // Clientes anônimos podem criar pedidos (Storefront)
       allow create: if true;
-      // O Admin logado pode gerenciar todos os pedidos (Kanban/Painel)
-      allow read, update, delete: if isLogged();
+      // O acesso administrativo global acima já permite read/update/delete para o admin logado
     }
     
-    // Suporte para consultas em nível de grupo de coleções
+    // Suporte para consultas em nível de grupo de coleções (necessário para o Dashboard e Listas)
     match /{path=**}/transactions/{transactionId} {
       allow read, write: if isLogged();
     }
