@@ -71,6 +71,8 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
         return;
     }
     
+    // Análise: Garantimos que o caminho use explicitamente o userId original do documento
+    // para bater com as regras de segurança do Firestore.
     const docPath = `artifacts/${APP_ID}/users/${transaction.userId}/transactions/${transaction.id}`;
     const transactionRef = doc(firestore, docPath);
     const updateData = { status: newStatus };
