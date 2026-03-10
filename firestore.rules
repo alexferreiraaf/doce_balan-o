@@ -1,16 +1,10 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * REGRAS DE SEGURANÇA - DOÇURAS DA FRAN
-     */
-
     // 1. REGRA ADMINISTRATIVA (Prioridade Máxima)
     // Permite que QUALQUER usuário autenticado gerencie todos os dados do app.
     // Isso é essencial para que o admin possa editar pedidos criados pela loja online.
-    match /artifacts/docuras-da-fran-default/{document=**} {
+    match /artifacts/docuras-da-fran-default/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
 
