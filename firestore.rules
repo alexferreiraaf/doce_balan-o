@@ -3,28 +3,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: O usuário está autenticado?
+    // Helper: O usuário está autenticado no sistema?
     function isLogged() {
       return request.auth != null && request.auth.uid != null;
     }
 
-    // ACESSO ADMINISTRATIVO GLOBAL
-    // Permite que qualquer usuário logado (administrador) tenha acesso total a todos os dados do app.
-    // Isso garante que você possa gerenciar pedidos, produtos e clientes sem erros de permissão.
+    // 1. ACESSO ADMINISTRATIVO GLOBAL
+    // Permite que qualquer usuário logado (você, o administrador) tenha acesso total
+    // a todos os dados do aplicativo. Isso é essencial para o Kanban e gestão financeira.
     match /artifacts/{appId}/{document=**} {
       allow read, write: if isLogged();
     }
 
-    // ACESSO PÚBLICO (LOJA VIRTUAL)
-    // Permissões específicas para clientes anônimos que acessam a loja.
+    // 2. ACESSO PÚBLICO / LOJA VIRTUAL
+    // Permissões específicas para clientes que acessam o cardápio sem login.
     
-    // Pedidos (Transações)
-    match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow create: if true; // Clientes anônimos criam pedidos na loja
-      allow read, write: if isLogged(); // Admin gerencia totalmente
-    }
-
-    // Cardápio (Produtos, Categorias e Opcionais)
+    // Produtos, Categorias e Opcionais: Leitura pública para exibir o cardápio.
     match /artifacts/{appId}/products/{productId} {
       allow read: if true;
     }
@@ -35,17 +29,23 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Clientes (Identificação na loja)
+    // Configurações da Loja: Leitura pública para verificar horário e chave PIX.
+    match /artifacts/{appId}/settings/app {
+      allow read: if true;
+    }
+
+    // Clientes: Permite que a loja identifique ou cadastre clientes pelo WhatsApp.
     match /artifacts/{appId}/customers/{customerId} {
       allow read, create, update: if true;
     }
 
-    // Configurações da Loja
-    match /artifacts/{appId}/settings/app {
-      allow read: if true;
+    // Pedidos (Transações): Clientes anônimos podem criar pedidos.
+    // O gerenciamento (leitura/atualização) é feito pelo Admin via regra global acima.
+    match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
+      allow create: if true;
     }
     
-    // Suporte para consultas em nível de coleção para o Admin
+    // Suporte para consultas em nível de grupo de coleções (Necessário para o Painel)
     match /{path=**}/transactions/{transactionId} {
       allow read, write: if isLogged();
     }
