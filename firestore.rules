@@ -3,24 +3,25 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: O usuário está logado no sistema?
+    // Helper: O usuário está autenticado?
     function isLogged() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
 
     // ACESSO ADMINISTRATIVO GLOBAL
-    // Qualquer usuário autenticado (o administrador) pode ler e escrever em qualquer documento dentro de 'artifacts'.
-    // Isso resolve o erro de permissão ao gerenciar pedidos da loja no Kanban.
+    // Permite que qualquer usuário logado (administrador) tenha acesso total a todos os dados do app.
+    // Isso garante que você possa gerenciar pedidos, produtos e clientes sem erros de permissão.
     match /artifacts/{appId}/{document=**} {
       allow read, write: if isLogged();
     }
 
     // ACESSO PÚBLICO (LOJA VIRTUAL)
-    // Permissões necessárias para que clientes anônimos façam pedidos e vejam o cardápio.
+    // Permissões específicas para clientes anônimos que acessam a loja.
     
     // Pedidos (Transações)
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow create: if true; // Clientes anônimos criam pedidos
+      allow create: if true; // Clientes anônimos criam pedidos na loja
+      allow read, write: if isLogged(); // Admin gerencia totalmente
     }
 
     // Cardápio (Produtos, Categorias e Opcionais)
@@ -34,17 +35,17 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Clientes (Necessário para a loja identificar/cadastrar o cliente ao finalizar pedido)
+    // Clientes (Identificação na loja)
     match /artifacts/{appId}/customers/{customerId} {
       allow read, create, update: if true;
     }
 
-    // Configurações da Loja (PIX, Horários, etc)
+    // Configurações da Loja
     match /artifacts/{appId}/settings/app {
       allow read: if true;
     }
     
-    // Suporte para consultas globais de administradores
+    // Suporte para consultas em nível de coleção para o Admin
     match /{path=**}/transactions/{transactionId} {
       allow read, write: if isLogged();
     }
