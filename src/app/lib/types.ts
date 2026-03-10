@@ -3,7 +3,7 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type TransactionType = 'income' | 'expense';
 export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'fiado';
-export type TransactionStatus = 'paid' | 'pending';
+export type TransactionStatus = 'pending' | 'preparing' | 'ready' | 'paid';
 
 export interface SelectedOptional extends Optional {
   quantity: number;
@@ -91,5 +91,3 @@ export interface AppSettings {
   phone?: string;
   openingHours?: Record<DayOfWeek, OpeningHours>;
 }
-
-  
