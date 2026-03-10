@@ -11,7 +11,6 @@ import {
   Calendar,
   ChefHat,
   PackageCheck,
-  ArrowRight,
   ShoppingBag
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -21,9 +20,9 @@ import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(admin)/loading-component';
 import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -72,20 +71,21 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
         return;
     }
     
-    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${transaction.userId}/transactions/${transaction.id}`);
+    // Construção robusta da referência do documento
+    const transactionRef = doc(firestore, "artifacts", APP_ID, "users", transaction.userId, "transactions", transaction.id);
     const updateData = { status: newStatus };
     
     updateDoc(transactionRef, updateData)
       .then(() => {
-        toast({ title: "Sucesso!", description: "Status do pedido atualizado." });
+        toast({ title: "Sucesso!", description: `Pedido movido para: ${newStatus === 'preparing' ? 'Em Preparo' : newStatus === 'ready' ? 'Pronto' : 'Finalizado'}` });
       })
       .catch((error) => {
+        console.error("Erro ao atualizar status:", error);
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: transactionRef.path,
             operation: 'update',
             requestResourceData: updateData,
         }));
-        toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o pedido." });
       });
   };
 
@@ -226,8 +226,4 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
       </ScrollArea>
     </div>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
 }
