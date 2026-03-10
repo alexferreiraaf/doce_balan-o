@@ -4,20 +4,17 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * 1. ACESSO ADMINISTRATIVO TOTAL
-     * Se o usuário estiver autenticado (logado), ele tem permissão total
-     * para ler e escrever em QUALQUER documento dentro do app.
+     * REGRAS DE SEGURANÇA - DOÇURAS DA FRAN
      */
+
+    // Permissão administrativa total para usuários logados
+    // Qualquer pessoa autenticada pode gerenciar todos os dados do app em /artifacts/
     match /artifacts/docuras-da-fran-default/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
 
-    /**
-     * 2. REGRAS PARA A LOJA ONLINE (VISITANTES ANÔNIMOS)
-     * Permite que clientes não logados interajam com o cardápio e façam pedidos.
-     */
-    
-    // Visitantes podem ver produtos, categorias e configurações
+    // Regras específicas para a Loja Online (Visitantes Anônimos)
+    // Visitantes podem ler produtos, categorias e configurações
     match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
     }
@@ -36,12 +33,12 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Visitantes podem CRIAR pedidos (transações)
+    // Visitantes podem criar novos pedidos
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
     }
     
-    // Suporte para consultas em nível de grupo de coleções
+    // Suporte para consultas em nível de grupo de coleções (Collection Group Queries)
     match /{path=**}/transactions/{id} {
       allow read, write: if request.auth != null;
     }

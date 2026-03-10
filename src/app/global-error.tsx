@@ -22,11 +22,11 @@ export default function GlobalError({
       if (reset && typeof reset === 'function') {
         reset();
       } else {
-        // Fallback: recarregar a página inteira
+        // Fallback: recarregar a página inteira se a função reset não estiver disponível
         window.location.reload();
       }
     } catch (e) {
-      // Fallback final: forçar navegação para o PDV
+      // Fallback final: forçar navegação para uma rota segura (PDV)
       window.location.href = '/pdv';
     }
   };
@@ -50,9 +50,10 @@ export default function GlobalError({
               </Button>
             </div>
             {process.env.NODE_ENV === 'development' && (
-              <pre className="mt-6 p-4 bg-muted text-[10px] text-left overflow-auto rounded max-h-40">
-                {error?.message || 'Erro desconhecido'}
-              </pre>
+              <div className="mt-6 p-4 bg-muted text-[10px] text-left overflow-auto rounded max-h-40">
+                <p className="font-bold mb-1">Log de Erro:</p>
+                <pre>{error?.message || 'Erro desconhecido'}</pre>
+              </div>
             )}
           </div>
         </div>
