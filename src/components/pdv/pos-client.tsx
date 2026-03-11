@@ -6,8 +6,8 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import type { Product, ProductCategory, Transaction, Customer } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus } from 'lucide-react';
+import type { Product, ProductCategory, Transaction, Customer, ProductSize } from '@/app/lib/types';
+import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus, ChevronRight } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Input } from '../ui/input';
@@ -22,6 +22,7 @@ import { useFirestore, useUser } from '@/firebase';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
 import { APP_ID } from '@/app/lib/constants';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 
 interface CartItem extends Product {
   quantity: number;
@@ -130,11 +131,14 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {products.map((product) => {
               const isAvailable = product.isAvailable ?? true;
+              const hasSizes = product.sizes && product.sizes.length > 0;
+              const lowestPrice = hasSizes ? Math.min(...product.sizes!.map(s => s.price)) : product.price;
+
               return (
               <Card
                 key={product.id}
                 className={cn(
-                  "cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden",
+                  "cursor-pointer hover:shadow-lg hover:border-primary transition-all flex flex-col overflow-hidden relative",
                   !isAvailable && "opacity-60 cursor-not-allowed"
                 )}
                 onClick={() => {
@@ -163,8 +167,15 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                 </div>
                 <div className="p-3 flex flex-col justify-between flex-grow">
                   <h3 className="font-semibold text-card-foreground leading-tight">{product.name}</h3>
-                  <p className="text-primary font-bold mt-2">{formatCurrency(product.price)}</p>
+                  <p className="text-primary font-bold mt-2">
+                    {hasSizes ? `A partir de ${formatCurrency(lowestPrice)}` : formatCurrency(product.price)}
+                  </p>
                 </div>
+                {hasSizes && (
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="bg-white/90 text-primary border-primary/20 text-[10px]">{product.sizes!.length} tam.</Badge>
+                  </div>
+                )}
               </Card>
               )
             })}
@@ -189,8 +200,8 @@ function CartView({ cart, onUpdateQuantity, onFinalize, total, onAddMore }: { ca
                   {cart.map((item) => (
                     <div key={item.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
                       <div className="flex-grow">
-                        <p className="font-semibold">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatCurrency(item.price)}</p>
+                        <p className="font-semibold text-sm leading-tight">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(item.price)}</p>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}>
@@ -242,6 +253,9 @@ export function POSClient() {
   const firestore = useFirestore();
   const storage = getStorage();
 
+  // State for size selection
+  const [selectedProductForSizes, setSelectedProductForSizes] = useState<Product | null>(null);
+
   const filteredProducts = useMemo(() => {
     return products
       .filter((product) => {
@@ -253,7 +267,7 @@ export function POSClient() {
       );
   }, [products, selectedCategory, searchTerm]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, size?: ProductSize) => {
     if (product.isAvailable === false) {
       toast({
         variant: "destructive",
@@ -262,18 +276,34 @@ export function POSClient() {
       });
       return;
     }
+
+    // If product has sizes and none is selected, open the modal
+    if (product.sizes && product.sizes.length > 0 && !size) {
+      setSelectedProductForSizes(product);
+      return;
+    }
+
+    const finalProduct = {
+      ...product,
+      name: size ? `${product.name} (${size.name})` : product.name,
+      price: size ? size.price : product.price,
+      id: size ? `${product.id}-${size.name}` : product.id,
+    };
+
     setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
+      const existingItem = prevCart.find((item) => item.id === finalProduct.id);
       if (existingItem) {
         return prevCart.map((item) =>
-          item.id === product.id
+          item.id === finalProduct.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...finalProduct, quantity: 1 }];
     });
-     if(isMobile) setMobileTab('cart');
+
+    setSelectedProductForSizes(null);
+    if(isMobile) setMobileTab('cart');
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -301,7 +331,6 @@ export function POSClient() {
     setShowFinalizeSheet(false);
     setLastSale({transaction, customer});
     
-    // Save receipt if there's a customer
     if (customer && user) {
         try {
             const pdfBlob = await receiptDialogRef.current?.generatePdf();
@@ -320,15 +349,10 @@ export function POSClient() {
             }
         } catch (error) {
             console.error("Failed to save receipt:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Erro ao Salvar Comprovante',
-                description: 'Não foi possível salvar o comprovante automaticamente.',
-            });
         }
     }
     
-    setCart([]); // Clear cart after sale is finalized
+    setCart([]); 
   }
 
   const handleAddMore = () => {
@@ -344,8 +368,9 @@ export function POSClient() {
     return <POSLoading />;
   }
 
-  if (isMobile) {
-      return (
+  return (
+    <>
+      {isMobile ? (
           <>
             <Tabs value={mobileTab} onValueChange={setMobileTab} className="flex flex-col h-full">
                 <div className="p-4 pb-0">
@@ -368,7 +393,7 @@ export function POSClient() {
                             onSearchTermChange={setSearchTerm}
                         />
                         <ScrollArea className="flex-grow">
-                            <ProductGrid products={filteredProducts} onProductClick={addToCart} />
+                            <ProductGrid products={filteredProducts} onProductClick={(p) => addToCart(p)} />
                         </ScrollArea>
                     </div>
                 </TabsContent>
@@ -376,48 +401,57 @@ export function POSClient() {
                     <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} onAddMore={handleAddMore} />
                 </TabsContent>
             </Tabs>
-            <AddTransactionSheet
-                open={showFinalizeSheet}
-                onOpenChange={handleSheetOpenChange}
-                cart={cart}
-                cartTotal={total}
-                onSaleFinalized={handleSaleFinalized}
-            />
-            {lastSale && (
-                <SaleReceiptDialog
-                    ref={receiptDialogRef}
-                    transaction={lastSale.transaction}
-                    customer={lastSale.customer}
-                    isOpen={!!lastSale}
-                    onOpenChange={(open) => { if (!open) setLastSale(null); }}
-                />
-            )}
         </>
-      )
-  }
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-full">
+          <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col h-full overflow-hidden">
+            <div className="p-4">
+                <ProductFilters
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    onSelectCategory={setSelectedCategory}
+                    searchTerm={searchTerm}
+                    onSearchTermChange={setSearchTerm}
+                />
+            </div>
+            <ScrollArea className="flex-grow px-4 pb-4">
+              <ProductGrid products={filteredProducts} onProductClick={(p) => addToCart(p)} />
+            </ScrollArea>
+          </div>
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 h-full">
-      {/* Product Selection */}
-      <div className="lg:col-span-2 bg-card border rounded-lg flex flex-col h-full overflow-hidden">
-        <div className="p-4">
-            <ProductFilters
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                searchTerm={searchTerm}
-                onSearchTermChange={setSearchTerm}
-            />
+          <div className="lg:col-span-1">
+            <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} onAddMore={handleAddMore} />
+          </div>
         </div>
-        <ScrollArea className="flex-grow px-4 pb-4">
-          <ProductGrid products={filteredProducts} onProductClick={addToCart} />
-        </ScrollArea>
-      </div>
+      )}
 
-      {/* Sale Summary */}
-      <div className="lg:col-span-1">
-        <CartView cart={cart} onUpdateQuantity={updateQuantity} onFinalize={handleFinalize} total={total} onAddMore={handleAddMore} />
-      </div>
+      {/* Modal para Seleção de Tamanho */}
+      <Dialog open={!!selectedProductForSizes} onOpenChange={(open) => !open && setSelectedProductForSizes(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Escolha o Tamanho</DialogTitle>
+            <DialogDescription>
+              Selecione o tamanho desejado para <strong>{selectedProductForSizes?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-4">
+            {selectedProductForSizes?.sizes?.map((size) => (
+              <Button
+                key={size.name}
+                variant="outline"
+                className="justify-between h-14 text-base font-semibold group"
+                onClick={() => addToCart(selectedProductForSizes, size)}
+              >
+                <span>{size.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-primary">{formatCurrency(size.price)}</span>
+                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AddTransactionSheet
         open={showFinalizeSheet}
@@ -436,6 +470,6 @@ export function POSClient() {
               onOpenChange={(open) => { if (!open) setLastSale(null); }}
           />
       )}
-    </div>
+    </>
   );
 }

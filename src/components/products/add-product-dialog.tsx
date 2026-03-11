@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, PlusCircle, X } from 'lucide-react';
+import { Loader2, PlusCircle, X, Trash2, Plus } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import Image from 'next/image';
 
@@ -38,11 +38,16 @@ import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
 import { Switch } from '../ui/switch';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { Separator } from '../ui/separator';
 
+const sizeSchema = z.object({
+  name: z.string().min(1, 'Nome do tamanho é obrigatório.'),
+  price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
-  price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+  price: z.coerce.number().min(0, 'O preço base deve ser zero ou maior.'),
   promotionalPrice: z.coerce.number().optional(),
   categoryId: z.string().optional(),
   imageUrl: z.string().optional(),
@@ -50,6 +55,8 @@ const formSchema = z.object({
   isPromotion: z.boolean().default(false),
   isAvailable: z.boolean().default(true),
   imageFile: z.any().optional(),
+  hasSizes: z.boolean().default(false),
+  sizes: z.array(sizeSchema).optional(),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -84,10 +91,18 @@ export function AddProductDialog() {
       isPromotion: false,
       isAvailable: true,
       promotionalPrice: 0,
+      hasSizes: false,
+      sizes: [],
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "sizes",
+  });
+
   const isPromotion = form.watch("isPromotion");
+  const hasSizes = form.watch("hasSizes");
 
   const resetFormState = () => {
     form.reset();
@@ -141,7 +156,7 @@ export function AddProductDialog() {
       const collectionPath = `artifacts/${APP_ID}/products`;
       const productData = {
         name: data.name,
-        price: data.price,
+        price: data.hasSizes && data.sizes && data.sizes.length > 0 ? data.sizes[0].price : data.price,
         categoryId: data.categoryId || '',
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
@@ -149,6 +164,7 @@ export function AddProductDialog() {
         isAvailable: data.isAvailable,
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
         salesCount: 0,
+        sizes: data.hasSizes ? data.sizes : [],
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -185,7 +201,7 @@ export function AddProductDialog() {
         <DialogHeader>
           <DialogTitle>Adicionar Novo Produto</DialogTitle>
           <DialogDescription>
-            Cadastre um novo produto para usar nos lançamentos de entrada.
+            Cadastre um novo produto com tamanhos e preços opcionais.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -203,19 +219,86 @@ export function AddProductDialog() {
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
-              name="price"
+              name="hasSizes"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preço (R$)</FormLabel>
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
+                  <div className="space-y-0.5">
+                    <FormLabel>Este produto tem tamanhos diferentes?</FormLabel>
+                    <FormDescription>Ex: Bolo P, Bolo M, Bolo G</FormDescription>
+                  </div>
                   <FormControl>
-                    <CurrencyInput placeholder="R$ 25,00" {...field} onValueChange={(value) => field.onChange(value)} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
+
+            {hasSizes ? (
+              <div className="space-y-4 border p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm">Tamanhos e Preços</h4>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', price: 0 })}>
+                    <Plus className="w-4 h-4 mr-1" /> Add Tamanho
+                  </Button>
+                </div>
+                <Separator />
+                {fields.map((field, index) => (
+                  <div key={field.id} className="flex items-end gap-2 group animate-in slide-in-from-top-2">
+                    <FormField
+                      control={form.control}
+                      name={`sizes.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel className="text-xs">Tamanho (Ex: Pequeno)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`sizes.${index}.price`}
+                      render={({ field }) => (
+                        <FormItem className="w-32">
+                          <FormLabel className="text-xs">Preço (R$)</FormLabel>
+                          <FormControl>
+                            <CurrencyInput placeholder="0,00" {...field} onValueChange={(val) => field.onChange(val)} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="button" variant="ghost" size="icon" className="mb-0.5 text-muted-foreground hover:text-destructive" onClick={() => remove(index)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {fields.length === 0 && <p className="text-center text-xs text-muted-foreground py-2">Nenhum tamanho adicionado.</p>}
+              </div>
+            ) : (
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço (R$)</FormLabel>
+                    <FormControl>
+                      <CurrencyInput placeholder="R$ 25,00" {...field} onValueChange={(value) => field.onChange(value)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="imageFile"
@@ -360,5 +443,3 @@ export function AddProductDialog() {
     </Dialog>
   );
 }
-
-  

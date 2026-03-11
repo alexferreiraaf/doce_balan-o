@@ -40,6 +40,11 @@ export interface Transaction {
   scheduledAt?: Timestamp;
 }
 
+export interface ProductSize {
+  name: string;
+  price: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -51,6 +56,7 @@ export interface Product {
   isPromotion?: boolean;
   isAvailable?: boolean;
   salesCount?: number;
+  sizes?: ProductSize[];
 }
 
 export interface Customer {

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Edit, X } from 'lucide-react';
+import { Loader2, Edit, X, Trash2, Plus } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import Image from 'next/image';
 
@@ -39,10 +39,16 @@ import { AddProductCategoryDialog } from './add-product-category-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { Separator } from '../ui/separator';
+
+const sizeSchema = z.object({
+  name: z.string().min(1, 'Nome do tamanho é obrigatório.'),
+  price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
-  price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+  price: z.coerce.number().min(0, 'O preço base deve ser zero ou maior.'),
   promotionalPrice: z.coerce.number().optional(),
   categoryId: z.string().optional(),
   imageUrl: z.string().optional(),
@@ -50,6 +56,8 @@ const formSchema = z.object({
   isPromotion: z.boolean().default(false),
   isAvailable: z.boolean().default(true),
   imageFile: z.any().optional(),
+  hasSizes: z.boolean().default(false),
+  sizes: z.array(sizeSchema).optional(),
 });
 
 
@@ -88,10 +96,18 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       isFeatured: product.isFeatured || false,
       isPromotion: product.isPromotion || false,
       isAvailable: product.isAvailable ?? true,
+      hasSizes: !!(product.sizes && product.sizes.length > 0),
+      sizes: product.sizes || [],
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "sizes",
+  });
+
   const isPromotion = form.watch("isPromotion");
+  const hasSizes = form.watch("hasSizes");
 
   const resetFormState = () => {
     form.reset({
@@ -103,6 +119,8 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         isFeatured: product.isFeatured || false,
         isPromotion: product.isPromotion || false,
         isAvailable: product.isAvailable ?? true,
+        hasSizes: !!(product.sizes && product.sizes.length > 0),
+        sizes: product.sizes || [],
     });
     setImagePreview(product.imageUrl || null);
     const fileInput = document.getElementById(`file-upload-${product.id}`) as HTMLInputElement;
@@ -158,22 +176,20 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
           await uploadString(imageStorageRef, base64, 'data_url');
           imageUrl = await getDownloadURL(imageStorageRef);
 
-          // Delete old image if it exists and is a firebase storage url
           if (product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
             try {
               const oldImageRef = storageRef(storage, product.imageUrl);
               await deleteObject(oldImageRef);
             } catch (deleteError) {
-              console.warn("Could not delete old image, it might not exist or there's a permission issue.", deleteError);
+              console.warn("Could not delete old image", deleteError);
             }
           }
         } else if (imageUrl === '' && product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
-           // If imageUrl was cleared and there was an old image, delete it.
             try {
               const oldImageRef = storageRef(storage, product.imageUrl);
               await deleteObject(oldImageRef);
             } catch (deleteError) {
-              console.warn("Could not delete old image on clear, it might not exist or there's a permission issue.", deleteError);
+              console.warn("Could not delete old image", deleteError);
             }
         }
       } catch (uploadError: any) {
@@ -187,13 +203,14 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
 
       const productData = {
         name: data.name,
-        price: data.price,
+        price: data.hasSizes && data.sizes && data.sizes.length > 0 ? data.sizes[0].price : data.price,
         categoryId: data.categoryId || '',
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
         isPromotion: data.isPromotion,
         isAvailable: data.isAvailable,
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
+        sizes: data.hasSizes ? data.sizes : [],
       };
 
       updateDoc(productRef, productData)
@@ -226,7 +243,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         <DialogHeader>
           <DialogTitle>Editar Produto</DialogTitle>
           <DialogDescription>
-            Atualize as informações do produto abaixo.
+            Atualize as informações, tamanhos e preços do produto.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -244,19 +261,86 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
-              name="price"
+              name="hasSizes"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preço (R$)</FormLabel>
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
+                  <div className="space-y-0.5">
+                    <FormLabel>Este produto tem tamanhos diferentes?</FormLabel>
+                    <FormDescription>Ex: Pequeno, Médio, Grande</FormDescription>
+                  </div>
                   <FormControl>
-                    <CurrencyInput placeholder="R$ 25,00" {...field} onValueChange={(value) => field.onChange(value)} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
+
+            {hasSizes ? (
+              <div className="space-y-4 border p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm">Tamanhos e Preços</h4>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', price: 0 })}>
+                    <Plus className="w-4 h-4 mr-1" /> Add Tamanho
+                  </Button>
+                </div>
+                <Separator />
+                {fields.map((field, index) => (
+                  <div key={field.id} className="flex items-end gap-2 animate-in slide-in-from-top-2">
+                    <FormField
+                      control={form.control}
+                      name={`sizes.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel className="text-xs">Tamanho</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`sizes.${index}.price`}
+                      render={({ field }) => (
+                        <FormItem className="w-32">
+                          <FormLabel className="text-xs">Preço (R$)</FormLabel>
+                          <FormControl>
+                            <CurrencyInput placeholder="0,00" {...field} onValueChange={(val) => field.onChange(val)} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="button" variant="ghost" size="icon" className="mb-0.5 text-muted-foreground hover:text-destructive" onClick={() => remove(index)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {fields.length === 0 && <p className="text-center text-xs text-muted-foreground py-2">Nenhum tamanho adicionado.</p>}
+              </div>
+            ) : (
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preço (R$)</FormLabel>
+                    <FormControl>
+                      <CurrencyInput placeholder="R$ 25,00" {...field} onValueChange={(value) => field.onChange(value)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="imageFile"
@@ -399,5 +483,3 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     </Dialog>
   );
 }
-
-  

@@ -2,11 +2,11 @@
 
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
-import type { AppSettings, DayOfWeek, Product } from '@/app/lib/types';
+import type { AppSettings, DayOfWeek, Product, ProductSize } from '@/app/lib/types';
 import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
-import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent, ChevronDown } from 'lucide-react';
+import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent, ChevronDown, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
 import { WhiskIcon } from '../icons/whisk-icon';
@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/colla
 import { cn } from '@/lib/utils';
 import { useUser, useAuth } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 
 interface CartItem extends Product {
   quantity: number;
@@ -49,6 +50,9 @@ export function StorefrontClient() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [showPromotions, setShowPromotions] = useState(false);
   
+  // State for size selection
+  const [selectedProductForSizes, setSelectedProductForSizes] = useState<Product | null>(null);
+
   const { user } = useUser();
   const auth = useAuth();
   const [isClient, setIsClient] = useState(false);
@@ -62,14 +66,9 @@ export function StorefrontClient() {
     if (auth && !user) {
       signInAnonymously(auth).catch((error) => {
         console.error('Failed to sign in anonymously', error);
-        toast({
-          variant: 'destructive',
-          title: 'Erro de conexão',
-          description: 'Não foi possível conectar à loja. Tente recarregar a página.',
-        });
       });
     }
-  }, [auth, user, toast]);
+  }, [auth, user]);
 
   const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; message: string; isStatusLoading: boolean }>({
     isOpen: false,
@@ -135,7 +134,7 @@ export function StorefrontClient() {
       promotionalProducts: promotions,
       featuredProducts: featured,
       bestSellerThreshold: threshold,
-      regularProducts: products, // All products for the main grid
+      regularProducts: products,
     };
   }, [products]);
 
@@ -154,7 +153,7 @@ export function StorefrontClient() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   }, [cart]);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = (product: Product, size?: ProductSize) => {
     if (product.isAvailable === false) {
       toast({
        variant: 'destructive',
@@ -172,15 +171,30 @@ export function StorefrontClient() {
       return;
     }
 
+    // Se o produto tem tamanhos e nenhum foi escolhido ainda
+    if (product.sizes && product.sizes.length > 0 && !size) {
+      setSelectedProductForSizes(product);
+      return;
+    }
+
+    const finalProduct = {
+      ...product,
+      name: size ? `${product.name} (${size.name})` : product.name,
+      price: size ? size.price : product.price,
+      id: size ? `${product.id}-${size.name}` : product.id,
+    };
+
     setCart(currentCart => {
-      const existingItem = currentCart.find(item => item.id === product.id);
+      const existingItem = currentCart.find(item => item.id === finalProduct.id);
       if (existingItem) {
         return currentCart.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === finalProduct.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...currentCart, { ...product, quantity: 1 }];
+      return [...currentCart, { ...finalProduct, quantity: 1 }];
     });
+
+    setSelectedProductForSizes(null);
     setIsCartOpen(true);
   };
 
@@ -218,13 +232,15 @@ export function StorefrontClient() {
   };
 
   if (loading) {
-    return null; // The loading skeleton is handled by Suspense
+    return null;
   }
 
   const ProductCard = ({ product }: { product: Product }) => {
     const isBestSeller = (product.salesCount || 0) > 0 && (product.salesCount || 0) >= bestSellerThreshold;
     const hasPromo = product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0;
-    const displayPrice = hasPromo ? product.promotionalPrice! : product.price;
+    const hasSizes = product.sizes && product.sizes.length > 0;
+    const lowestPrice = hasSizes ? Math.min(...product.sizes!.map(s => s.price)) : product.price;
+    const displayPrice = hasPromo ? product.promotionalPrice! : lowestPrice;
     const isAvailable = product.isAvailable ?? true;
     
     return (
@@ -258,13 +274,16 @@ export function StorefrontClient() {
                 </div>
             </CardHeader>
             <CardContent className="p-4 flex flex-col flex-grow">
-                <h3 className="font-semibold text-lg flex-grow">{product.name}</h3>
+                <h3 className="font-semibold text-lg flex-grow leading-tight">{product.name}</h3>
                 <div className="flex justify-between items-end mt-4">
                     <div className="flex flex-col items-start">
                         {hasPromo && (
                             <p className="text-sm text-muted-foreground line-through">{formatCurrency(product.price)}</p>
                         )}
-                        <p className="text-xl font-bold text-primary">{formatCurrency(displayPrice)}</p>
+                        <p className="text-xl font-bold text-primary">
+                          {hasSizes && !hasPromo ? `A partir de ` : ''}
+                          {formatCurrency(displayPrice)}
+                        </p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)} disabled={!isAvailable}>
                         <ShoppingCart className="w-4 h-4 mr-2" />
@@ -277,7 +296,7 @@ export function StorefrontClient() {
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 pb-24">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
             <WhiskIcon className="w-16 h-16 text-primary" />
@@ -384,6 +403,34 @@ export function StorefrontClient() {
         </div>
       )}
 
+      {/* Modal para Seleção de Tamanho */}
+      <Dialog open={!!selectedProductForSizes} onOpenChange={(open) => !open && setSelectedProductForSizes(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Escolha o Tamanho</DialogTitle>
+            <DialogDescription>
+              Selecione a opção desejada para <strong>{selectedProductForSizes?.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-4">
+            {selectedProductForSizes?.sizes?.map((size) => (
+              <Button
+                key={size.name}
+                variant="outline"
+                className="justify-between h-14 text-base font-semibold group"
+                onClick={() => handleAddToCart(selectedProductForSizes!, size)}
+              >
+                <span>{size.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-primary font-bold">{formatCurrency(size.price)}</span>
+                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Cart Sheet */}
       <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
         <SheetContent className="flex flex-col">
@@ -404,8 +451,8 @@ export function StorefrontClient() {
                         </div>
                       )}
                       <div className="flex-grow">
-                        <p className="font-semibold">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{formatCurrency(item.promotionalPrice ?? item.price)}</p>
+                        <p className="font-semibold text-sm leading-tight">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(item.promotionalPrice ?? item.price)}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}>
                             <Minus className="h-4 w-4" />
@@ -417,7 +464,7 @@ export function StorefrontClient() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">{formatCurrency((item.promotionalPrice ?? item.price) * item.quantity)}</p>
+                        <p className="font-bold text-sm">{formatCurrency((item.promotionalPrice ?? item.price) * item.quantity)}</p>
                         <Button variant="ghost" size="icon" className="h-7 w-7 mt-2 text-muted-foreground hover:text-destructive" onClick={() => handleUpdateQuantity(item.id, 0)}>
                            <Trash2 className="h-4 w-4"/>
                         </Button>
