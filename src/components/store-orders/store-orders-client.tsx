@@ -1,3 +1,4 @@
+
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { 
@@ -13,7 +14,8 @@ import {
   PackageCheck,
   ShoppingBag,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Undo2
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
@@ -109,7 +111,11 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
     
     try {
       await updateDoc(transactionRef, updateData);
-      toast({ title: "Pedido Atualizado", description: `O status agora é: ${newStatus === 'preparing' ? 'Em Preparo' : newStatus === 'ready' ? 'Pronto' : 'Finalizado'}.` });
+      toast({ title: "Pedido Atualizado", description: `O status agora é: ${
+        newStatus === 'preparing' ? 'Em Preparo' : 
+        newStatus === 'ready' ? 'Pronto' : 
+        newStatus === 'pending' ? 'Pendente' : 'Finalizado'
+      }.` });
     } catch (error: any) {
       console.error("Erro ao atualizar status:", error);
       if (error.code === 'permission-denied' || error.message?.includes('permission')) {
@@ -173,21 +179,41 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
                <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
             </div>
             
-            {t.status === 'pending' && (
-              <Button size="sm" className="h-8 text-xs bg-amber-500 hover:bg-amber-600" onClick={() => updateOrderStatus(t, 'preparing')}>
-                <ChefHat className="w-3 h-3 mr-1" /> Preparar
-              </Button>
-            )}
-            {t.status === 'preparing' && (
-              <Button size="sm" className="h-8 text-xs bg-blue-500 hover:bg-blue-600" onClick={() => updateOrderStatus(t, 'ready')}>
-                <PackageCheck className="w-3 h-3 mr-1" /> Pronto
-              </Button>
-            )}
-            {t.status === 'ready' && (
-              <Button size="sm" className="h-8 text-xs bg-green-500 hover:bg-green-600" onClick={() => updateOrderStatus(t, 'paid')}>
-                <CheckCircle className="w-3 h-3 mr-1" /> Finalizar
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {/* Back Actions */}
+              {t.status === 'preparing' && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => updateOrderStatus(t, 'pending')}>
+                  <Undo2 className="w-4 h-4" />
+                </Button>
+              )}
+              {t.status === 'ready' && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => updateOrderStatus(t, 'preparing')}>
+                  <Undo2 className="w-4 h-4" />
+                </Button>
+              )}
+              {t.status === 'paid' && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => updateOrderStatus(t, 'ready')}>
+                  <Undo2 className="w-4 h-4" />
+                </Button>
+              )}
+
+              {/* Forward Actions */}
+              {t.status === 'pending' && (
+                <Button size="sm" className="h-8 text-xs bg-amber-500 hover:bg-amber-600" onClick={() => updateOrderStatus(t, 'preparing')}>
+                  <ChefHat className="w-3 h-3 mr-1" /> Preparar
+                </Button>
+              )}
+              {t.status === 'preparing' && (
+                <Button size="sm" className="h-8 text-xs bg-blue-500 hover:bg-blue-600" onClick={() => updateOrderStatus(t, 'ready')}>
+                  <PackageCheck className="w-3 h-3 mr-1" /> Pronto
+                </Button>
+              )}
+              {t.status === 'ready' && (
+                <Button size="sm" className="h-8 text-xs bg-green-500 hover:bg-green-600" onClick={() => updateOrderStatus(t, 'paid')}>
+                  <CheckCircle className="w-3 h-3 mr-1" /> Finalizar
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
