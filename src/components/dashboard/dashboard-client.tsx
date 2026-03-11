@@ -1,3 +1,4 @@
+
 'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -19,7 +20,7 @@ import { AddProductDialog } from './add-product-dialog';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
-import { parseToNumber } from '@/lib/utils';
+import { parseToNumber, cn } from '@/lib/utils';
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -39,7 +40,8 @@ export function DashboardClient() {
     if (!startDate || !endDate || !Array.isArray(transactions)) return [];
     
     const fromTime = startDate.getTime();
-    const toTime = endDate.getTime() + 86399999;
+    // Garante que o fim do dia seja incluído (23:59:59.999)
+    const toTime = new Date(endDate).setHours(23, 59, 59, 999);
     
     return transactions.filter((t) => {
       let transactionTime = 0;
@@ -102,21 +104,50 @@ export function DashboardClient() {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm w-fit ml-auto">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-[140px] justify-start text-xs font-bold">
-                    <CalendarIcon className="mr-2 h-3 w-3" />
-                    {format(startDate, "MMMM / yyyy", { locale: ptBR })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar mode="single" selected={startDate} onSelect={(d) => d && setStartDate(startOfMonth(d))} />
-                </PopoverContent>
-              </Popover>
-              <div className="flex items-center gap-1 ml-2 border-l pl-2">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
+            <div className="flex items-center gap-2 bg-card p-2 rounded-full border shadow-md w-fit ml-auto">
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className={cn(
+                        "rounded-full h-9 px-4 justify-start text-xs font-bold border-primary/20",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-3.5 w-3.5 text-primary" />
+                      {startDate ? format(startDate, "dd/MM/yyyy") : "Início"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                  </PopoverContent>
+                </Popover>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className={cn(
+                        "rounded-full h-9 px-4 justify-start text-xs font-bold border-primary/20",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-3.5 w-3.5 text-primary" />
+                      {endDate ? format(endDate, "dd/MM/yyyy") : "Fim"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="flex items-center gap-1 ml-2 border-l pl-2 h-6 border-muted-foreground/20">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
               </div>
             </div>
 
