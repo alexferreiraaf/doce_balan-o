@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { 
   Clock, 
   CheckCircle, 
@@ -8,13 +8,16 @@ import {
   FileText, 
   CreditCard, 
   Coins, 
-  Calendar,
+  Calendar as CalendarIcon,
   ChefHat,
   PackageCheck,
-  ShoppingBag
+  ShoppingBag,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(admin)/loading-component';
@@ -33,6 +36,8 @@ import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from '../transactions/edit-transaction-sheet';
 import { OrderDetailsDialog } from './order-details-dialog';
 import { ScrollArea, ScrollBar } from '../ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
 
 const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
     pix: { text: 'PIX', icon: Landmark },
@@ -52,10 +57,29 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const loading = transactionsLoading || customersLoading || isUserLoading;
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  useEffect(() => {
+    const today = new Date();
+    setStartDate(startOfMonth(today));
+    setEndDate(endOfMonth(today));
+  }, []);
+
+  const filteredTransactions = useMemo(() => {
+    if (!startDate || !endDate || !Array.isArray(allTransactions)) return [];
+    
+    const fromTime = startDate.getTime();
+    const toTime = endDate.getTime() + 86399999;
+    
+    return allTransactions.filter((t) => {
+      const transactionTime = t.dateMs || (t.timestamp?.toMillis ? t.timestamp.toMillis() : 0);
+      return transactionTime >= fromTime && transactionTime <= toTime;
+    });
+  }, [allTransactions, startDate, endDate]);
 
   const ordersByStatus = useMemo(() => {
-    const storeOrders = allTransactions.filter(t => t.category === 'Venda Online' || t.fromStorefront);
+    const storeOrders = filteredTransactions.filter(t => t.category === 'Venda Online' || t.fromStorefront);
     
     return {
       pending: storeOrders.filter(t => t.status === 'pending'),
@@ -63,7 +87,15 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
       ready: storeOrders.filter(t => t.status === 'ready'),
       paid: storeOrders.filter(t => t.status === 'paid'),
     };
-  }, [allTransactions]);
+  }, [filteredTransactions]);
+
+  const handleMonthChange = (direction: 'next' | 'prev') => {
+    const operation = direction === 'next' ? addMonths : subMonths;
+    const current = startDate || new Date();
+    const next = operation(current, 1);
+    setStartDate(startOfMonth(next));
+    setEndDate(endOfMonth(next));
+  };
 
   const updateOrderStatus = async (transaction: Transaction, newStatus: TransactionStatus) => {
     if (!user || !firestore) {
@@ -92,7 +124,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
     }
   };
 
-  if (loading) {
+  if (transactionsLoading || customersLoading || isUserLoading || !startDate || !endDate) {
     return <Loading />;
   }
 
@@ -117,7 +149,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
             )}
             {t.scheduledAt && (
               <div className="flex items-center text-xs font-semibold text-primary">
-                <Calendar className="w-3 h-3 mr-1" />
+                <CalendarIcon className="w-3 h-3 mr-1" />
                 {format(t.scheduledAt.toDate(), "dd/MM 'às' HH:mm")}
               </div>
             )}
@@ -192,9 +224,34 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
             <FileText className="w-8 h-8" />
             Quadro de Pedidos
           </h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <ShoppingBag className="w-4 h-4" />
-            Total: {allTransactions.filter(t => t.category === 'Venda Online' || t.fromStorefront).length} pedidos
+          
+          <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm w-fit">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="w-[130px] justify-start text-xs font-bold">
+                  <CalendarIcon className="mr-2 h-3 w-3" />
+                  {format(startDate, "dd/MM/yyyy", { locale: ptBR })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={startDate} onSelect={(d) => d && setStartDate(d)} />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="w-[130px] justify-start text-xs font-bold">
+                  <CalendarIcon className="mr-2 h-3 w-3" />
+                  {format(endDate, "dd/MM/yyyy", { locale: ptBR })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar mode="single" selected={endDate} onSelect={(d) => d && setEndDate(d)} />
+              </PopoverContent>
+            </Popover>
+            <div className="flex items-center gap-1 ml-2 border-l pl-2">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
           </div>
       </div>
       
