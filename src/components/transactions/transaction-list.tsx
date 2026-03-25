@@ -3,7 +3,7 @@
 import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transaction, PaymentMethod, Customer } from '@/app/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { DeleteTransactionButton } from '../dashboard/delete-transaction-button';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
@@ -56,6 +56,9 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                     <span className="font-semibold text-card-foreground">{t.description}</span>
                     <div className='flex items-center gap-2 flex-wrap'>
                         <Badge variant="secondary" className="text-xs">{t.category}</Badge>
+                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            {formatDate(t.timestamp || t.dateMs)}
+                        </Badge>
                         {t.type === 'income' && paymentInfo && (
                             <Badge variant={t.paymentMethod === 'fiado' ? 'destructive' : 'outline'} className="text-xs">
                                 <paymentInfo.icon className="w-3 h-3 mr-1" />

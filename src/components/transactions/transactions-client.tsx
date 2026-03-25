@@ -9,7 +9,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -135,6 +135,10 @@ export function TransactionsClient() {
                                     </Badge>
                                   </>
                               )}
+                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {formatDate(t.timestamp || t.dateMs)}
+                              </Badge>
                               <Badge variant="destructive" className="text-xs">
                                   <Clock className="w-3 h-3 mr-1" />
                                   Pendente: {formatCurrency(remainingAmount)}

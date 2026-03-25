@@ -80,7 +80,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
   const firestore = useFirestore();
   const storage = getStorage();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { categories, loading: categoriesLoading } = useProductCategories();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -165,37 +165,32 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       return;
     }
 
-    startTransition(async () => {
-      let imageUrl: string | undefined = data.imageUrl;
+    setLoading(true);
+    let imageUrl: string | undefined = data.imageUrl;
 
-      try {
-        if (data.imageFile) {
-          const file = data.imageFile as File;
-          const base64 = await fileToBase64(file);
-          const imageStorageRef = storageRef(storage, `products/${user.uid}/${Date.now()}_${file.name}`);
-          await uploadString(imageStorageRef, base64, 'data_url');
-          imageUrl = await getDownloadURL(imageStorageRef);
+    try {
+      if (data.imageFile) {
+        const file = data.imageFile as File;
+        const base64 = await fileToBase64(file);
+        const imageStorageRef = storageRef(storage, `products/${user.uid}/${Date.now()}_${file.name}`);
+        await uploadString(imageStorageRef, base64, 'data_url');
+        imageUrl = await getDownloadURL(imageStorageRef);
 
-          if (product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
-            try {
-              const oldImageRef = storageRef(storage, product.imageUrl);
-              await deleteObject(oldImageRef);
-            } catch (deleteError) {
-              console.warn("Could not delete old image", deleteError);
-            }
+        if (product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
+          try {
+            const oldImageRef = storageRef(storage, product.imageUrl);
+            await deleteObject(oldImageRef);
+          } catch (deleteError) {
+            console.warn("Could not delete old image", deleteError);
           }
-        } else if (imageUrl === '' && product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
-            try {
-              const oldImageRef = storageRef(storage, product.imageUrl);
-              await deleteObject(oldImageRef);
-            } catch (deleteError) {
-              console.warn("Could not delete old image", deleteError);
-            }
         }
-      } catch (uploadError: any) {
-        console.error('File handling failed:', uploadError);
-        toast({ variant: 'destructive', title: 'Erro no Upload', description: 'Não foi possível processar a imagem.'});
-        return;
+      } else if (imageUrl === '' && product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
+          try {
+            const oldImageRef = storageRef(storage, product.imageUrl);
+            await deleteObject(oldImageRef);
+          } catch (deleteError) {
+            console.warn("Could not delete old image", deleteError);
+          }
       }
       
       const docPath = `artifacts/${APP_ID}/products/${product.id}`;
@@ -213,23 +208,26 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         sizes: data.hasSizes ? data.sizes : [],
       };
 
-      updateDoc(productRef, productData)
-        .then(() => {
-          toast({ title: 'Sucesso!', description: 'Produto atualizado.' });
-          setOpen(false);
-        })
-        .catch((error) => {
-          console.error('Error updating product: ', error);
-          errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-              path: docPath,
-              operation: 'update',
-              requestResourceData: productData,
-            })
-          );
-        });
-    });
+      await updateDoc(productRef, productData);
+      toast({ title: 'Sucesso!', description: 'Produto atualizado.' });
+      setOpen(false);
+    } catch (error: any) {
+      console.error('Error updating product: ', error);
+      if (error.code?.includes('storage/')) {
+        toast({ variant: 'destructive', title: 'Erro no Upload', description: 'Não foi possível processar a imagem.'});
+      } else {
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: `artifacts/${APP_ID}/products/${product.id}`,
+            operation: 'update',
+            requestResourceData: data,
+          })
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -472,8 +470,8 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
                 </Button>
-                <Button type="submit" disabled={isPending || isAuthLoading}>
-                {(isPending || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={loading || isAuthLoading}>
+                {(loading || isAuthLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                  Salvar Alterações
                 </Button>
             </DialogFooter>

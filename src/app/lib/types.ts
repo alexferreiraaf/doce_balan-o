@@ -38,6 +38,7 @@ export interface Transaction {
   receiptUrl?: string;
   fromStorefront?: boolean;
   scheduledAt?: Timestamp;
+  deliveryType?: 'delivery' | 'pickup';
 }
 
 export interface ProductSize {

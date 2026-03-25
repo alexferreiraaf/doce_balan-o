@@ -16,11 +16,17 @@ import { DangerZone } from './danger-zone';
 import { RecentTransactionsList } from './recent-transactions-list';
 import { storefrontUserId } from '@/firebase/config';
 import { TopProducts } from './top-products';
-import { AddProductDialog } from './add-product-dialog';
+import { AddProductDialog } from '../products/add-product-dialog';
 import { AddCustomerDialog } from './add-customer-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { parseToNumber, cn } from '@/lib/utils';
+import dynamic from 'next/dynamic';
+
+const DashboardCharts = dynamic(() => import('./dashboard-charts').then(mod => mod.DashboardCharts), { 
+  ssr: false,
+  loading: () => <div className="h-[400px] flex items-center justify-center bg-card rounded-lg border animate-pulse">Carregando gráficos...</div>
+});
 
 export function DashboardClient() {
   const { user } = useUser();
@@ -156,6 +162,12 @@ export function DashboardClient() {
                 <StatCard title="Entradas (Pagas)" value={totals.income} colorClass="border-blue-500 text-blue-600" icon={TrendingUp} />
                 <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
             </div>
+
+            <DashboardCharts 
+              transactions={filteredTransactions} 
+              startDate={startDate} 
+              endDate={endDate} 
+            />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <TopProducts transactions={filteredTransactions} />

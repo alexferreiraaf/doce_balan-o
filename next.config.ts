@@ -9,6 +9,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   /* config options here */
+  transpilePackages: ['recharts'],
   typescript: {
     ignoreBuildErrors: true,
   },

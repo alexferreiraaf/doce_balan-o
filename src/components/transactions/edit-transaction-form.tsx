@@ -33,7 +33,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { Product, Transaction } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
-import { AddProductDialog } from '../dashboard/add-product-dialog';
+import { AddProductDialog } from '../products/add-product-dialog';
 import { AddCustomerDialog } from '../dashboard/add-customer-dialog';
 import { Textarea } from '../ui/textarea';
 

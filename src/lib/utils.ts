@@ -48,3 +48,21 @@ export function formatCurrency(value: number) {
     currency: 'BRL',
   }).format(safeValue);
 }
+
+export function formatDate(date: any) {
+  if (!date) return '';
+  
+  let d: Date;
+  if (typeof date === 'number') {
+    d = new Date(date);
+  } else if (date.toDate && typeof date.toDate === 'function') {
+    // Firebase Timestamp
+    d = date.toDate();
+  } else {
+    d = new Date(date);
+  }
+
+  if (isNaN(d.getTime())) return '';
+
+  return new Intl.DateTimeFormat('pt-BR').format(d);
+}
