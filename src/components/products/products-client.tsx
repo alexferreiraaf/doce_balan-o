@@ -1,10 +1,14 @@
 'use client';
 import { useProducts } from '@/app/lib/hooks/use-products';
+import { useSettings } from '@/app/lib/hooks/use-settings';
+import { generateProductsPDF } from '@/lib/pdf-generator';
+
 import Loading from '@/app/(admin)/loading-component';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { AddProductDialog } from './add-product-dialog';
-import { Package, Tag, ImageOff, Star, Percent } from 'lucide-react';
+import { Package, Tag, ImageOff, Star, Percent, FileDown, Loader2 } from 'lucide-react';
+
 import { formatCurrency } from '@/lib/utils';
 import {
   Table,
@@ -18,7 +22,7 @@ import { DeleteProductButton } from './delete-product-button';
 import { EditProductDialog } from './edit-product-dialog';
 import type { Product } from '@/app/lib/types';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { AddProductCategoryDialog } from './add-product-category-dialog';
 import Image from 'next/image';
@@ -38,6 +42,10 @@ export function ProductsClient() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { settings } = useSettings();
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+
 
   const loading = productsLoading || categoriesLoading;
 
@@ -107,9 +115,36 @@ export function ProductsClient() {
             Meus Produtos
         </h1>
         <div className="flex items-center gap-2">
+            <Button 
+                variant="outline" 
+                onClick={async () => {
+                    setIsGeneratingPDF(true);
+                    try {
+                        await generateProductsPDF(products, categories, settings?.storeName);
+                    } finally {
+                        setIsGeneratingPDF(false);
+                    }
+                }}
+                disabled={isGeneratingPDF}
+                className="hidden sm:flex"
+            >
+                {isGeneratingPDF ? (
+                    <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Gerando...
+                    </>
+                ) : (
+                    <>
+                        <FileDown className="w-4 h-4 mr-2" />
+                        Relatório PDF
+                    </>
+                )}
+            </Button>
+
             <AddProductCategoryDialog isPrimaryButton />
             <AddProductDialog />
         </div>
+
       </div>
       
       {products.length === 0 ? (

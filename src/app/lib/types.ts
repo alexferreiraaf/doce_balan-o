@@ -93,8 +93,10 @@ export interface OpeningHours {
 }
 
 export interface AppSettings {
+  storeName?: string;
   pixKey?: string;
   address?: string;
   phone?: string;
   openingHours?: Record<DayOfWeek, OpeningHours>;
 }
+
