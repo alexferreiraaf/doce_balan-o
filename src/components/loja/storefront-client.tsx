@@ -23,6 +23,10 @@ import { cn } from '@/lib/utils';
 import { useUser, useAuth } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { OrderProgressBar } from './order-progress-bar';
+import { useOrderTracking } from '@/app/lib/hooks/use-order-tracking';
+import type { Transaction } from '@/app/lib/types';
+
 
 interface CartItem extends Product {
   quantity: number;
@@ -56,11 +60,24 @@ export function StorefrontClient() {
   const { user } = useUser();
   const auth = useAuth();
   const [isClient, setIsClient] = useState(false);
+  
+  // Tracking state
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [activeOrderUserId, setActiveOrderUserId] = useState<string | null>(null);
+  const { transaction: activeOrder } = useOrderTracking(activeOrderId, activeOrderUserId);
 
   useEffect(() => {
     setIsClient(true);
+    // Load tracking from localStorage
+    if (typeof window !== 'undefined') {
+      const savedOrderId = localStorage.getItem('lastOrderId');
+      const savedUserId = localStorage.getItem('lastOrderUserId');
+      if (savedOrderId && savedUserId) {
+        setActiveOrderId(savedOrderId);
+        setActiveOrderUserId(savedUserId);
+      }
+    }
   }, []);
-
 
   useEffect(() => {
     if (auth && !user) {
@@ -222,14 +239,28 @@ export function StorefrontClient() {
     setIsCheckoutOpen(true);
   }
 
-  const handleSaleFinalized = () => {
+  const handleSaleFinalized = (transaction: Transaction) => {
     setIsCheckoutOpen(false);
     setCart([]);
+    
+    // Save for tracking
+    setActiveOrderId(transaction.id);
+    setActiveOrderUserId(transaction.userId);
+    localStorage.setItem('lastOrderId', transaction.id);
+    localStorage.setItem('lastOrderUserId', transaction.userId);
+
     toast({
       title: "Pedido Recebido!",
-      description: "Seu pedido foi enviado. Entraremos em contato em breve para confirmar.",
+      description: "Seu pedido foi enviado. Acompanhe o progresso no topo da página.",
     });
   };
+
+  const handleClearTracking = () => {
+    setActiveOrderId(null);
+    setActiveOrderUserId(null);
+    localStorage.removeItem('lastOrderId');
+    localStorage.removeItem('lastOrderUserId');
+  }
 
   if (loading) {
     return null;
@@ -297,6 +328,13 @@ export function StorefrontClient() {
 
   return (
     <div className="space-y-12 pb-24">
+      {isClient && activeOrder && (
+        <OrderProgressBar 
+            transaction={activeOrder} 
+            onClose={handleClearTracking} 
+        />
+      )}
+
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
             <WhiskIcon className="w-16 h-16 text-primary" />
