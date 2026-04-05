@@ -3,7 +3,8 @@
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import type { AppSettings, DayOfWeek, Product, ProductSize } from '@/app/lib/types';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
 import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent, ChevronDown, ChevronRight } from 'lucide-react';
@@ -65,6 +66,19 @@ export function StorefrontClient() {
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [activeOrderUserId, setActiveOrderUserId] = useState<string | null>(null);
   const { transaction: activeOrder } = useOrderTracking(activeOrderId, activeOrderUserId);
+  const searchParams = useSearchParams();
+  const hasHandledDeepLink = useRef(false);
+
+  useEffect(() => {
+    const productIdFromQuery = searchParams.get('p');
+    if (!productsLoading && productIdFromQuery && !hasHandledDeepLink.current && products.length > 0) {
+      const product = products.find(p => p.id === productIdFromQuery);
+      if (product) {
+        handleAddToCart(product);
+        hasHandledDeepLink.current = true;
+      }
+    }
+  }, [productsLoading, products, searchParams]);
 
   useEffect(() => {
     setIsClient(true);

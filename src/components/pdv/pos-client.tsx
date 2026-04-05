@@ -322,7 +322,8 @@ export function POSClient() {
     const hasSizes = product.sizes && product.sizes.length > 0;
     const lowestPrice = hasSizes ? Math.min(...product.sizes!.map(s => s.price)) : product.price;
     const priceStr = formatCurrency(lowestPrice);
-    const text = `Confira nosso delicioso *${product.name}* por apenas *${priceStr}*! 😋✨`;
+    const productUrl = `${window.location.origin}/loja?p=${product.id}`;
+    const text = `Confira nosso delicioso *${product.name}* por apenas *${priceStr}*! 😋✨\n\nPeça aqui: ${productUrl}`;
 
     // Try native sharing
     if (navigator.share) {
