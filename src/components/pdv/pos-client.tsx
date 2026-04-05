@@ -7,7 +7,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { Product, ProductCategory, Transaction, Customer, ProductSize } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus, ChevronRight } from 'lucide-react';
+import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus, ChevronRight, Share2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Input } from '../ui/input';
@@ -118,7 +118,7 @@ function POSLoading() {
     )
 }
 
-function ProductGrid({ products, onProductClick }: { products: Product[], onProductClick: (product: Product) => void }) {
+function ProductGrid({ products, onProductClick, onShareClick }: { products: Product[], onProductClick: (product: Product) => void, onShareClick: (e: React.MouseEvent, product: Product) => void }) {
     if (products.length === 0) {
         return (
             <div className="col-span-full text-center py-10">
@@ -170,6 +170,16 @@ function ProductGrid({ products, onProductClick }: { products: Product[], onProd
                   <p className="text-primary font-bold mt-2">
                     {hasSizes ? `A partir de ${formatCurrency(lowestPrice)}` : formatCurrency(product.price)}
                   </p>
+                </div>
+                <div className="absolute top-2 left-2 z-20">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-white/90 text-primary hover:bg-primary hover:text-white transition-colors"
+                    onClick={(e) => onShareClick(e, product)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 {hasSizes && (
                   <div className="absolute top-2 right-2">
@@ -306,6 +316,66 @@ export function POSClient() {
     if(isMobile) setMobileTab('cart');
   };
 
+  const handleShareProduct = async (e: React.MouseEvent, product: Product) => {
+    e.stopPropagation();
+    
+    const hasSizes = product.sizes && product.sizes.length > 0;
+    const lowestPrice = hasSizes ? Math.min(...product.sizes!.map(s => s.price)) : product.price;
+    const priceStr = formatCurrency(lowestPrice);
+    const text = `Confira nosso delicioso *${product.name}* por apenas *${priceStr}*! 😋✨`;
+
+    // Try native sharing
+    if (navigator.share) {
+        try {
+            const shareData: ShareData = {
+                title: product.name,
+                text: text,
+            };
+
+            // Fetch and convert image if present
+            if (product.imageUrl) {
+                try {
+                    const response = await fetch(product.imageUrl);
+                    const blob = await response.blob();
+                    const file = new File([blob], 'produto.jpg', { type: blob.type });
+                    
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        shareData.files = [file];
+                    }
+                } catch (imgError) {
+                    console.error('Error fetching image for share:', imgError);
+                }
+            }
+
+            await navigator.share(shareData);
+        } catch (error) {
+            if ((error as Error).name !== 'AbortError') {
+                console.error('Error sharing:', error);
+                toast({
+                    title: 'Ops!',
+                    description: 'Não foi possível compartilhar agora.',
+                    variant: 'destructive'
+                });
+            }
+        }
+    } else {
+        // Fallback: Copy to clipboard and toast
+        try {
+            await navigator.clipboard.writeText(text);
+            toast({
+                title: 'Link Copiado!',
+                description: 'A mensagem foi copiada para sua área de transferência.',
+            });
+            
+            // Or try window.open for WhatsApp
+            const encodedText = encodeURIComponent(text);
+            window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+        } catch (clipboardError) {
+            console.error('Clipboard fallback failed:', clipboardError);
+        }
+    }
+  };
+
   const updateQuantity = (productId: string, quantity: number) => {
     setCart((prevCart) => {
       if (quantity <= 0) {
@@ -393,7 +463,7 @@ export function POSClient() {
                             onSearchTermChange={setSearchTerm}
                         />
                         <ScrollArea className="flex-grow">
-                            <ProductGrid products={filteredProducts} onProductClick={(p) => addToCart(p)} />
+                            <ProductGrid products={filteredProducts} onProductClick={(p) => addToCart(p)} onShareClick={handleShareProduct} />
                         </ScrollArea>
                     </div>
                 </TabsContent>
@@ -415,7 +485,7 @@ export function POSClient() {
                 />
             </div>
             <ScrollArea className="flex-grow px-4 pb-4">
-              <ProductGrid products={filteredProducts} onProductClick={(p) => addToCart(p)} />
+              <ProductGrid products={filteredProducts} onProductClick={(p) => addToCart(p)} onShareClick={handleShareProduct} />
             </ScrollArea>
           </div>
 
