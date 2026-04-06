@@ -2,12 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { Loader2 } from 'lucide-react';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,43 +25,38 @@ import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   email: z.string().email('Por favor, insira um e-mail válido.'),
-  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
 });
 
-type LoginFormValues = z.infer<typeof formSchema>;
+type ForgotPasswordFormValues = z.infer<typeof formSchema>;
 
-export function LoginForm() {
+export function ForgotPasswordForm() {
   const auth = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const form = useForm<LoginFormValues>({
+  const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
-      password: '',
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
+  const onSubmit = (data: ForgotPasswordFormValues) => {
     startTransition(async () => {
       try {
-        await signInWithEmailAndPassword(auth, data.email, data.password);
+        await sendPasswordResetEmail(auth, data.email);
+        setIsSubmitted(true);
         toast({
-          title: 'Login bem-sucedido!',
-          description: 'Bem-vindo(a) de volta!',
+          title: 'E-mail enviado!',
+          description: 'Verifique sua caixa de entrada para redefinir sua senha.',
         });
-        router.push('/pdv'); 
-        router.refresh();
       } catch (error) {
-        let description = 'Ocorreu um erro desconhecido. Tente novamente.';
+        let description = 'Ocorreu um erro ao enviar o e-mail de redefinição.';
         if (error instanceof FirebaseError) {
           switch (error.code) {
             case 'auth/user-not-found':
-            case 'auth/wrong-password':
-            case 'auth/invalid-credential':
-              description = 'Credenciais inválidas. Verifique seu e-mail e senha.';
+              description = 'Não encontramos uma conta com este e-mail.';
               break;
             default:
               description = `Erro: ${error.message}`;
@@ -70,13 +64,31 @@ export function LoginForm() {
         }
         toast({
           variant: 'destructive',
-          title: 'Erro no Login',
+          title: 'Erro!',
           description,
         });
-        console.error('Login error:', error);
+        console.error('Password reset error:', error);
       }
     });
   };
+
+  if (isSubmitted) {
+    return (
+      <Card>
+        <CardContent className="pt-6 space-y-4 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <h2 className="text-xl font-semibold text-primary">Verifique seu e-mail</h2>
+            <p className="text-muted-foreground text-sm">
+              Enviamos um link de redefinição de senha para <strong>{form.getValues('email')}</strong>.
+            </p>
+          </div>
+          <Button asChild className="w-full">
+            <Link href="/login">Voltar para o Login</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -96,39 +108,21 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Senha</FormLabel>
-                    <Link
-                      href="/forgot-password"
-                      className="text-sm font-medium text-primary hover:underline transition-colors"
-                    >
-                      Esqueceu a senha?
-                    </Link>
-                  </div>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Entrar
+              Enviar Link de Redefinição
             </Button>
           </form>
         </Form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Não tem uma conta?{' '}
-          <Link href="/signup" className="font-semibold text-primary hover:underline">
-            Cadastre-se
+        <div className="mt-6 text-center">
+          <Link
+            href="/login"
+            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para o Login
           </Link>
-        </p>
+        </div>
       </CardContent>
     </Card>
   );
