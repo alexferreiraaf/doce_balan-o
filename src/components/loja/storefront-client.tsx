@@ -155,17 +155,19 @@ export function StorefrontClient() {
       return { promotionalProducts: [], featuredProducts: [], bestSellerThreshold: 0, regularProducts: [] };
     }
 
-    const promotions = products.filter(p => p.isPromotion);
-    const featured = products.filter(p => p.isFeatured).slice(0, 4);
+    const availableProducts = products.filter(p => p.isAvailable ?? true);
 
-    const salesCounts = products.map(p => p.salesCount || 0).sort((a, b) => b - a);
+    const promotions = availableProducts.filter(p => p.isPromotion);
+    const featured = availableProducts.filter(p => p.isFeatured).slice(0, 4);
+
+    const salesCounts = availableProducts.map(p => p.salesCount || 0).sort((a, b) => b - a);
     const threshold = salesCounts.length > 3 ? salesCounts[2] : 0;
     
     return { 
       promotionalProducts: promotions,
       featuredProducts: featured,
       bestSellerThreshold: threshold,
-      regularProducts: products,
+      regularProducts: availableProducts,
     };
   }, [products]);
 
