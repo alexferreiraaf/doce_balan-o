@@ -27,11 +27,23 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
 
     const totalIncome = paidIncome.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    
+    let totalCmv = 0;
+    paidIncome.forEach(t => {
+       if (t.cartItems) {
+           t.cartItems.forEach(item => {
+               totalCmv += (item.cost || 0) * item.quantity;
+           });
+       }
+    });
+
     const totalPending = pending.reduce((sum, t) => {
         const remainingAmount = Number(t.amount || 0) - Number(t.downPayment || 0);
         return sum + remainingAmount;
     }, 0);
-    const balance = totalIncome - totalExpense;
+    
+    const grossProfit = totalIncome - totalCmv;
+    const balance = grossProfit - totalExpense;
 
     const groupByCategory = (trans: Transaction[]) => {
       return trans.reduce((acc, t) => {
@@ -54,6 +66,9 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
       .map(([name, total]) => ({ name, total }));
 
     return {
+      totalIncome,
+      totalCmv,
+      grossProfit,
       balance,
       totalPending,
       topIncomeCategories,
@@ -92,13 +107,21 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <div className={`p-4 rounded-lg text-center ${summary.balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                <h3 className="text-sm font-medium text-muted-foreground">Balanço Final (Receitas Pagas - Despesas)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-lg bg-blue-50 text-center">
+                <h3 className="text-sm font-medium text-blue-800">Faturamento</h3>
+                <p className="text-3xl font-bold text-blue-700">{formatCurrency(summary.totalIncome)}</p>
+            </div>
+            <div className="p-4 rounded-lg bg-emerald-50 text-center">
+                <h3 className="text-sm font-medium text-emerald-800">Lucro Bruto</h3>
+                <p className="text-3xl font-bold text-emerald-700">{formatCurrency(summary.grossProfit)}</p>
+            </div>
+            <div className={`p-4 rounded-lg text-center ${summary.balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                <h3 className="text-sm font-medium text-muted-foreground">Lucro Líquido</h3>
                 <p className={`text-3xl font-bold ${summary.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(summary.balance)}</p>
             </div>
             <div className="p-4 rounded-lg bg-amber-100 text-center">
-                <h3 className="text-sm font-medium text-amber-800 flex items-center justify-center gap-2"><Clock className="w-4 h-4"/>Vendas a Prazo (Pendentes)</h3>
+                <h3 className="text-sm font-medium text-amber-800 flex items-center justify-center gap-2"><Clock className="w-4 h-4"/>A Prazo</h3>
                 <p className="text-3xl font-bold text-amber-700">{formatCurrency(summary.totalPending)}</p>
             </div>
         </div>

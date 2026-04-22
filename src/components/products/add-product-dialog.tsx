@@ -43,11 +43,13 @@ import { Separator } from '../ui/separator';
 const sizeSchema = z.object({
   name: z.string().min(1, 'Nome do tamanho é obrigatório.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
+  cost: z.coerce.number().min(0, 'O custo deve ser zero ou maior.').optional(),
 });
 
 const formSchema = z.object({
   name: z.string().min(2, 'O nome do produto deve ter pelo menos 2 caracteres.'),
   price: z.coerce.number().min(0, 'O preço base deve ser zero ou maior.'),
+  cost: z.coerce.number().min(0, 'O custo deve ser zero ou maior.').optional(),
   promotionalPrice: z.coerce.number().optional(),
   categoryId: z.string().optional(),
   imageUrl: z.string().optional(),
@@ -85,6 +87,7 @@ export function AddProductDialog() {
     defaultValues: {
       name: '',
       price: 0,
+      cost: 0,
       categoryId: '',
       imageUrl: '',
       isFeatured: false,
@@ -152,6 +155,7 @@ export function AddProductDialog() {
       const productData = {
         name: data.name,
         price: data.hasSizes && data.sizes && data.sizes.length > 0 ? data.sizes[0].price : data.price,
+        cost: data.hasSizes && data.sizes && data.sizes.length > 0 ? (data.sizes[0].cost || 0) : (data.cost || 0),
         categoryId: data.categoryId || '',
         imageUrl: imageUrl || '',
         isFeatured: data.isFeatured,
@@ -241,7 +245,7 @@ export function AddProductDialog() {
               <div className="space-y-4 border p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <h4 className="font-semibold text-sm">Tamanhos e Preços</h4>
-                  <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', price: 0 })}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', price: 0, cost: 0 })}>
                     <Plus className="w-4 h-4 mr-1" /> Add Tamanho
                   </Button>
                 </div>
@@ -265,8 +269,21 @@ export function AddProductDialog() {
                       control={form.control}
                       name={`sizes.${index}.price`}
                       render={({ field }) => (
-                        <FormItem className="w-32">
+                        <FormItem className="w-28">
                           <FormLabel className="text-xs">Preço (R$)</FormLabel>
+                          <FormControl>
+                            <CurrencyInput placeholder="0,00" {...field} onValueChange={(val) => field.onChange(val)} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`sizes.${index}.cost`}
+                      render={({ field }) => (
+                        <FormItem className="w-28">
+                          <FormLabel className="text-xs">Custo (R$)</FormLabel>
                           <FormControl>
                             <CurrencyInput placeholder="0,00" {...field} onValueChange={(val) => field.onChange(val)} />
                           </FormControl>
@@ -282,19 +299,34 @@ export function AddProductDialog() {
                 {fields.length === 0 && <p className="text-center text-xs text-muted-foreground py-2">Nenhum tamanho adicionado.</p>}
               </div>
             ) : (
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço (R$)</FormLabel>
-                    <FormControl>
-                      <CurrencyInput placeholder="R$ 25,00" {...field} onValueChange={(value) => field.onChange(value)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="flex gap-4">
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Preço de Venda (R$)</FormLabel>
+                      <FormControl>
+                        <CurrencyInput placeholder="R$ 25,00" {...field} onValueChange={(value) => field.onChange(value)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cost"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Custo (R$)</FormLabel>
+                      <FormControl>
+                        <CurrencyInput placeholder="R$ 10,00" {...field} onValueChange={(value) => field.onChange(value)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             <FormField

@@ -50,6 +50,7 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
 
       let income = 0;
       let expense = 0;
+      let cmv = 0;
 
       dayTransactions.forEach(t => {
         const amount = parseToNumber(t.amount);
@@ -60,6 +61,12 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
           } else {
             income += parseToNumber(t.downPayment);
           }
+          
+          if (t.cartItems && t.cartItems.length > 0) {
+            t.cartItems.forEach(item => {
+              cmv += (item.cost || 0) * item.quantity;
+            });
+          }
         } else {
           expense += amount;
         }
@@ -67,7 +74,8 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
 
       return {
         name: format(day, 'dd/MM', { locale: ptBR }),
-        receita: income,
+        faturamento: income,
+        lucroBruto: income - cmv,
         despesa: expense,
       };
     });
@@ -209,7 +217,8 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                  <Bar dataKey="receita" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Receita" />
+                  <Bar dataKey="faturamento" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Faturamento" />
+                  <Bar dataKey="lucroBruto" fill="#10b981" radius={[4, 4, 0, 0]} name="Lucro Bruto" />
                   <Bar dataKey="despesa" fill="#ef4444" radius={[4, 4, 0, 0]} name="Despesa" />
                 </BarChart>
               </ResponsiveContainer>

@@ -65,6 +65,7 @@ export function DashboardClient() {
   const totals = useMemo(() => {
     let paidVal = 0;
     let expenseVal = 0;
+    let productCost = 0;
 
     filteredTransactions.forEach(t => {
       const amount = parseToNumber(t.amount);
@@ -77,6 +78,12 @@ export function DashboardClient() {
         } else { 
           paidVal += downPayment; 
         }
+        
+        if (t.cartItems && t.cartItems.length > 0) {
+          t.cartItems.forEach(item => {
+            productCost += (item.cost || 0) * item.quantity;
+          });
+        }
       } else { 
         expenseVal += amount; 
       }
@@ -85,7 +92,9 @@ export function DashboardClient() {
     return { 
       income: paidVal, 
       expense: expenseVal, 
-      balance: paidVal - expenseVal
+      cost: productCost,
+      grossProfit: paidVal - productCost,
+      balance: paidVal - productCost - expenseVal
     };
   }, [filteredTransactions]);
 
@@ -157,10 +166,12 @@ export function DashboardClient() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard title="Balanço (Pago)" value={totals.balance} colorClass={totals.balance >= 0 ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'} icon={Wallet} />
-                <StatCard title="Entradas (Pagas)" value={totals.income} colorClass="border-blue-500 text-blue-600" icon={TrendingUp} />
-                <StatCard title="Saídas (Gastos)" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <StatCard title="Faturamento" value={totals.income} colorClass="border-blue-500 text-blue-600" icon={TrendingUp} />
+                <StatCard title="Custo dos Prod." value={totals.cost} colorClass="border-orange-500 text-orange-600" icon={TrendingDown} />
+                <StatCard title="Lucro Bruto" value={totals.grossProfit} colorClass="border-emerald-500 text-emerald-600" icon={Wallet} />
+                <StatCard title="Despesas" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
+                <StatCard title="Lucro Líquido" value={totals.balance} colorClass={totals.balance >= 0 ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'} icon={Wallet} />
             </div>
 
             <DashboardCharts 

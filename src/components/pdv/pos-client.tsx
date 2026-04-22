@@ -297,6 +297,7 @@ export function POSClient() {
       ...product,
       name: size ? `${product.name} (${size.name})` : product.name,
       price: size ? size.price : product.price,
+      cost: size ? size.cost : product.cost,
       id: size ? `${product.id}-${size.name}` : product.id,
     };
 

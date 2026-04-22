@@ -14,6 +14,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  cost?: number;
 }
 
 export interface Transaction {
@@ -44,12 +45,14 @@ export interface Transaction {
 export interface ProductSize {
   name: string;
   price: number;
+  cost?: number;
 }
 
 export interface Product {
   id: string;
   name: string;
   price: number;
+  cost?: number;
   promotionalPrice?: number;
   categoryId?: string;
   imageUrl?: string;

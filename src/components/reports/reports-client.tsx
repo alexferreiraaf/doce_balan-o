@@ -45,15 +45,22 @@ export function ReportsClient() {
 
 
   const summary = useMemo(() => {
-    const income = filteredTransactions
-      .filter((t) => t.type === 'income' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado')))
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    let income = 0;
+    let expense = 0;
+    let cmv = 0;
 
-    const expense = filteredTransactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    filteredTransactions.forEach(t => {
+       if (t.type === 'income' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))) {
+           income += (t.amount || 0);
+           if (t.cartItems) {
+               t.cartItems.forEach(item => { cmv += (item.cost || 0) * item.quantity; });
+           }
+       } else if (t.type === 'expense') {
+           expense += (t.amount || 0);
+       }
+    });
       
-    return { income, expense, balance: income - expense };
+    return { income, expense, cost: cmv, grossProfit: income - cmv, balance: income - cmv - expense };
   }, [filteredTransactions]);
   
   const handleMonthChange = (direction: 'next' | 'prev') => {
