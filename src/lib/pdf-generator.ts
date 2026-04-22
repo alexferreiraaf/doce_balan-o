@@ -59,10 +59,18 @@ export const generateProductsPDF = async (
     
     const tableData = await Promise.all(productsInCategory.map(async (p) => {
         const imageBase64 = p.imageUrl ? await getBase64Image(p.imageUrl) : null;
+        
+        let priceDisplay = '';
+        if (p.sizes && p.sizes.length > 0) {
+            priceDisplay = p.sizes.map(s => `${s.name}: ${formatCurrency(s.price)}`).join('\n');
+        } else {
+            priceDisplay = p.isPromotion && p.promotionalPrice ? `${formatCurrency(p.promotionalPrice)} (Promoção)` : formatCurrency(p.price);
+        }
+
         return {
             logo: '',
             name: p.name,
-            price: p.isPromotion && p.promotionalPrice ? `${formatCurrency(p.promotionalPrice)} (Promoção)` : formatCurrency(p.price),
+            price: priceDisplay,
             available: p.isAvailable ? 'Sim' : 'Não',
             imageBase64: imageBase64
         };
