@@ -27,8 +27,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Doçuras da Fran</title>
-        <meta name="description" content="Seu assistente financeiro para confeitarias." />
+        <title>Doce Balanço - Cardápio Online</title>
+        <meta name="description" content="Confira nossas delícias e faça seu pedido online!" />
         <meta name="manifest" content="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
