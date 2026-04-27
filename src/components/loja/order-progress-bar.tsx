@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Transaction, TransactionStatus } from '@/app/lib/types';
 import { cn } from '@/lib/utils';
+import { StoreOrderDetailsDialog } from './store-order-details-dialog';
 
 interface OrderProgressBarProps {
   transaction: Transaction;
@@ -71,6 +72,7 @@ const statusConfig: Record<TransactionStatus, {
 };
 
 export function OrderProgressBar({ transaction, onClose, orderNumber }: OrderProgressBarProps) {
+  const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const status = transaction.status || 'pending';
   const config = statusConfig[status];
   const Icon = config.icon;
@@ -79,7 +81,7 @@ export function OrderProgressBar({ transaction, onClose, orderNumber }: OrderPro
     ? format(transaction.timestamp.toDate(), "dd/MM HH:mm", { locale: ptBR })
     : '';
 
-  const displayOrderNumber = orderNumber || transaction.id.slice(-5).toUpperCase();
+  const displayOrderNumber = orderNumber || transaction.orderNumber?.toString() || transaction.id.slice(-5).toUpperCase();
 
   return (
     <Card className="overflow-hidden border-none shadow-lg bg-background/80 backdrop-blur-md mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -91,12 +93,23 @@ export function OrderProgressBar({ transaction, onClose, orderNumber }: OrderPro
               Acompanhe seu pedido <span className="text-muted-foreground font-normal">#{displayOrderNumber}</span>
             </h3>
           </div>
-          {onClose && (
-            <Button variant="outline" size="sm" className="h-8 rounded-full border-primary text-primary hover:bg-primary hover:text-white transition-colors gap-1 px-3" onClick={onClose}>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-8 rounded-full border-primary text-primary hover:bg-primary hover:text-white transition-colors gap-1 px-3 shadow-sm active:scale-95 transition-transform" onClick={() => setIsDetailsOpen(true)}>
               <span className="text-xs font-bold uppercase">Detalhes</span>
             </Button>
-          )}
+            {onClose && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={onClose} title="Remover da tela">
+                <XCircle className="w-5 h-5" />
+              </Button>
+            )}
+          </div>
         </div>
+
+        <StoreOrderDetailsDialog 
+          transaction={transaction}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+        />
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">

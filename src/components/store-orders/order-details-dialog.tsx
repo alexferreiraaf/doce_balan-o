@@ -14,6 +14,8 @@ import type { Transaction, Customer, PaymentMethod } from "@/app/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { format } from "date-fns";
+import { useState } from "react";
+import { EditTransactionForm } from "../transactions/edit-transaction-form";
 
 interface OrderDetailsDialogProps {
     transaction: Transaction;
@@ -27,6 +29,9 @@ const paymentMethodDetails: Record<string, { text: string; icon: React.ElementTy
 };
 
 export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialogProps) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [open, setOpen] = useState(false);
+
     if (!customer) return null;
 
     const fullAddress = [
@@ -43,12 +48,15 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
     const paymentInfo = transaction.paymentMethod ? paymentMethodDetails[transaction.paymentMethod] : null;
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <DialogTrigger asChild>
-                            <Button variant="outline" size="icon">
+                            <Button variant="outline" size="icon" onClick={() => {
+                                setIsEditing(false);
+                                setOpen(true);
+                            }}>
                                 <Eye className="w-4 h-4" />
                             </Button>
                         </DialogTrigger>
@@ -58,14 +66,31 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Detalhes do Pedido</DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <DialogTitle>{isEditing ? 'Editar Pedido' : 'Detalhes do Pedido'}</DialogTitle>
+                        {!isEditing && (
+                            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="flex items-center gap-2 h-8 px-2 text-primary font-bold">
+                                Editar
+                            </Button>
+                        )}
+                    </div>
                     <DialogDescription>
-                        Informações completas do pedido e do cliente.
+                        {isEditing ? 'Ajuste as informações do pedido abaixo.' : 'Informações completas do pedido e do cliente.'}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                {isEditing ? (
+                    <div className="py-4">
+                        <EditTransactionForm transaction={transaction} setSheetOpen={(isOpen) => {
+                            if (!isOpen) {
+                                setIsEditing(false);
+                                setOpen(false);
+                            }
+                        }} />
+                    </div>
+                ) : (
+                    <div className="space-y-4 py-4">
                     
                     {/* Customer Info */}
                     <div className="space-y-2">
@@ -145,7 +170,8 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
                     </div>
 
                 </div>
+                )}
             </DialogContent>
         </Dialog>
     );
-}
+}

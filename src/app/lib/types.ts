@@ -40,6 +40,7 @@ export interface Transaction {
   fromStorefront?: boolean;
   scheduledAt?: Timestamp;
   deliveryType?: 'delivery' | 'pickup';
+  orderNumber?: number;
 }
 
 export interface ProductSize {

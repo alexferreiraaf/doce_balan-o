@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Package, Bike, X, Plus, ChevronsUpDown, Minus, ChevronDown, CalendarIcon } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc, writeBatch, Timestamp, runTransaction } from 'firebase/firestore';
 import axios from 'axios';
 import { addDays, format, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -504,33 +504,66 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             if (scheduledAtTimestamp) {
                 transactionData.scheduledAt = scheduledAtTimestamp;
             }
-            
-            // 3. Create transaction and update product sales counts in a batch
-            const batch = writeBatch(firestore);
-            
-            // Add new transaction to the batch
+
+            // 3. Create transaction and update product sales counts
             const transactionCollection = collection(firestore, transactionCollectionPath);
-            const finalTransactionData = { ...transactionData, timestamp: serverTimestamp() };
-            if (!finalTransactionData.scheduledAt) {
-              delete finalTransactionData.scheduledAt;
-            }
             const newTransactionRef = doc(transactionCollection);
-            batch.set(newTransactionRef, finalTransactionData);
-            
-            // Update sales count for each product in the sale
-            if (productsInSale.length > 0) {
-                for (const item of productsInSale) {
-                    const productRef = doc(firestore, `artifacts/${APP_ID}/products`, item.id);
-                    const productDoc = await getDoc(productRef);
-                    if (productDoc.exists()) {
-                        const currentSales = productDoc.data().salesCount || 0;
-                        batch.update(productRef, { salesCount: currentSales + item.quantity });
+            let finalOrderNumber: number | undefined;
+
+            await runTransaction(firestore, async (firestoreTransaction) => {
+                // 1. ALL READS FIRST
+                
+                // Read counter
+                const counterRef = doc(firestore, `artifacts/${APP_ID}/settings`, 'counters');
+                const counterDoc = await firestoreTransaction.get(counterRef);
+                
+                // Read all products involved
+                const productDocs: { ref: any, currentSales: number, quantity: number }[] = [];
+                if (productsInSale.length > 0) {
+                    for (const item of productsInSale) {
+                        const productRef = doc(firestore, `artifacts/${APP_ID}/products`, item.id);
+                        const productDoc = await firestoreTransaction.get(productRef);
+                        if (productDoc.exists()) {
+                            productDocs.push({
+                                ref: productRef,
+                                currentSales: productDoc.data().salesCount || 0,
+                                quantity: item.quantity
+                            });
+                        }
                     }
                 }
-            }
 
-            // Commit the batch
-            await batch.commit();
+                // 2. ALL WRITES AFTER
+                
+                // Increment counter
+                let nextNumber = 1;
+                if (counterDoc.exists()) {
+                    nextNumber = (counterDoc.data().orderSequence || 0) + 1;
+                }
+                firestoreTransaction.set(counterRef, { orderSequence: nextNumber }, { merge: true });
+                finalOrderNumber = nextNumber;
+
+                // Prepare final data
+                const finalTransactionData = { 
+                    ...transactionData, 
+                    timestamp: serverTimestamp(),
+                    orderNumber: finalOrderNumber 
+                };
+                if (!finalTransactionData.scheduledAt) {
+                    delete finalTransactionData.scheduledAt;
+                }
+                if (!finalOrderNumber) {
+                    delete finalTransactionData.orderNumber;
+                }
+
+                // Create transaction
+                firestoreTransaction.set(newTransactionRef, finalTransactionData);
+
+                // Update sales counts
+                for (const p of productDocs) {
+                    firestoreTransaction.update(p.ref, { salesCount: p.currentSales + p.quantity });
+                }
+            });
             
             toast({ title: 'Sucesso!', description: data.fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
             
@@ -538,6 +571,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 const createdTransaction: Transaction = {
                     ...(transactionData as Omit<Transaction, 'id' | 'timestamp' | 'customerId'>),
                     id: newTransactionRef.id,
+                    orderNumber: finalOrderNumber,
                     customerId: customerId || null,
                     timestamp: {
                       toDate: () => new Date(),

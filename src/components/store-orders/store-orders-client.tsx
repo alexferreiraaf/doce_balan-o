@@ -142,7 +142,10 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
       <Card className="mb-3 shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-primary/40">
         <CardContent className="p-4 space-y-3">
           <div className="flex justify-between items-start gap-2">
-            <span className="font-bold text-sm line-clamp-2">{t.description}</span>
+            <div className="flex flex-col gap-0.5">
+              {t.orderNumber && <span className="text-[10px] font-black text-primary">#{t.orderNumber}</span>}
+              <span className="font-bold text-sm line-clamp-2">{t.description}</span>
+            </div>
             <EditTransactionSheet transaction={t} />
           </div>
 
