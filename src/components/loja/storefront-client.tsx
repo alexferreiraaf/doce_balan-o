@@ -90,8 +90,26 @@ export function StorefrontClient() {
         setActiveOrderId(savedOrderId);
         setActiveOrderUserId(savedUserId);
       }
+
+      // Load cart from localStorage
+      const savedCart = localStorage.getItem('storeCart');
+      if (savedCart) {
+        try {
+          setCart(JSON.parse(savedCart));
+        } catch (e) {
+          console.error('Failed to parse saved cart', e);
+        }
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (isClient && cart.length > 0) {
+      localStorage.setItem('storeCart', JSON.stringify(cart));
+    } else if (isClient && cart.length === 0) {
+      localStorage.removeItem('storeCart');
+    }
+  }, [cart, isClient]);
 
   useEffect(() => {
     if (auth && !user) {
@@ -264,6 +282,7 @@ export function StorefrontClient() {
     setActiveOrderUserId(transaction.userId);
     localStorage.setItem('lastOrderId', transaction.id);
     localStorage.setItem('lastOrderUserId', transaction.userId);
+    localStorage.removeItem('storeCart');
 
     toast({
       title: "Pedido Recebido!",

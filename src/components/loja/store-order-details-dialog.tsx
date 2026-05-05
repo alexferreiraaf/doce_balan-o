@@ -79,9 +79,21 @@ export function StoreOrderDetailsDialog({ transaction, open, onOpenChange }: Sto
                         <div className="bg-muted/30 rounded-lg p-3 space-y-2">
                             {transaction.cartItems && transaction.cartItems.length > 0 ? (
                                 transaction.cartItems.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between text-sm">
-                                        <span>{item.quantity}x {item.name}</span>
-                                        <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                                    <div key={idx} className="space-y-1">
+                                        <div className="flex justify-between text-sm">
+                                            <span>{item.quantity}x {item.name}</span>
+                                            <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                                        </div>
+                                        {item.selectedOptionals && item.selectedOptionals.length > 0 && (
+                                            <div className="pl-4 space-y-0.5">
+                                                {item.selectedOptionals.map((opt, optIdx) => (
+                                                    <div key={optIdx} className="flex justify-between text-[10px] text-muted-foreground">
+                                                        <span>+ {opt.quantity}x {opt.name}</span>
+                                                        <span>{formatCurrency(opt.price * opt.quantity)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             ) : (

@@ -145,10 +145,42 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
                     {/* Order Info */}
                     <div className="space-y-2">
                         <h3 className="font-semibold flex items-center gap-2">Pedido</h3>
-                        <div className="pl-6 text-sm space-y-1">
-                            <p>{transaction.description}</p>
-                            {transaction.deliveryFee && transaction.deliveryFee > 0 && <p className="text-muted-foreground">Taxa de Entrega: {formatCurrency(transaction.deliveryFee)}</p>}
-                            <p className="font-bold">Total: {formatCurrency(transaction.amount)}</p>
+                        <div className="pl-6 text-sm space-y-2">
+                            {transaction.cartItems && transaction.cartItems.length > 0 ? (
+                                transaction.cartItems.map((item, idx) => (
+                                    <div key={idx} className="space-y-1">
+                                        <div className="flex justify-between items-start">
+                                            <span className="font-medium">{item.quantity}x {item.name}</span>
+                                            <span>{formatCurrency(item.price * item.quantity)}</span>
+                                        </div>
+                                        {item.selectedOptionals && item.selectedOptionals.length > 0 && (
+                                            <div className="pl-3 space-y-0.5 border-l-2 border-primary/20">
+                                                {item.selectedOptionals.map((opt, optIdx) => (
+                                                    <div key={optIdx} className="flex justify-between text-[11px] text-muted-foreground">
+                                                        <span>+ {opt.quantity}x {opt.name}</span>
+                                                        <span>{formatCurrency(opt.price * opt.quantity)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <p>{transaction.description}</p>
+                            )}
+                            
+                            <div className="pt-2 border-t space-y-1">
+                                {transaction.deliveryFee && transaction.deliveryFee > 0 && (
+                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                        <span>Taxa de Entrega</span>
+                                        <span>{formatCurrency(transaction.deliveryFee)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between font-bold text-base text-primary">
+                                    <span>Total</span>
+                                    <span>{formatCurrency(transaction.amount)}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

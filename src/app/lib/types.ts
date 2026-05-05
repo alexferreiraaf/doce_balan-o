@@ -15,6 +15,7 @@ export interface CartItem {
   price: number;
   quantity: number;
   cost?: number;
+  selectedOptionals?: SelectedOptional[];
 }
 
 export interface Transaction {
