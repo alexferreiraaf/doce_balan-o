@@ -26,6 +26,7 @@ import { TransactionList } from './transaction-list';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from './edit-transaction-sheet';
 import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
+import { AddEmployeePaymentSheet } from '../dashboard/add-employee-payment-sheet';
 
 export function TransactionsClient() {
   const { user, isUserLoading } = useUser();
@@ -85,7 +86,8 @@ export function TransactionsClient() {
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <h1 className="text-3xl font-bold tracking-tight text-primary">Meus Lançamentos</h1>
-            <div className="hidden sm:block">
+            <div className="hidden sm:flex gap-2 items-center">
+                <AddEmployeePaymentSheet />
                 <AddTransactionSheet />
             </div>
         </div>
@@ -178,7 +180,8 @@ export function TransactionsClient() {
           title="Lançamentos Concluídos"
         />
       </div>
-      <div className="sm:hidden fixed bottom-20 right-4 z-50">
+      <div className="sm:hidden fixed bottom-20 right-4 z-50 flex flex-col gap-2 items-center">
+        <AddEmployeePaymentSheet isMobile={true} />
         <AddTransactionSheet isMobile={true}/>
       </div>
     </>

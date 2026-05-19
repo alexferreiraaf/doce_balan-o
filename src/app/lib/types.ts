@@ -78,6 +78,13 @@ export interface Customer {
   state?: string;
 }
 
+export interface Employee {
+  id: string;
+  name: string;
+  role?: string;
+  phone?: string;
+}
+
 export interface ProductCategory {
   id: string;
   name: string;

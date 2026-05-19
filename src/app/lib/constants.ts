@@ -5,6 +5,7 @@ export const EXPENSE_CATEGORIES = [
   'Embalagens',
   'Aluguel/Taxas',
   'Equipamentos',
+  'Pagamento de Funcionário',
   'Outros Gastos',
 ];
 
