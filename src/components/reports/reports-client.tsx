@@ -1,10 +1,12 @@
 'use client';
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
+import { useCustomers } from '@/app/lib/hooks/use-customers';
+import { useSettings } from '@/app/lib/hooks/use-settings';
 import Loading from '@/app/(admin)/loading-component';
 import { SummaryReport } from './summary-report';
 import { useMemo, useState, useEffect } from 'react';
 import { addDays, format, addMonths, subMonths } from 'date-fns';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, FileText, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,11 +14,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { ReportCard } from './simple-report';
 import { storefrontUserId } from '@/firebase/config';
 import { useUser } from '@/firebase';
+import { generateFinancialReportPDF, generateTermSalesPDF } from '@/lib/pdf-generator';
 
 export function ReportsClient() {
   const { user } = useUser();
   const userIdsToFetch = [user?.uid, storefrontUserId].filter(Boolean) as string[];
   const { transactions, loading } = useTransactions({ userIds: userIdsToFetch });
+  const { customers, loading: customersLoading } = useCustomers();
+  const { settings, loading: settingsLoading } = useSettings();
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
@@ -77,7 +82,7 @@ export function ReportsClient() {
   };
 
 
-  if (loading || !startDate || !endDate) {
+  if (loading || customersLoading || settingsLoading || !startDate || !endDate) {
     return <Loading />;
   }
   
@@ -138,6 +143,29 @@ export function ReportsClient() {
             <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}>
                 <ChevronRight className="h-4 w-4" />
             </Button>
+        </div>
+      </div>
+      
+      <div className="flex flex-wrap gap-3 p-4 bg-muted/20 border rounded-xl items-center justify-between">
+        <div className="text-sm font-medium text-muted-foreground">
+          Exportar Relatórios:
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            onClick={() => generateFinancialReportPDF(filteredTransactions, { startDate, endDate }, settings?.storeName)}
+            className="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 shadow-sm"
+          >
+            <FileText className="w-4 h-4" />
+            Baixar PDF Geral
+          </Button>
+          <Button 
+            onClick={() => generateTermSalesPDF(filteredTransactions, customers, { startDate, endDate }, settings?.storeName)}
+            variant="outline"
+            className="border-amber-600 text-amber-700 hover:bg-amber-50 hover:text-amber-800 flex items-center gap-2"
+          >
+            <Download className="w-4 h-4 text-amber-600" />
+            PDF Vendas a Prazo
+          </Button>
         </div>
       </div>
       
