@@ -1,9 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ID do administrador da loja (Doçuras da Fran)
-    function isAdmin() {
+    function isSuperAdmin() {
       return request.auth != null && request.auth.uid == 'I7HKJVmF4uRDL75dQShPmHVi4333';
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() || (
+        request.auth != null && 
+        exists(/databases/$(database)/documents/artifacts/docuras-da-fran-default/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/artifacts/docuras-da-fran-default/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
     // 1. ACESSO ADMINISTRATIVO

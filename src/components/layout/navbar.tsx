@@ -288,10 +288,7 @@ export function Navbar() {
                             <LogIn className="mr-2 h-4 w-4" />
                             <span>Fazer Login</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => router.push('/signup')}>
-                            <UserIcon className="mr-2 h-4 w-4" />
-                            <span>Criar Conta</span>
-                        </DropdownMenuItem>
+
                      </>
                    ) : (
                     <>
@@ -304,6 +301,10 @@ export function Navbar() {
                          <DropdownMenuItem onSelect={() => router.push('/settings')}>
                           <Settings className="mr-2 h-4 w-4" />
                           Configurações da Loja
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => router.push('/settings/users')}>
+                          <Users className="mr-2 h-4 w-4" />
+                          Gerenciar Usuários
                         </DropdownMenuItem>
                         {notificationPermission !== 'granted' && (
                             <DropdownMenuItem onSelect={handleRequestNotificationPermission}>

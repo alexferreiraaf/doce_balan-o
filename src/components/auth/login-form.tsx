@@ -123,12 +123,7 @@ export function LoginForm() {
             </Button>
           </form>
         </Form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Não tem uma conta?{' '}
-          <Link href="/signup" className="font-semibold text-primary hover:underline">
-            Cadastre-se
-          </Link>
-        </p>
+
       </CardContent>
     </Card>
   );
