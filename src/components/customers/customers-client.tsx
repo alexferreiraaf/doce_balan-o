@@ -1,9 +1,10 @@
 'use client';
+import { useState } from 'react';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import Loading from '@/app/(admin)/loading-component';
 import { Card, CardContent } from '../ui/card';
 import { AddCustomerDialog } from '../dashboard/add-customer-dialog';
-import { Users } from 'lucide-react';
+import { Users, Search } from 'lucide-react';
 import Link from 'next/link';
 import {
   Table,
@@ -15,11 +16,13 @@ import {
 } from "@/components/ui/table";
 import { DeleteCustomerButton } from './delete-customer-button';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { ArrowRight } from 'lucide-react';
 
 
 export function CustomersClient() {
   const { customers, loading } = useCustomers();
+  const [searchTerm, setSearchTerm] = useState('');
 
   if (loading) {
     return <Loading />;
@@ -34,6 +37,17 @@ export function CustomersClient() {
         </h1>
         <AddCustomerDialog />
       </div>
+
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Pesquisar por nome do cliente..."
+          className="pl-8 bg-background"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
       
       <Card>
         <CardContent className="p-0">
@@ -45,14 +59,16 @@ export function CustomersClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.length === 0 ? (
+              {customers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={2} className="h-24 text-center">
-                    Nenhum cliente cadastrado.
+                    {searchTerm ? 'Nenhum cliente encontrado para essa pesquisa.' : 'Nenhum cliente cadastrado.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                customers.map((customer) => (
+                customers
+                  .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((customer) => (
                   <TableRow key={customer.id} className="group">
                     <TableCell className="font-medium">
                       <Link href={`/customers/${customer.id}`} className="flex items-center gap-2 hover:underline">

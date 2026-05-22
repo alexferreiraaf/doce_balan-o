@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 
 import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { DeleteTransactionButton } from '../dashboard/delete-transaction-button'
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from './edit-transaction-sheet';
 import { useUser } from '@/firebase';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -25,6 +27,12 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
 export function TransactionList({ transactions, title }: TransactionListProps) {
   const { customers } = useCustomers();
   const { user } = useUser();
+  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+
+  const filteredTransactions = transactions.filter(t => {
+    if (filter === 'all') return true;
+    return t.type === filter;
+  });
 
   if (transactions.length === 0) {
     return (
@@ -37,12 +45,24 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">{title}</CardTitle>
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all">Todos</TabsTrigger>
+              <TabsTrigger value="income">Entradas</TabsTrigger>
+              <TabsTrigger value="expense">Saídas</TabsTrigger>
+            </TabsList>
+          </Tabs>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-3">
-          {transactions.map((t) => {
+        {filteredTransactions.length === 0 ? (
+            <div className="text-center p-6 text-muted-foreground">
+              <p>Nenhum lançamento encontrado para este filtro.</p>
+            </div>
+        ) : (
+          <ul className="space-y-3">
+            {filteredTransactions.map((t) => {
             const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
             const customerName = customers.find(c => c.id === t.customerId)?.name;
             return (
@@ -85,6 +105,7 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
             )
           })}
         </ul>
+        )}
       </CardContent>
     </Card>
   );

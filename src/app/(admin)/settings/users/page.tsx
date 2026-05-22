@@ -1,4 +1,5 @@
 import { AdminUserForm } from '@/components/settings/admin-user-form';
+import { AdminUserList } from '@/components/settings/admin-user-list';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
 
@@ -19,6 +20,18 @@ export default function AdminUsersPage() {
         </CardHeader>
         <CardContent>
           <AdminUserForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Usuários e Funcionários Cadastrados</CardTitle>
+          <CardDescription>
+            Lista de todos os administradores e funcionários com acesso ao sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminUserList />
         </CardContent>
       </Card>
     </div>
