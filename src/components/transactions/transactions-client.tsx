@@ -40,14 +40,29 @@ export function TransactionsClient() {
   const loading = transactionsLoading || customersLoading || isUserLoading;
 
   const { paidTransactions, pendingFiado, totalFiadoValue, upcomingDeliveries } = useMemo(() => {
+    // Any transaction (even from POS or Storefront) that is scheduled and not delivered
+    // Exclude if it's already marked as fiado (delivered but not paid)
+    const upcoming = transactions.filter(t => {
+        if (!t.scheduledAt) return false;
+        if (t.paymentMethod === 'fiado') return false;
+        if (t.isDelivered) return false;
+
+        // Legacy fallback: if it's paid and has no isDelivered flag, we assume it's delivered 
+        // if it was scheduled for more than 3 days ago.
+        if (t.status === 'paid' && t.isDelivered === undefined) {
+             const threeDaysAgo = new Date();
+             threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+             if (t.scheduledAt.toMillis() < threeDaysAgo.getTime()) {
+                 return false;
+             }
+        }
+        return true;
+    });
+
     // Exclude storefront orders from the manual transactions page logic for general income/expense
     const manualTransactions = transactions.filter(t => t.category !== 'Venda Online' && !t.fromStorefront);
     
-    const paid = manualTransactions.filter(t => t.status !== 'pending');
-    
-    // Any transaction (even from POS or Storefront) that is scheduled and not paid/finalized
-    // Exclude if it's already marked as fiado (delivered but not paid)
-    const upcoming = transactions.filter(t => t.scheduledAt && t.status !== 'paid' && t.paymentMethod !== 'fiado');
+    const paid = manualTransactions.filter(t => t.status !== 'pending' && !upcoming.some(u => u.id === t.id));
 
     // Fiado: Any transaction that is pending and payment method is fiado
     const fiado = transactions.filter((t) => t.status === 'pending' && t.paymentMethod === 'fiado');
@@ -72,13 +87,34 @@ export function TransactionsClient() {
     }
 
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
-    const updateData: any = { paymentMethod: paymentMethod };
+    const updateData: any = { paymentMethod: paymentMethod, isDelivered: true };
     
     if (paymentMethod === 'fiado') {
         updateData.status = 'pending';
     } else {
         updateData.status = 'paid';
     }
+    
+    updateDoc(transactionRef, updateData)
+      .catch((error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: transactionRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        }));
+        console.error("Error updating transaction: ", error);
+        toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a venda." });
+      });
+  };
+
+  const handleMarkAsDelivered = (transactionId: string) => {
+    if (isUserLoading || !user || !firestore) {
+        toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado." });
+        return;
+    }
+
+    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
+    const updateData: any = { isDelivered: true };
     
     updateDoc(transactionRef, updateData)
       .catch((error) => {
@@ -236,24 +272,36 @@ export function TransactionsClient() {
                           </div>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                          <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                  <Button
-                                      size="sm" 
-                                      className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
-                                      disabled={isUserLoading}
-                                  >
-                                      <CheckCircle className="w-4 h-4 mr-2" />
-                                      Concluir
-                                  </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>Pago via PIX</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Pago em Dinheiro</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Pago no Cartão</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'fiado')}>Entregue (Vendido Fiado)</DropdownMenuItem>
-                              </DropdownMenuContent>
-                          </DropdownMenu>
+                          {t.status === 'paid' ? (
+                              <Button
+                                  size="sm" 
+                                  className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
+                                  onClick={() => handleMarkAsDelivered(t.id)}
+                                  disabled={isUserLoading}
+                              >
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Entregue
+                              </Button>
+                          ) : (
+                              <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                      <Button
+                                          size="sm" 
+                                          className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
+                                          disabled={isUserLoading}
+                                      >
+                                          <CheckCircle className="w-4 h-4 mr-2" />
+                                          Concluir
+                                      </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>Pago via PIX</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Pago em Dinheiro</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Pago no Cartão</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'fiado')}>Entregue (Vendido Fiado)</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                              </DropdownMenu>
+                          )}
                           <EditTransactionSheet transaction={t} />
                           <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
                       </div>

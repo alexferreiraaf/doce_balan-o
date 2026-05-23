@@ -72,6 +72,7 @@ const fileToBase64 = (file: File): Promise<string> =>
   });
 
 
+
 export function AddProductDialog() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();

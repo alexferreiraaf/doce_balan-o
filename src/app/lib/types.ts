@@ -42,6 +42,7 @@ export interface Transaction {
   scheduledAt?: Timestamp;
   deliveryType?: 'delivery' | 'pickup';
   orderNumber?: number;
+  isDelivered?: boolean;
 }
 
 export interface ProductSize {
