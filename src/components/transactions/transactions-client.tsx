@@ -1,6 +1,6 @@
 'use client';
 import { useMemo } from 'react';
-import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown } from 'lucide-react';
+import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, Calendar, Package } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -10,6 +10,7 @@ import { APP_ID } from '@/app/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -38,12 +39,19 @@ export function TransactionsClient() {
 
   const loading = transactionsLoading || customersLoading || isUserLoading;
 
-  const { paidTransactions, pendingFiado, totalFiadoValue } = useMemo(() => {
-    // Exclude storefront orders from the manual transactions page logic
+  const { paidTransactions, pendingFiado, totalFiadoValue, upcomingDeliveries } = useMemo(() => {
+    // Exclude storefront orders from the manual transactions page logic for general income/expense
     const manualTransactions = transactions.filter(t => t.category !== 'Venda Online' && !t.fromStorefront);
     
     const paid = manualTransactions.filter(t => t.status !== 'pending');
-    const fiado = manualTransactions.filter((t) => t.status === 'pending');
+    
+    // Any transaction (even from POS or Storefront) that is scheduled and not paid/finalized
+    // Exclude if it's already marked as fiado (delivered but not paid)
+    const upcoming = transactions.filter(t => t.scheduledAt && t.status !== 'paid' && t.paymentMethod !== 'fiado');
+
+    // Fiado: Any transaction that is pending and payment method is fiado
+    const fiado = transactions.filter((t) => t.status === 'pending' && t.paymentMethod === 'fiado');
+    
     const fiadoValue = fiado.reduce((sum, t) => {
         const remainingAmount = t.amount - (t.downPayment || 0);
         return sum + remainingAmount;
@@ -52,7 +60,8 @@ export function TransactionsClient() {
     return {
       paidTransactions: paid,
       pendingFiado: fiado,
-      totalFiadoValue: fiadoValue
+      totalFiadoValue: fiadoValue,
+      upcomingDeliveries: upcoming.sort((a, b) => a.scheduledAt!.toMillis() - b.scheduledAt!.toMillis())
     };
   }, [transactions]);
 
@@ -63,7 +72,13 @@ export function TransactionsClient() {
     }
 
     const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
-    const updateData = { status: 'paid', paymentMethod: paymentMethod };
+    const updateData: any = { paymentMethod: paymentMethod };
+    
+    if (paymentMethod === 'fiado') {
+        updateData.status = 'pending';
+    } else {
+        updateData.status = 'paid';
+    }
     
     updateDoc(transactionRef, updateData)
       .catch((error) => {
@@ -163,6 +178,80 @@ export function TransactionsClient() {
                                   <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                          <EditTransactionSheet transaction={t} />
+                          <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
+                      </div>
+                      </li>
+                  )})}
+                  </ul>
+              </CardContent>
+          </Card>
+        )}
+
+        {upcomingDeliveries.length > 0 && (
+          <Card>
+              <CardHeader>
+                  <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                      <Calendar className="w-5 h-5 mr-2 text-blue-600" />
+                      Pedidos Agendados / A Produzir
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">Pedidos que foram agendados para uma data futura.</p>
+              </CardHeader>
+              <CardContent>
+                  <ul className="space-y-3">
+                  {upcomingDeliveries.map((t) => {
+                      const customerName = customers.find(c => c.id === t.customerId)?.name || t.description.match(/Cliente: (.*?)(?: -|$)/)?.[1];
+                      const deliveryDate = t.scheduledAt ? format(t.scheduledAt.toDate(), "dd/MM/yyyy 'às' HH:mm") : '';
+                      const isStorefront = t.fromStorefront || t.category === 'Venda Online';
+                      
+                      return (
+                      <li
+                        key={t.id}
+                        className="flex flex-col sm:flex-row items-start sm:items-center p-3 rounded-lg bg-blue-50/60 gap-2 border border-blue-100"
+                      >
+                      <div className="flex-grow flex flex-col gap-2 w-full">
+                          <span className="font-semibold text-card-foreground">
+                              {t.orderNumber && <span className="text-blue-600 mr-1">#{t.orderNumber}</span>}
+                              {t.description}
+                          </span>
+                          <div className='flex items-center gap-2 flex-wrap'>
+                              {customerName && (
+                                  <Badge variant="outline" className="text-xs border-blue-200">
+                                      <User className="w-3 h-3 mr-1" />
+                                      {customerName}
+                                  </Badge>
+                              )}
+                              <Badge variant="default" className="text-xs bg-blue-600 hover:bg-blue-700">
+                                  <Calendar className="w-3 h-3 mr-1" />
+                                  Para: {deliveryDate}
+                              </Badge>
+                              {isStorefront && (
+                                  <Badge variant="outline" className="text-xs">
+                                      <Package className="w-3 h-3 mr-1" />
+                                      Loja Online
+                                  </Badge>
+                              )}
+                          </div>
+                      </div>
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button
+                                      size="sm" 
+                                      className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
+                                      disabled={isUserLoading}
+                                  >
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      Concluir
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>Pago via PIX</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Pago em Dinheiro</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Pago no Cartão</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'fiado')}>Entregue (Vendido Fiado)</DropdownMenuItem>
                               </DropdownMenuContent>
                           </DropdownMenu>
                           <EditTransactionSheet transaction={t} />
