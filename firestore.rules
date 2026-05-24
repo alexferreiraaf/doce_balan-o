@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSuperAdmin() {
-      return request.auth != null && request.auth.uid == 'I7HKJVmF4uRDL75dQShPmHVi4333';
+      return request.auth != null && (request.auth.uid == 'I7HKJVmF4uRDL75dQShPmHVi4333' || request.auth.token.email == 'alexferreira.af411@gmail.com');
     }
 
     function isAdmin() {
