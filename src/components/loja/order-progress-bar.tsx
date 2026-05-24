@@ -114,7 +114,7 @@ export function OrderProgressBar({ transaction, onClose, orderNumber }: OrderPro
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className={cn("text-[10px] sm:text-xs font-black tracking-widest uppercase", config.textColor)}>
-              {config.label}
+              {status === 'ready' ? (transaction.deliveryType === 'delivery' ? 'PRONTO PARA ENTREGA' : 'PRONTO PARA RETIRADA') : config.label}
             </span>
             <span className="text-[10px] sm:text-xs text-muted-foreground font-bold">
               {config.progress}%

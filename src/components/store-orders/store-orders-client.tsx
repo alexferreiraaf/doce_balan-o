@@ -15,7 +15,8 @@ import {
   ShoppingBag,
   ChevronLeft,
   ChevronRight,
-  Undo2
+  Undo2,
+  XCircle
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
@@ -114,7 +115,8 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
       toast({ title: "Pedido Atualizado", description: `O status agora é: ${
         newStatus === 'preparing' ? 'Em Preparo' : 
         newStatus === 'ready' ? 'Pronto' : 
-        newStatus === 'pending' ? 'Pendente' : 'Finalizado'
+        newStatus === 'pending' ? 'Pendente' : 
+        newStatus === 'cancelled' ? 'Cancelado' : 'Finalizado'
       }.` });
     } catch (error: any) {
       console.error("Erro ao atualizar status:", error);
@@ -180,6 +182,9 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
             <div className="flex gap-1">
                {customer && <OrderDetailsDialog transaction={t} customer={customer} />}
                <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => updateOrderStatus(t, 'cancelled')} title="Cancelar Pedido">
+                 <XCircle className="w-4 h-4" />
+               </Button>
             </div>
             
             <div className="flex items-center gap-1">

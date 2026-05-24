@@ -63,7 +63,7 @@ export function StoreOrderDetailsDialog({ transaction, open, onOpenChange }: Sto
                         <Badge variant="secondary" className="px-4 py-1 text-sm font-bold uppercase tracking-wider">
                             {transaction.status === 'pending' && 'Aguardando Confirmação'}
                             {transaction.status === 'preparing' && 'Em Preparo'}
-                            {transaction.status === 'ready' && 'Pronto para Retirada'}
+                            {transaction.status === 'ready' && (isDelivery ? 'Pronto para Entrega' : 'Pronto para Retirada')}
                             {transaction.status === 'paid' && 'Pedido Finalizado'}
                             {transaction.status === 'cancelled' && 'Pedido Cancelado'}
                         </Badge>

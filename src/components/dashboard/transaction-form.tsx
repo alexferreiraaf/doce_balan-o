@@ -529,6 +529,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 status: status,
                 customerId: customerId || null,
                 dateMs: Date.now(),
+                deliveryType: data.deliveryType,
             };
             
             if (scheduledAtTimestamp) {
