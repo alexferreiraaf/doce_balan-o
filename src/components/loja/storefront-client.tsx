@@ -58,7 +58,7 @@ export function StorefrontClient() {
   // State for size selection
   const [selectedProductForSizes, setSelectedProductForSizes] = useState<Product | null>(null);
 
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const [isClient, setIsClient] = useState(false);
   
@@ -112,12 +112,12 @@ export function StorefrontClient() {
   }, [cart, isClient]);
 
   useEffect(() => {
-    if (auth && !user) {
+    if (auth && !isUserLoading && !user) {
       signInAnonymously(auth).catch((error) => {
         console.error('Failed to sign in anonymously', error);
       });
     }
-  }, [auth, user]);
+  }, [auth, user, isUserLoading]);
 
   const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; message: string; isStatusLoading: boolean }>({
     isOpen: false,

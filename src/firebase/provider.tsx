@@ -88,6 +88,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       async (firebaseUser) => { // Auth state determined
         if (firebaseUser && firestore) {
+           setUserAuthState(prev => ({ ...prev, isUserLoading: true }));
            try {
              const userDoc = await getDoc(doc(firestore, 'artifacts/docuras-da-fran-default/users', firebaseUser.uid));
              const role = userDoc.exists() ? userDoc.data().role : null;
