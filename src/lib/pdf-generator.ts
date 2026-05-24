@@ -192,15 +192,34 @@ export const generateFinancialReportPDF = async (
   doc.setFillColor(190, 24, 93); // Primary theme color: Be185d
   doc.rect(0, 0, 210, 40, 'F');
 
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.text(storeName || 'DOCE BALANÇO', 14, 20);
+  const logoUrl = typeof window !== 'undefined' ? window.location.origin + '/icons/icon-192x192.png' : '';
+  const logoBase64 = logoUrl ? await getBase64Image(logoUrl) : null;
 
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Relatório Financeiro do Período: ${startStr} a ${endStr}`, 14, 28);
-  doc.text(`Gerado em: ${dateStr}`, 14, 34);
+  doc.setTextColor(255, 255, 255);
+  if (logoBase64) {
+      try {
+          doc.addImage(logoBase64, 'PNG', 14, 5, 30, 30);
+      } catch (e) {
+          console.error("Error adding logo:", e);
+      }
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(storeName || 'DOÇURAS DA FRAN', 48, 18);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Relatório Financeiro do Período: ${startStr} a ${endStr}`, 48, 26);
+      doc.text(`Gerado em: ${dateStr}`, 48, 32);
+  } else {
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(storeName || 'DOÇURAS DA FRAN', 14, 20);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Relatório Financeiro do Período: ${startStr} a ${endStr}`, 14, 28);
+      doc.text(`Gerado em: ${dateStr}`, 14, 34);
+  }
 
   // Financial Summary Table
   doc.setFontSize(14);
@@ -353,19 +372,38 @@ export const generateTermSalesPDF = async (
   const startStr = dateRange.startDate.toLocaleDateString('pt-BR');
   const endStr = dateRange.endDate.toLocaleDateString('pt-BR');
 
-  // Title Banner in Amber/Orange Theme
-  doc.setFillColor(217, 119, 6); // Amber
+  // Title Banner in Pink/Theme Color
+  doc.setFillColor(190, 24, 93); // Pink/Bordo
   doc.rect(0, 0, 210, 40, 'F');
 
-  doc.setFontSize(20);
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.text(storeName || 'DOCE BALANÇO', 14, 20);
+  const logoUrl = typeof window !== 'undefined' ? window.location.origin + '/icons/icon-192x192.png' : '';
+  const logoBase64 = logoUrl ? await getBase64Image(logoUrl) : null;
 
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Relatório de Vendas a Prazo (Contas em Aberto)`, 14, 28);
-  doc.text(`Período do Relatório: ${startStr} a ${endStr}   |   Gerado em: ${dateStr}`, 14, 34);
+  doc.setTextColor(255, 255, 255);
+  if (logoBase64) {
+      try {
+          doc.addImage(logoBase64, 'PNG', 14, 5, 30, 30);
+      } catch (e) {
+          console.error("Error adding logo:", e);
+      }
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(storeName || 'DOÇURAS DA FRAN', 48, 18);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Relatório de Vendas a Prazo (Contas em Aberto)`, 48, 26);
+      doc.text(`Período do Relatório: ${startStr} a ${endStr}   |   Gerado em: ${dateStr}`, 48, 32);
+  } else {
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text(storeName || 'DOÇURAS DA FRAN', 14, 20);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Relatório de Vendas a Prazo (Contas em Aberto)`, 14, 28);
+      doc.text(`Período do Relatório: ${startStr} a ${endStr}   |   Gerado em: ${dateStr}`, 14, 34);
+  }
 
   // Filter pending/fiado transactions
   const pendingTransactions = transactions.filter(
@@ -378,13 +416,13 @@ export const generateTermSalesPDF = async (
   }, 0);
 
   // Total Debt Summary Box
-  doc.setFillColor(254, 243, 199);
+  doc.setFillColor(253, 242, 248);
   doc.rect(14, 48, 182, 18, 'F');
-  doc.setDrawColor(217, 119, 6);
+  doc.setDrawColor(190, 24, 93);
   doc.rect(14, 48, 182, 18, 'S');
 
   doc.setFontSize(11);
-  doc.setTextColor(180, 83, 9);
+  doc.setTextColor(190, 24, 93);
   doc.setFont('helvetica', 'bold');
   doc.text(`TOTAL A RECEBER EM ABERTO NO PERÍODO:`, 20, 59);
 
@@ -394,7 +432,7 @@ export const generateTermSalesPDF = async (
   let currentY = 76;
 
   doc.setFontSize(14);
-  doc.setTextColor(217, 119, 6);
+  doc.setTextColor(190, 24, 93);
   doc.setFont('helvetica', 'bold');
   doc.text('Detalhamento de Devedores e Prazos', 14, currentY);
 
@@ -437,7 +475,7 @@ export const generateTermSalesPDF = async (
     head: [['Data', 'Devedor (Cliente)', 'Descrição', 'Valor Total', 'Sinal Pago', 'Valor Aberto', 'Tempo']],
     body: termSalesData.map(t => [t.date, t.customer, t.desc, t.total, t.paid, t.due, t.time]),
     theme: 'grid',
-    headStyles: { fillColor: [217, 119, 6] },
+    headStyles: { fillColor: [190, 24, 93] },
     columnStyles: {
       0: { cellWidth: 22 },
       1: { cellWidth: 'auto', fontStyle: 'bold' },

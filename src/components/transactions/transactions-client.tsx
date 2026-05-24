@@ -1,6 +1,6 @@
 'use client';
-import { useMemo } from 'react';
-import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, Calendar, Package } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, Calendar, Package, Search, Share2 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -9,6 +9,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +31,7 @@ import { AddTransactionSheet } from '../dashboard/add-transaction-sheet';
 import { AddEmployeePaymentSheet } from '../dashboard/add-employee-payment-sheet';
 
 export function TransactionsClient() {
+  const [fiadoSearchTerm, setFiadoSearchTerm] = useState('');
   const { user, isUserLoading } = useUser();
   // Fetch transactions only for the logged-in user on this page
   const { transactions, loading: transactionsLoading } = useTransactions({ userIds: [user?.uid] });
@@ -79,6 +81,40 @@ export function TransactionsClient() {
       upcomingDeliveries: upcoming.sort((a, b) => a.scheduledAt!.toMillis() - b.scheduledAt!.toMillis())
     };
   }, [transactions]);
+
+  const filteredPendingFiado = useMemo(() => {
+      return pendingFiado.filter((t) => {
+          if (!fiadoSearchTerm.trim()) return true;
+          const customerName = customers.find(c => c.id === t.customerId)?.name || '';
+          const lowerSearch = fiadoSearchTerm.toLowerCase();
+          return customerName.toLowerCase().includes(lowerSearch) || 
+                 t.description.toLowerCase().includes(lowerSearch);
+      });
+  }, [pendingFiado, fiadoSearchTerm, customers]);
+
+  const filteredTotalFiadoValue = useMemo(() => {
+      return filteredPendingFiado.reduce((sum, t) => {
+          const remainingAmount = t.amount - (t.downPayment || 0);
+          return sum + remainingAmount;
+      }, 0);
+  }, [filteredPendingFiado]);
+
+  const handleShareWhatsApp = () => {
+      if (filteredPendingFiado.length === 0) return;
+      
+      let message = `Olá, tudo bem?\nPassando para informar que há um saldo pendente de *${formatCurrency(filteredTotalFiadoValue)}* referente aos seguintes pedidos:\n\n`;
+      
+      filteredPendingFiado.forEach(t => {
+          const dateStr = formatDate(t.timestamp || t.dateMs);
+          const remainingAmount = t.amount - (t.downPayment || 0);
+          message += `- ${t.description.replace(/ \(Entrada de R\$\d+,\d+\)/, '')}: *${formatCurrency(remainingAmount)}* (${dateStr})\n`;
+      });
+      
+      message += `\nQualquer dúvida, estou à disposição!`;
+      
+      const encodedMessage = encodeURIComponent(message);
+      window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+  };
 
   const handleMarkAsPaid = (transactionId: string, paymentMethod: PaymentMethod) => {
     if (isUserLoading || !user || !firestore) {
@@ -146,19 +182,45 @@ export function TransactionsClient() {
         {pendingFiado.length > 0 && (
           <Card>
               <CardHeader>
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
                           <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
                               <Clock className="w-5 h-5 mr-2 text-amber-600" />
                               Vendas a Prazo (Fiado) Pendentes
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground">Total pendente: <span className="font-bold">{formatCurrency(totalFiadoValue)}</span></p>
+                          <p className="text-sm text-muted-foreground">
+                              {fiadoSearchTerm.trim() ? 'Total filtrado: ' : 'Total pendente: '}
+                              <span className="font-bold">{formatCurrency(filteredTotalFiadoValue)}</span>
+                          </p>
+                      </div>
+                      <div className="flex w-full sm:w-auto items-center gap-2">
+                          <div className="relative w-full sm:w-64">
+                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                  type="text"
+                                  placeholder="Buscar cliente..."
+                                  className="pl-8 bg-white"
+                                  value={fiadoSearchTerm}
+                                  onChange={(e) => setFiadoSearchTerm(e.target.value)}
+                              />
+                          </div>
+                          {fiadoSearchTerm.trim() && filteredPendingFiado.length > 0 && (
+                              <Button 
+                                  variant="outline" 
+                                  onClick={handleShareWhatsApp} 
+                                  title="Compartilhar lista via WhatsApp"
+                                  className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+                              >
+                                  <Share2 className="h-4 w-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Cobrar</span>
+                              </Button>
+                          )}
                       </div>
                   </div>
               </CardHeader>
               <CardContent>
                   <ul className="space-y-3">
-                  {pendingFiado.map((t) => {
+                  {filteredPendingFiado.map((t) => {
                       const customerName = customers.find(c => c.id === t.customerId)?.name;
                       const remainingAmount = t.amount - (t.downPayment || 0);
                       const hasDownPayment = (t.downPayment || 0) > 0;
