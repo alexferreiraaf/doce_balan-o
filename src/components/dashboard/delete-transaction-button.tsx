@@ -29,9 +29,10 @@ import { errorEmitter } from '@/firebase/error-emitter';
 interface DeleteTransactionButtonProps {
   transactionId: string;
   transactionUserId: string; // The owner of the transaction
+  children?: React.ReactNode;
 }
 
-export function DeleteTransactionButton({ transactionId, transactionUserId }: DeleteTransactionButtonProps) {
+export function DeleteTransactionButton({ transactionId, transactionUserId, children }: DeleteTransactionButtonProps) {
   const { user, isUserLoading: isAuthLoading } = useUser(); // The currently logged-in user (admin)
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -102,6 +103,7 @@ export function DeleteTransactionButton({ transactionId, transactionUserId }: De
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          {children}
           <DropdownMenuItem
             className="text-red-600 focus:text-red-600 focus:bg-red-50"
             onSelect={() => setIsAlertOpen(true)}

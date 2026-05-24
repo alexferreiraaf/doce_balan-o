@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Undo2,
-  XCircle
+  XCircle,
+  MessageCircle
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
@@ -41,6 +42,7 @@ import { OrderDetailsDialog } from './order-details-dialog';
 import { ScrollArea, ScrollBar } from '../ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
+import { DropdownMenuItem } from '../ui/dropdown-menu';
 
 const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.ElementType }> = {
     pix: { text: 'PIX', icon: Landmark },
@@ -132,6 +134,31 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
     }
   };
 
+  const sendWhatsAppMessage = (t: Transaction, customer: any) => {
+    if (!customer.whatsapp) return;
+    const phone = customer.whatsapp.replace(/\D/g, '');
+    const name = customer.name.split(' ')[0];
+    
+    let itemsText = t.description;
+    if (t.cartItems && t.cartItems.length > 0) {
+      itemsText = t.cartItems.map((item: any) => `${item.quantity}x ${item.name}`).join(', ');
+    }
+    
+    const isDelivery = t.deliveryType === 'delivery' || t.description.includes('Entrega');
+    let message = '';
+
+    switch(t.status) {
+      case 'pending': message = `Olá, ${name}! Recebemos o seu pedido (${itemsText}). Em breve começaremos a prepará-lo!`; break;
+      case 'preparing': message = `Olá, ${name}! O seu pedido (${itemsText}) já está em preparo!`; break;
+      case 'ready': message = `Olá, ${name}! O seu pedido (${itemsText}) está PRONTO! ${isDelivery ? 'Já vai sair para entrega' : 'Pode vir retirar!'}`; break;
+      case 'paid': message = `Olá, ${name}! Muito obrigado por comprar com a Doçuras da Fran! Esperamos que goste do seu pedido!`; break;
+      case 'cancelled': message = `Olá, ${name}. O seu pedido (${itemsText}) foi cancelado. Se tiver alguma dúvida, estamos à disposição.`; break;
+      default: message = `Olá, ${name}! Aqui é da Doçuras da Fran. Referente ao pedido: ${itemsText}.`; break;
+    }
+
+    window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
   if (transactionsLoading || customersLoading || isUserLoading || !startDate || !endDate) {
     return <Loading />;
   }
@@ -181,10 +208,20 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
           <div className="flex items-center justify-between pt-2 border-t gap-2">
             <div className="flex gap-1">
                {customer && <OrderDetailsDialog transaction={t} customer={customer} />}
-               <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => updateOrderStatus(t, 'cancelled')} title="Cancelar Pedido">
-                 <XCircle className="w-4 h-4" />
-               </Button>
+               {customer?.whatsapp && (
+                 <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={() => sendWhatsAppMessage(t, customer)} title="Enviar Mensagem via WhatsApp">
+                   <MessageCircle className="w-4 h-4" />
+                 </Button>
+               )}
+               <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId}>
+                 <DropdownMenuItem 
+                     onSelect={() => updateOrderStatus(t, 'cancelled')}
+                     className="text-orange-600 focus:text-orange-600 focus:bg-orange-50 cursor-pointer"
+                 >
+                     <XCircle className="w-4 h-4 mr-2" />
+                     Cancelar Pedido
+                 </DropdownMenuItem>
+               </DeleteTransactionButton>
             </div>
             
             <div className="flex items-center gap-1">
