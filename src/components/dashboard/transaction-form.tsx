@@ -168,6 +168,7 @@ type TransactionFormValues = z.infer<typeof formSchema> & { fromStorefront?: boo
 
 interface InitialCartItem extends Product {
   quantity: number;
+  selectedOptionals?: SelectedOptional[];
 }
 
 interface TransactionFormProps {
@@ -575,17 +576,16 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 finalOrderNumber = nextNumber;
 
                 // Prepare final data
-                const finalTransactionData = { 
+                const finalTransactionData: any = { 
                     ...transactionData, 
                     timestamp: serverTimestamp(),
                     orderNumber: finalOrderNumber 
                 };
-                if (!finalTransactionData.scheduledAt) {
-                    delete finalTransactionData.scheduledAt;
-                }
-                if (!finalOrderNumber) {
-                    delete finalTransactionData.orderNumber;
-                }
+                Object.keys(finalTransactionData).forEach(key => {
+                    if (finalTransactionData[key] === undefined) {
+                        delete finalTransactionData[key];
+                    }
+                });
 
                 // Create transaction
                 firestoreTransaction.set(newTransactionRef, finalTransactionData);
@@ -618,14 +618,18 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             setSelectedOptionals([]);
             setSheetOpen(false);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error in onSubmit:', error);
-             toast({ variant: 'destructive', title: 'Erro Crítico', description: 'Não foi possível completar a operação. Verifique suas permissões.' });
-             errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: 'customer/transaction creation',
-                operation: 'create',
-                requestResourceData: {data},
-            }));
+            if (error?.code === 'permission-denied') {
+                 toast({ variant: 'destructive', title: 'Erro de Permissão', description: 'Você não tem permissão para realizar esta operação.' });
+                 errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'customer/transaction creation',
+                    operation: 'create',
+                    requestResourceData: {data},
+                }));
+            } else {
+                 toast({ variant: 'destructive', title: 'Erro', description: 'Ocorreu um erro ao processar o pedido. Tente novamente.' });
+            }
         }
     });
   };
