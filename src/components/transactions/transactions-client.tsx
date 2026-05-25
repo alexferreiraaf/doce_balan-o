@@ -43,10 +43,8 @@ export function TransactionsClient() {
 
   const { paidTransactions, pendingFiado, totalFiadoValue, upcomingDeliveries } = useMemo(() => {
     // Any transaction (even from POS or Storefront) that is scheduled and not delivered
-    // Exclude if it's already marked as fiado (delivered but not paid)
     const upcoming = transactions.filter(t => {
         if (!t.scheduledAt) return false;
-        if (t.paymentMethod === 'fiado') return false;
         if (t.isDelivered) return false;
 
         // Legacy fallback: if it's paid and has no isDelivered flag, we assume it's delivered 
@@ -66,8 +64,8 @@ export function TransactionsClient() {
     
     const paid = manualTransactions.filter(t => t.status !== 'pending' && !upcoming.some(u => u.id === t.id));
 
-    // Fiado: Any transaction that is pending and payment method is fiado
-    const fiado = transactions.filter((t) => t.status === 'pending' && t.paymentMethod === 'fiado');
+    // Fiado: Any transaction that is pending and payment method is fiado, and not currently an upcoming delivery
+    const fiado = transactions.filter((t) => t.status === 'pending' && t.paymentMethod === 'fiado' && !upcoming.some(u => u.id === t.id));
     
     const fiadoValue = fiado.reduce((sum, t) => {
         const remainingAmount = t.amount - (t.downPayment || 0);

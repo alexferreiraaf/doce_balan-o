@@ -191,8 +191,9 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                     <span className="font-semibold text-card-foreground">{t.description}</span>
                     <div className='flex items-center gap-2 flex-wrap'>
                         <Badge variant="secondary" className="text-xs">{t.category}</Badge>
-                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            {formatDate(t.timestamp || t.dateMs)}
+                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200" title={`Lançado em: ${formatDate(t.timestamp || t.dateMs)}`}>
+                            <CalendarIcon className="w-3 h-3 mr-1 inline-block" />
+                            {t.scheduledAt ? `Para: ${format(t.scheduledAt.toDate(), "dd/MM/yyyy")}` : formatDate(t.timestamp || t.dateMs)}
                         </Badge>
                         {t.type === 'income' && paymentInfo && (
                             <Badge variant={t.paymentMethod === 'fiado' ? 'destructive' : 'outline'} className="text-xs">
