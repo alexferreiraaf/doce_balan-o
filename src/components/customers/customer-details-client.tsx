@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import type { Transaction } from '@/app/lib/types';
+import { ReceiptDialog } from '../transactions/receipt-dialog';
 
 interface CustomerDetailsClientProps {
   customerId: string;
@@ -29,8 +30,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
   }, [transactions, customerId]);
 
   const receipts = useMemo(() => {
-    // Correctly type assertion for transactions with receiptUrl
-    return customerTransactions.filter((t): t is Transaction & { receiptUrl: string } => !!t.receiptUrl);
+    return customerTransactions.filter(t => t.type === 'income');
   }, [customerTransactions]);
 
   const loading = customerLoading || transactionsLoading;
@@ -187,12 +187,7 @@ export function CustomerDetailsClient({ customerId }: CustomerDetailsClientProps
                             {format(new Date(receipt.dateMs), 'dd/MM/yyyy')}
                            </span>
                         </div>
-                        <Button asChild variant="outline" size="sm">
-                          <a href={receipt.receiptUrl} target="_blank" rel="noopener noreferrer">
-                            <Download className="mr-2 h-4 w-4" />
-                            Ver Comprovante
-                          </a>
-                        </Button>
+                        <ReceiptDialog transaction={receipt} />
                       </li>
                     ))}
                   </ul>

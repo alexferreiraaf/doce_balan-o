@@ -1,8 +1,13 @@
 'use client';
 import { useState } from 'react';
-
-import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
+import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User, CalendarIcon, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Transaction, PaymentMethod, Customer } from '@/app/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Badge } from '../ui/badge';
@@ -11,6 +16,7 @@ import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from './edit-transaction-sheet';
 import { useUser } from '@/firebase';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from '@/lib/utils';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -28,11 +34,40 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
   const { customers } = useCustomers();
   const { user } = useUser();
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
 
   const filteredTransactions = transactions.filter(t => {
-    if (filter === 'all') return true;
-    return t.type === filter;
+    if (filter !== 'all' && t.type !== filter) return false;
+    
+    let tDate: Date;
+    const dateVal = t.timestamp || t.dateMs;
+    if (typeof dateVal === 'number') {
+      tDate = new Date(dateVal);
+    } else if (dateVal && typeof (dateVal as any).toDate === 'function') {
+      tDate = (dateVal as any).toDate();
+    } else {
+      tDate = new Date(dateVal as any);
+    }
+    tDate.setHours(0, 0, 0, 0);
+
+    if (startDate) {
+      const fromDate = new Date(startDate);
+      fromDate.setHours(0, 0, 0, 0);
+      if (tDate < fromDate) return false;
+    }
+    
+    if (endDate) {
+      const toDate = new Date(endDate);
+      toDate.setHours(23, 59, 59, 999);
+      if (tDate > toDate) return false;
+    }
+    
+    return true;
   });
+
+  const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+  const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
 
   if (transactions.length === 0) {
     return (
@@ -45,15 +80,95 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <CardHeader className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">{title}</CardTitle>
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full sm:w-auto">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="income">Entradas</TabsTrigger>
-              <TabsTrigger value="expense">Saídas</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full sm:w-[150px] justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "dd/MM/yyyy") : <span>Data Inicial</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  locale={ptBR}
+                />
+                {startDate && (
+                   <div className="p-2">
+                       <Button variant="ghost" className="w-full text-destructive" onClick={() => setStartDate(undefined)}>
+                          <X className="w-4 h-4 mr-2"/>
+                          Limpar
+                       </Button>
+                   </div>
+                )}
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full sm:w-[150px] justify-start text-left font-normal",
+                    !endDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "dd/MM/yyyy") : <span>Data Final</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="single"
+                  selected={endDate}
+                  onSelect={setEndDate}
+                  locale={ptBR}
+                />
+                {endDate && (
+                   <div className="p-2">
+                       <Button variant="ghost" className="w-full text-destructive" onClick={() => setEndDate(undefined)}>
+                          <X className="w-4 h-4 mr-2"/>
+                          Limpar
+                       </Button>
+                   </div>
+                )}
+              </PopoverContent>
+            </Popover>
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full sm:w-auto">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                <TabsTrigger value="income">Entradas</TabsTrigger>
+                <TabsTrigger value="expense">Saídas</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+        <div className="flex gap-4 p-4 bg-muted/50 rounded-lg">
+            {(filter === 'all' || filter === 'income') && (
+              <div>
+                 <p className="text-sm text-muted-foreground">Total de Entradas</p>
+                 <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+              </div>
+            )}
+            {(filter === 'all' || filter === 'expense') && (
+              <div>
+                 <p className="text-sm text-muted-foreground">Total de Saídas</p>
+                 <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpense)}</p>
+              </div>
+            )}
+        </div>
       </CardHeader>
       <CardContent>
         {filteredTransactions.length === 0 ? (
