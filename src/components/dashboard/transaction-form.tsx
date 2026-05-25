@@ -429,13 +429,33 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     state: data.customerState || '',
                 };
 
-                const existingCustomer = customers.find(c => c.name.toLowerCase() === data.customerName!.toLowerCase());
+                const cleanPhone = (data.customerWhatsapp || '').replace(/\D/g, '');
+                let existingCustomer = customers.find(c => c.whatsapp && c.whatsapp.replace(/\D/g, '') === cleanPhone);
+                if (!existingCustomer && data.customerName) {
+                    existingCustomer = customers.find(c => c.name.toLowerCase() === data.customerName!.toLowerCase());
+                }
 
                 if (existingCustomer) {
                     customerId = existingCustomer.id;
                     const customerRef = doc(firestore, customerCollectionPath, customerId);
-                    await updateDoc(customerRef, customerData);
-                    customerForReceipt = { id: customerId, ...customerData };
+                    
+                    const updateData: Partial<Customer> = { 
+                        name: data.customerName,
+                        whatsapp: data.customerWhatsapp || existingCustomer.whatsapp
+                    };
+                    
+                    if (data.deliveryType === 'delivery' || data.customerCep) {
+                        updateData.cep = data.customerCep || '';
+                        updateData.street = data.customerStreet || '';
+                        updateData.number = data.customerNumber || '';
+                        updateData.complement = data.customerComplement || '';
+                        updateData.neighborhood = data.customerNeighborhood || '';
+                        updateData.city = data.customerCity || '';
+                        updateData.state = data.customerState || '';
+                    }
+
+                    await updateDoc(customerRef, updateData);
+                    customerForReceipt = { ...existingCustomer, ...updateData } as Customer;
                 } else {
                     const docRef = await addDoc(customerCollection, customerData);
                     customerId = docRef.id;
@@ -875,7 +895,25 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                             <FormItem>
                             <FormLabel>WhatsApp</FormLabel>
                             <FormControl>
-                              <PhoneInput placeholder="(11) 99999-8888" {...field} onValueChange={(value) => field.onChange(value)} />
+                              <PhoneInput placeholder="(11) 99999-8888" {...field} onValueChange={(value) => {
+                                  field.onChange(value);
+                                  const cleanPhone = value.replace(/\D/g, '');
+                                  if (cleanPhone.length >= 10) {
+                                      const existing = customers.find(c => c.whatsapp && c.whatsapp.replace(/\D/g, '') === cleanPhone);
+                                      if (existing) {
+                                          if (!form.getValues('customerName')) form.setValue('customerName', existing.name);
+                                          if (!form.getValues('customerCep') && existing.cep) {
+                                              form.setValue('customerCep', existing.cep);
+                                              form.setValue('customerStreet', existing.street || '');
+                                              form.setValue('customerNumber', existing.number || '');
+                                              form.setValue('customerComplement', existing.complement || '');
+                                              form.setValue('customerNeighborhood', existing.neighborhood || '');
+                                              form.setValue('customerCity', existing.city || '');
+                                              form.setValue('customerState', existing.state || '');
+                                          }
+                                      }
+                                  }
+                              }} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>

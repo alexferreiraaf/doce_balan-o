@@ -42,7 +42,7 @@ export function CustomersClient() {
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
-          placeholder="Pesquisar por nome do cliente..."
+          placeholder="Pesquisar por nome ou número..."
           className="pl-8 bg-background"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -59,7 +59,10 @@ export function CustomersClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+              {customers.filter(c => {
+                const term = searchTerm.toLowerCase();
+                return c.name.toLowerCase().includes(term) || (c.whatsapp && c.whatsapp.includes(term));
+              }).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={2} className="h-24 text-center">
                     {searchTerm ? 'Nenhum cliente encontrado para essa pesquisa.' : 'Nenhum cliente cadastrado.'}
@@ -67,7 +70,10 @@ export function CustomersClient() {
                 </TableRow>
               ) : (
                 customers
-                  .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .filter(c => {
+                    const term = searchTerm.toLowerCase();
+                    return c.name.toLowerCase().includes(term) || (c.whatsapp && c.whatsapp.includes(term));
+                  })
                   .map((customer) => (
                   <TableRow key={customer.id} className="group">
                     <TableCell className="font-medium">
