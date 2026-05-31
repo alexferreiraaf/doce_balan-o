@@ -30,12 +30,20 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { formatCurrency } from '@/lib/utils';
-import type { Product, Transaction } from '@/app/lib/types';
+import type { Product, Transaction, CartItem } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { AddProductDialog } from '../products/add-product-dialog';
 import { AddCustomerDialog } from '../dashboard/add-customer-dialog';
 import { Textarea } from '../ui/textarea';
+import { Plus, Trash2 } from 'lucide-react';
+
+const cartItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.number(),
+  quantity: z.number(),
+});
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -43,8 +51,7 @@ const formSchema = z.object({
   category: z.string({ required_error: 'Por favor, selecione uma categoria.' }),
   amount: z.coerce.number().positive('O valor deve ser maior que zero.'),
   // Fields for income type
-  productId: z.string().optional(),
-  quantity: z.coerce.number().optional(),
+  cartItems: z.array(cartItemSchema).optional(),
   discount: z.coerce.number().optional(),
   deliveryFee: z.coerce.number().optional(),
   additionalDescription: z.string().optional(),
@@ -94,6 +101,16 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
   const initialProduct = findProductByDescription(transaction.description, products);
   const initialQuantityMatch = transaction.description.match(/(\d+)x/);
   const initialQuantity = initialQuantityMatch ? parseInt(initialQuantityMatch[1], 10) : 1;
+  
+  let initialCartItems: CartItem[] = transaction.cartItems || [];
+  if (initialCartItems.length === 0 && initialProduct) {
+      initialCartItems = [{
+          id: initialProduct.id,
+          name: initialProduct.name,
+          price: initialProduct.price,
+          quantity: initialQuantity
+      }];
+  }
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
@@ -102,8 +119,7 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
       description: transaction.type === 'expense' ? transaction.description : '',
       amount: transaction.amount,
       category: transaction.category,
-      productId: initialProduct?.id || '',
-      quantity: transaction.type === 'income' ? initialQuantity : 1,
+      cartItems: initialCartItems,
       discount: transaction.discount || 0,
       deliveryFee: transaction.deliveryFee || 0,
       additionalDescription: transaction.additionalDescription || '',
@@ -123,25 +139,39 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
     const subscription = form.watch((value, { name }) => {
       if (
         value.type === 'income' &&
-        ['productId', 'quantity', 'discount', 'deliveryFee', 'additionalValue'].includes(name as string)
+        (name?.startsWith('cartItems') || ['discount', 'deliveryFee', 'additionalValue'].includes(name as string))
       ) {
-        const product = products.find((p) => p.id === value.productId);
-        const productPrice = product ? product.price : 0;
-        const productTotal = productPrice * Number(value.quantity || 0);
+        const items = value.cartItems || [];
+        const productsTotal = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
         const discount = Number(value.discount || 0);
         const deliveryFee = Number(value.deliveryFee || 0);
         const additional = Number(value.additionalValue || 0);
-        const totalAmount = productTotal - discount + deliveryFee + additional;
+        const totalAmount = productsTotal - discount + deliveryFee + additional;
         form.setValue('amount', totalAmount > 0 ? totalAmount : 0, { shouldValidate: true });
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, products]);
-
-  // Effect to reset fields when product changes
-  useEffect(() => {
-    form.register('productId');
   }, [form]);
+
+  const addProductToCart = () => {
+      const current = form.getValues('cartItems') || [];
+      form.setValue('cartItems', [...current, { id: '', name: '', price: 0, quantity: 1 }], { shouldValidate: true });
+  };
+  
+  const removeProductFromCart = (index: number) => {
+      const current = form.getValues('cartItems') || [];
+      form.setValue('cartItems', current.filter((_, i) => i !== index), { shouldValidate: true });
+  };
+  
+  const updateCartItem = (index: number, productId: string) => {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      
+      const current = form.getValues('cartItems') || [];
+      const updated = [...current];
+      updated[index] = { ...updated[index], id: product.id, name: product.name, price: product.price };
+      form.setValue('cartItems', updated, { shouldValidate: true });
+  };
 
 
   const onSubmit = (data: TransactionFormValues) => {
@@ -158,12 +188,12 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
       const downPaymentValue = data.hasDownPayment === 'yes' ? (data.downPayment || 0) : 0;
 
       if (data.type === 'income') {
-        const product = products.find(p => p.id === data.productId);
-        if (!product || !data.quantity) {
-             toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um produto e quantidade.' });
+        const cart = data.cartItems || [];
+        if (cart.length === 0 || cart.some(i => !i.id)) {
+             toast({ variant: 'destructive', title: 'Erro', description: 'Adicione pelo menos um produto válido.' });
              return;
         }
-        transactionDescription = `Venda de ${data.quantity}x ${product.name}`;
+        transactionDescription = cart.map(item => `${item.quantity}x ${item.name}`).join(', ');
         if(data.additionalDescription) {
             transactionDescription += ` (+ ${data.additionalDescription})`
         }
@@ -186,7 +216,7 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
         status = 'pending';
       }
 
-      const transactionData = {
+      const transactionData: any = {
         type: data.type,
         description: transactionDescription,
         category: data.category,
@@ -201,6 +231,10 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
         customerId: data.customerId || null,
         // timestamp is not updated, it keeps the original creation date
       };
+      
+      if (data.type === 'income') {
+          transactionData.cartItems = data.cartItems;
+      }
 
       updateDoc(transactionRef, transactionData)
         .then(() => {
@@ -277,46 +311,61 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
           </>
         ) : (
           <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="productId"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex justify-between items-center">
-                    <FormLabel>Produto</FormLabel>
-                    <AddProductDialog />
-                  </div>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger disabled={productsLoading}>
-                        <SelectValue placeholder={productsLoading ? "Carregando produtos..." : "Selecione um produto"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {products.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name} ({formatCurrency(p.price)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantidade</FormLabel>
-                  <FormControl>
-                    <Input type="number" min="1" step="1" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-4 border p-4 rounded-md bg-muted/20">
+                <div className="flex justify-between items-center mb-2">
+                    <FormLabel className="text-base font-bold">Produtos</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <AddProductDialog />
+                        <Button type="button" variant="outline" size="sm" onClick={addProductToCart}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Adicionar Produto
+                        </Button>
+                    </div>
+                </div>
+                
+                {form.watch('cartItems')?.map((item, index) => (
+                    <div key={index} className="flex gap-2 items-end">
+                        <FormField
+                            control={form.control}
+                            name={`cartItems.${index}.id`}
+                            render={({ field }) => (
+                                <FormItem className="flex-grow">
+                                    <FormLabel className="text-xs text-muted-foreground">Produto</FormLabel>
+                                    <Select onValueChange={(val) => { field.onChange(val); updateCartItem(index, val); }} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger disabled={productsLoading}>
+                                                <SelectValue placeholder="Selecione..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {products.map((p) => (
+                                                <SelectItem key={p.id} value={p.id}>
+                                                    {p.name} ({formatCurrency(p.price)})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`cartItems.${index}.quantity`}
+                            render={({ field }) => (
+                                <FormItem className="w-24">
+                                    <FormLabel className="text-xs text-muted-foreground">Qtd.</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" min="1" step="1" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 1)} />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="text-destructive mb-0.5" onClick={() => removeProductFromCart(index)} disabled={(form.watch('cartItems')?.length || 0) <= 1}>
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
+                ))}
+            </div>
             <FormField
                 control={form.control}
                 name="customerId"
