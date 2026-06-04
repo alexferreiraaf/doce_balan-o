@@ -23,6 +23,8 @@ service cloud.firestore {
     // Produtos e Categorias: Todos podem ver
     match /artifacts/docuras-da-fran-default/products/{id} {
       allow read: if true;
+      // Permite que o checkout atualize o salesCount
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['salesCount']);
     }
     match /artifacts/docuras-da-fran-default/product-categories/{id} {
       allow read: if true;
@@ -32,6 +34,11 @@ service cloud.firestore {
     }
     match /artifacts/docuras-da-fran-default/settings/app {
       allow read: if true;
+    }
+    match /artifacts/docuras-da-fran-default/settings/counters {
+      allow read: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['orderSequence']);
+      allow create: if true;
     }
     
     // Clientes: Público só pode criar (Storefront), Admin pode tudo
