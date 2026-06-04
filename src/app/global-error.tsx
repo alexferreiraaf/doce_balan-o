@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { WhiskIcon } from '@/components/icons/whisk-icon';
 
@@ -11,8 +11,13 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [isStorefront, setIsStorefront] = useState(false);
+
   useEffect(() => {
     console.error('Erro Crítico Detectado:', error);
+    if (typeof window !== 'undefined') {
+      setIsStorefront(window.location.pathname.startsWith('/loja'));
+    }
   }, [error]);
 
   const handleReset = () => {
@@ -23,7 +28,7 @@ export default function GlobalError({
         window.location.reload();
       }
     } catch (e) {
-      window.location.href = '/pdv';
+      window.location.href = isStorefront ? '/loja' : '/pdv';
     }
   };
 
@@ -41,9 +46,11 @@ export default function GlobalError({
               <Button onClick={handleReset} className="w-full h-12 text-lg font-bold">
                 Recarregar a página
               </Button>
-              <Button variant="ghost" onClick={() => window.location.href = '/pdv'} className="w-full">
-                Ir para o PDV
-              </Button>
+              {!isStorefront && (
+                <Button variant="ghost" onClick={() => window.location.href = '/pdv'} className="w-full">
+                  Ir para o PDV
+                </Button>
+              )}
             </div>
             {process.env.NODE_ENV === 'development' && (
               <div className="mt-6 p-4 bg-muted text-[10px] text-left overflow-auto rounded max-h-40">

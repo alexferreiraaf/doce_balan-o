@@ -69,6 +69,54 @@ export function StorefrontClient() {
   const searchParams = useSearchParams();
   const hasHandledDeepLink = useRef(false);
 
+  const loading = productsLoading || categoriesLoading || settingsLoading;
+
+  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; message: string; isStatusLoading: boolean }>({
+    isOpen: false,
+    message: 'Verificando horário...',
+    isStatusLoading: true,
+  });
+
+  useEffect(() => {
+    if (!isClient || settingsLoading) {
+      setStoreStatus(prev => ({...prev, isStatusLoading: true}));
+      return;
+    }
+
+    const getStatus = (): { isOpen: boolean; message: string } => {
+      if (!settings?.openingHours) {
+        return { isOpen: true, message: '' };
+      }
+    
+      const now = new Date();
+      const currentDay = weekDayMap[now.getDay()];
+      const todaySettings = settings.openingHours[currentDay];
+    
+      if (!todaySettings || !todaySettings.enabled) {
+        return { isOpen: false, message: 'Hoje estamos fechados.' };
+      }
+    
+      const [openHour, openMinute] = todaySettings.open.split(':').map(Number);
+      const [closeHour, closeMinute] = todaySettings.close.split(':').map(Number);
+      
+      const openTime = new Date();
+      openTime.setHours(openHour, openMinute, 0, 0);
+    
+      const closeTime = new Date();
+      closeTime.setHours(closeHour, closeMinute, 0, 0);
+    
+      if (now >= openTime && now < closeTime) {
+        return { isOpen: true, message: '' };
+      } else if (now < openTime) {
+        return { isOpen: false, message: `Abrimos hoje às ${todaySettings.open}.` };
+      } else {
+         return { isOpen: false, message: `Fechamos hoje às ${todaySettings.close}.` };
+      }
+    };
+
+    setStoreStatus({ ...getStatus(), isStatusLoading: false });
+  }, [settings, settingsLoading, isClient]);
+
   useEffect(() => {
     const productIdFromQuery = searchParams.get('p');
     if (!productsLoading && !storeStatus.isStatusLoading && productIdFromQuery && !hasHandledDeepLink.current && products.length > 0) {
@@ -119,55 +167,6 @@ export function StorefrontClient() {
       });
     }
   }, [auth, user, isUserLoading]);
-
-  const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; message: string; isStatusLoading: boolean }>({
-    isOpen: false,
-    message: 'Verificando horário...',
-    isStatusLoading: true,
-  });
-
-  useEffect(() => {
-    if (!isClient || settingsLoading) {
-      setStoreStatus(prev => ({...prev, isStatusLoading: true}));
-      return;
-    }
-
-    const getStatus = (): { isOpen: boolean; message: string } => {
-      if (!settings?.openingHours) {
-        return { isOpen: true, message: '' };
-      }
-    
-      const now = new Date();
-      const currentDay = weekDayMap[now.getDay()];
-      const todaySettings = settings.openingHours[currentDay];
-    
-      if (!todaySettings || !todaySettings.enabled) {
-        return { isOpen: false, message: 'Hoje estamos fechados.' };
-      }
-    
-      const [openHour, openMinute] = todaySettings.open.split(':').map(Number);
-      const [closeHour, closeMinute] = todaySettings.close.split(':').map(Number);
-      
-      const openTime = new Date();
-      openTime.setHours(openHour, openMinute, 0, 0);
-    
-      const closeTime = new Date();
-      closeTime.setHours(closeHour, closeMinute, 0, 0);
-    
-      if (now >= openTime && now < closeTime) {
-        return { isOpen: true, message: '' };
-      } else if (now < openTime) {
-        return { isOpen: false, message: `Abrimos hoje às ${todaySettings.open}.` };
-      } else {
-         return { isOpen: false, message: `Fechamos hoje às ${todaySettings.close}.` };
-      }
-    };
-
-    setStoreStatus({ ...getStatus(), isStatusLoading: false });
-  }, [settings, settingsLoading, isClient]);
-
-
-  const loading = productsLoading || categoriesLoading || settingsLoading;
 
   const { promotionalProducts, featuredProducts, bestSellerThreshold, regularProducts } = useMemo(() => {
     if (products.length === 0) {
