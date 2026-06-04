@@ -71,14 +71,15 @@ export function StorefrontClient() {
 
   useEffect(() => {
     const productIdFromQuery = searchParams.get('p');
-    if (!productsLoading && productIdFromQuery && !hasHandledDeepLink.current && products.length > 0) {
+    if (!productsLoading && !storeStatus.isStatusLoading && productIdFromQuery && !hasHandledDeepLink.current && products.length > 0) {
       const product = products.find(p => p.id === productIdFromQuery);
       if (product) {
         handleAddToCart(product);
-        hasHandledDeepLink.current = true;
       }
+      // Always mark as handled if it's no longer loading, even if not found, to avoid infinite loops
+      hasHandledDeepLink.current = true;
     }
-  }, [productsLoading, products, searchParams]);
+  }, [productsLoading, storeStatus.isStatusLoading, products, searchParams]);
 
   useEffect(() => {
     setIsClient(true);

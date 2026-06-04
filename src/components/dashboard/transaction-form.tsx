@@ -209,7 +209,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const [isFetchingCep, setIsFetchingCep] = useState(false);
 
   const { products, loading: productsLoading } = useProducts();
-  const { customers, loading: customersLoading } = useCustomers();
+  const { customers, loading: customersLoading } = useCustomers(fromStorefront);
   const { optionals, loading: optionalsLoading } = useOptionals();
   const { settings, loading: settingsLoading } = useSettings();
   const [selectedOptionals, setSelectedOptionals] = useState<SelectedOptional[]>([]);

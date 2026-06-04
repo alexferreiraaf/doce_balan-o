@@ -7,18 +7,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 
-export function useCustomers() {
+export function useCustomers(skipFetch: boolean = false) {
   const firestore = useFirestore();
   const [loading, setLoading] = useState(true);
 
   // Query the public collection
   const customersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || skipFetch) return null;
     return query(
       collection(firestore, `artifacts/${APP_ID}/customers`),
       orderBy('name', 'asc')
     );
-  }, [firestore]);
+  }, [firestore, skipFetch]);
 
   const { data: customers, isLoading: customersLoading, error } = useCollection<Customer>(customersQuery);
   const { toast } = useToast();
