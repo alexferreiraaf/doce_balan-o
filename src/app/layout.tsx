@@ -5,6 +5,7 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 import { ThemeProvider } from '@/components/theme-provider';
 import { usePathname } from 'next/navigation';
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Metadata cannot be exported from a client component, so we define it here if needed
 // export const metadata: Metadata = { ... };
@@ -49,6 +50,7 @@ export default function RootLayout({
             children
           )}
           <Toaster />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>
