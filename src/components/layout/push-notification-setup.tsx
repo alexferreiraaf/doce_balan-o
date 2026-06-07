@@ -29,7 +29,11 @@ export function PushNotificationSetup() {
                 return;
             }
 
-            const currentToken = await getToken(messaging, { vapidKey });
+            const registration = await navigator.serviceWorker.ready;
+            const currentToken = await getToken(messaging, { 
+                vapidKey,
+                serviceWorkerRegistration: registration
+            });
 
             if (currentToken) {
               const userRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}`);
