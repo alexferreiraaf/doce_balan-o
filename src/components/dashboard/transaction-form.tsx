@@ -515,7 +515,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 downPayment: downPaymentValue,
                 paymentMethod: paymentMethod,
                 status: status,
-                customerId: customerId || null,
+                customerId: customerId || undefined,
                 dateMs: Date.now(),
                 deliveryType: data.deliveryType,
                 customerInfo: data.fromStorefront && customerForReceipt ? customerForReceipt : undefined,
@@ -604,7 +604,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     ...(transactionData as Omit<Transaction, 'id' | 'timestamp' | 'customerId'>),
                     id: newTransactionRef.id,
                     orderNumber: finalOrderNumber,
-                    customerId: customerId || null,
+                    customerId: customerId || undefined,
                     timestamp: {
                       toDate: () => new Date(),
                       toMillis: () => Date.now(),

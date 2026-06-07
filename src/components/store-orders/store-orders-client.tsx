@@ -164,7 +164,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
   }
 
   const KanbanCard = ({ t }: { t: Transaction }) => {
-    const customer = customers.find(c => c.id === t.customerId) || t.customerInfo;
+    const customer = customers.find(c => c.id === t.customerId) || (t.customerInfo as Customer);
     const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
     
     return (

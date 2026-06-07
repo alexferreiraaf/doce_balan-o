@@ -452,7 +452,7 @@ export const generateTermSalesPDF = async (
 
   const termSalesData = pendingTransactions.map(t => {
     const customer = customers.find(c => c.id === t.customerId) || t.customerInfo;
-    const customerName = customer ? customer.name : (t.description || 'Cliente Não Identificado');
+    const customerName = (customer ? customer.name : t.description) || 'Cliente Não Identificado';
     const totalVal = Number(t.amount || 0);
     const paidVal = Number(t.downPayment || 0);
     const remainingVal = totalVal - paidVal;
