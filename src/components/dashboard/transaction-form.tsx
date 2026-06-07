@@ -618,6 +618,19 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
             
             toast({ title: 'Sucesso!', description: data.fromStorefront ? 'Pedido enviado!' : 'Lançamento adicionado.' });
             
+            if (data.fromStorefront && targetUserId) {
+                fetch('/api/notify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: '🛒 Novo Pedido Online!',
+                        message: `Pedido de ${formatCurrency(data.amount)} recebido de ${data.customerName || 'Cliente'}.`,
+                        userId: targetUserId,
+                        url: '/transactions'
+                    })
+                }).catch(err => console.error('Failed to send push notification:', err));
+            }
+            
             if (data.type === 'income' && onSaleFinalized) {
                 const createdTransaction: Transaction = {
                     ...(transactionData as Omit<Transaction, 'id' | 'timestamp' | 'customerId'>),
