@@ -50,7 +50,8 @@ service cloud.firestore {
     // Transações/Pedidos: Público só pode criar (Storefront), Admin pode tudo
     match /artifacts/docuras-da-fran-default/users/{userId}/transactions/{id} {
       allow create: if true;
-      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow get: if true;
+      allow list, write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
   }
 }
