@@ -43,6 +43,7 @@ export interface Transaction {
   deliveryType?: 'delivery' | 'pickup';
   orderNumber?: number;
   isDelivered?: boolean;
+  customerInfo?: Partial<Customer>;
 }
 
 export interface ProductSize {

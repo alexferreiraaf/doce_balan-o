@@ -179,7 +179,7 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
           <ul className="space-y-3">
             {filteredTransactions.map((t) => {
             const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
-            const customerName = customers.find(c => c.id === t.customerId)?.name;
+            const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name;
             return (
                 <li
                 key={t.id}

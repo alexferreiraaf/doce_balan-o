@@ -83,7 +83,7 @@ export function TransactionsClient() {
   const filteredPendingFiado = useMemo(() => {
       return pendingFiado.filter((t) => {
           if (!fiadoSearchTerm.trim()) return true;
-          const customerName = customers.find(c => c.id === t.customerId)?.name || '';
+          const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name || '';
           const lowerSearch = fiadoSearchTerm.toLowerCase();
           return customerName.toLowerCase().includes(lowerSearch) || 
                  t.description.toLowerCase().includes(lowerSearch);
@@ -219,7 +219,7 @@ export function TransactionsClient() {
               <CardContent>
                   <ul className="space-y-3">
                   {filteredPendingFiado.map((t) => {
-                      const customerName = customers.find(c => c.id === t.customerId)?.name;
+                      const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name;
                       const remainingAmount = t.amount - (t.downPayment || 0);
                       const hasDownPayment = (t.downPayment || 0) > 0;
                       return (
@@ -298,7 +298,7 @@ export function TransactionsClient() {
               <CardContent>
                   <ul className="space-y-3">
                   {upcomingDeliveries.map((t) => {
-                      const customerName = customers.find(c => c.id === t.customerId)?.name || t.description.match(/Cliente: (.*?)(?: -|$)/)?.[1];
+                      const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name || t.description.match(/Cliente: (.*?)(?: -|$)/)?.[1];
                       const deliveryDate = t.scheduledAt ? format(t.scheduledAt.toDate(), "dd/MM/yyyy 'às' HH:mm") : '';
                       const isStorefront = t.fromStorefront || t.category === 'Venda Online';
                       

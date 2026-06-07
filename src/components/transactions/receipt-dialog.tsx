@@ -79,7 +79,7 @@ export function ReceiptDialog({ transaction, children }: ReceiptDialogProps) {
     }
   };
 
-  const customer = transaction.customerId ? customers.find(c => c.id === transaction.customerId) : null;
+  const customer = transaction.customerId ? customers.find(c => c.id === transaction.customerId) : (transaction.customerInfo || null);
   
   let tDate: Date;
   const dateVal = transaction.timestamp || transaction.dateMs;

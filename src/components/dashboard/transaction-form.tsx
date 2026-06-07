@@ -415,11 +415,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
         try {
             // 1. Find or Create/Update customer for storefront sales
             if (data.fromStorefront && data.customerName) {
-                const customerCollectionPath = `artifacts/${APP_ID}/customers`;
-                const customerCollection = collection(firestore, customerCollectionPath);
-                const customerData: Omit<Customer, 'id'> = {
+                const customerData: Partial<Customer> = {
                     name: data.customerName,
-                    whatsapp: data.customerWhatsapp || '', // Zod ensures this exists
+                    whatsapp: data.customerWhatsapp || '',
                     cep: data.customerCep || '',
                     street: data.customerStreet || '',
                     number: data.customerNumber || '',
@@ -428,39 +426,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     city: data.customerCity || '',
                     state: data.customerState || '',
                 };
-
-                const cleanPhone = (data.customerWhatsapp || '').replace(/\D/g, '');
-                let existingCustomer = customers.find(c => c.whatsapp && c.whatsapp.replace(/\D/g, '') === cleanPhone);
-                if (!existingCustomer && data.customerName) {
-                    existingCustomer = customers.find(c => c.name.toLowerCase() === data.customerName!.toLowerCase());
-                }
-
-                if (existingCustomer) {
-                    customerId = existingCustomer.id;
-                    const customerRef = doc(firestore, customerCollectionPath, customerId);
-                    
-                    const updateData: Partial<Customer> = { 
-                        name: data.customerName,
-                        whatsapp: data.customerWhatsapp || existingCustomer.whatsapp
-                    };
-                    
-                    if (data.deliveryType === 'delivery' || data.customerCep) {
-                        updateData.cep = data.customerCep || '';
-                        updateData.street = data.customerStreet || '';
-                        updateData.number = data.customerNumber || '';
-                        updateData.complement = data.customerComplement || '';
-                        updateData.neighborhood = data.customerNeighborhood || '';
-                        updateData.city = data.customerCity || '';
-                        updateData.state = data.customerState || '';
-                    }
-
-                    await updateDoc(customerRef, updateData);
-                    customerForReceipt = { ...existingCustomer, ...updateData } as Customer;
-                } else {
-                    const docRef = await addDoc(customerCollection, customerData);
-                    customerId = docRef.id;
-                    customerForReceipt = { id: customerId, ...customerData };
-                }
+                
+                customerForReceipt = customerData as Customer;
             } else if (data.customerId) {
                 customerForReceipt = customers.find(c => c.id === data.customerId);
             }
@@ -551,6 +518,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 customerId: customerId || null,
                 dateMs: Date.now(),
                 deliveryType: data.deliveryType,
+                customerInfo: data.fromStorefront && customerForReceipt ? customerForReceipt : undefined,
             };
             
             if (scheduledAtTimestamp) {
