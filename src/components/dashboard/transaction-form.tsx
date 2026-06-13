@@ -101,6 +101,11 @@ const formSchema = z.object({
   selectedOptionals: z.array(selectedOptionalSchema).optional(),
   cartItems: z.array(cartItemSchema).optional(),
 
+  // Installments / Credit Card
+  isInstallment: z.boolean().optional(),
+  totalInstallments: z.coerce.number().optional(),
+  creditCard: z.string().optional(),
+
   // Scheduling fields
   scheduledDate: z.date().optional(),
   scheduledTime: z.string().optional(),
@@ -253,6 +258,9 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       customerState: '',
       selectedOptionals: [],
       cartItems: cart || [],
+      isInstallment: false,
+      totalInstallments: undefined,
+      creditCard: '',
     },
   });
 
@@ -563,20 +571,57 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 firestoreTransaction.set(counterRef, { orderSequence: nextNumber }, { merge: true });
                 finalOrderNumber = nextNumber;
 
-                // Prepare final data
-                const finalTransactionData: any = { 
-                    ...transactionData, 
-                    timestamp: serverTimestamp(),
-                    orderNumber: finalOrderNumber 
-                };
-                Object.keys(finalTransactionData).forEach(key => {
-                    if (finalTransactionData[key] === undefined) {
-                        delete finalTransactionData[key];
-                    }
-                });
+                const isInstallmentExpense = data.type === 'expense' && data.paymentMethod === 'cartao' && data.isInstallment && data.totalInstallments && data.totalInstallments > 1;
 
-                // Create transaction
-                firestoreTransaction.set(newTransactionRef, finalTransactionData);
+                if (isInstallmentExpense) {
+                    const totalInstallments = data.totalInstallments!;
+                    const installmentAmount = data.amount / totalInstallments;
+                    const purchaseGroupId = doc(transactionCollection).id;
+                    const now = new Date();
+
+                    for (let i = 1; i <= totalInstallments; i++) {
+                        const installmentDate = new Date(now);
+                        installmentDate.setMonth(now.getMonth() + (i - 1));
+                        
+                        const finalTransactionData: any = { 
+                            ...transactionData,
+                            amount: installmentAmount,
+                            timestamp: Timestamp.fromDate(installmentDate),
+                            dateMs: installmentDate.getTime(),
+                            orderNumber: finalOrderNumber,
+                            isInstallment: true,
+                            installmentIndex: i,
+                            totalInstallments: totalInstallments,
+                            purchaseGroupId: purchaseGroupId,
+                            creditCard: data.creditCard || '',
+                            description: `${transactionData.description} (Parcela ${i}/${totalInstallments})`
+                        };
+
+                        Object.keys(finalTransactionData).forEach(key => {
+                            if (finalTransactionData[key] === undefined) {
+                                delete finalTransactionData[key];
+                            }
+                        });
+
+                        const installmentRef = doc(transactionCollection);
+                        firestoreTransaction.set(installmentRef, finalTransactionData);
+                    }
+                } else {
+                    // Prepare final data
+                    const finalTransactionData: any = { 
+                        ...transactionData, 
+                        timestamp: serverTimestamp(),
+                        orderNumber: finalOrderNumber 
+                    };
+                    Object.keys(finalTransactionData).forEach(key => {
+                        if (finalTransactionData[key] === undefined) {
+                            delete finalTransactionData[key];
+                        }
+                    });
+
+                    // Create transaction
+                    firestoreTransaction.set(newTransactionRef, finalTransactionData);
+                }
 
                 // Update sales counts
                 for (const p of productDocs) {
@@ -605,12 +650,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     id: newTransactionRef.id,
                     orderNumber: finalOrderNumber,
                     customerId: customerId || undefined,
-                    timestamp: {
-                      toDate: () => new Date(),
-                      toMillis: () => Date.now(),
-                      nanoseconds: 0,
-                      seconds: Math.floor(Date.now() / 1000)
-                    },
+                    timestamp: Timestamp.fromDate(new Date()),
                   };
                 onSaleFinalized(createdTransaction, customerForReceipt);
             }
@@ -760,6 +800,81 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                  <FormLabel>Meio de Pagamento</FormLabel>
+                  <FormControl>
+                      <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+                      >
+                          <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="pix" id="exp-pix" /></FormControl><FormLabel htmlFor="exp-pix" className="font-normal cursor-pointer">PIX</FormLabel></FormItem>
+                          <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="dinheiro" id="exp-dinheiro" /></FormControl><FormLabel htmlFor="exp-dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel></FormItem>
+                          <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="cartao" id="exp-cartao" /></FormControl><FormLabel htmlFor="exp-cartao" className="font-normal cursor-pointer">Cartão de Crédito</FormLabel></FormItem>
+                      </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {paymentMethodValue === 'cartao' && (
+                <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+                  <FormField
+                    control={form.control}
+                    name="creditCard"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Qual Cartão?</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: Nubank, Itaú..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="isInstallment"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Compra Parcelada?</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('isInstallment') && (
+                    <FormField
+                      control={form.control}
+                      name="totalInstallments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número de Parcelas</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="2" max="36" step="1" {...field} value={field.value || ''} />
+                          </FormControl>
+                          {Number(field.value) > 1 && Number(form.watch('amount')) > 0 && (
+                            <p className="text-sm text-green-600 font-medium mt-2">
+                              Serão geradas {field.value} parcelas de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(form.watch('amount')) / Number(field.value))}
+                            </p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <div className="space-y-4">

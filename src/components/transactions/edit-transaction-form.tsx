@@ -269,6 +269,12 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
 
         {transactionType === 'expense' ? (
           <>
+            {transaction.isInstallment && (
+                <div className="bg-purple-100 text-purple-800 p-3 rounded-md mb-4 flex flex-col">
+                   <span className="font-bold text-sm">Esta despesa é a parcela {transaction.installmentIndex}/{transaction.totalInstallments} de uma compra parcelada.</span>
+                   {transaction.creditCard && <span className="text-xs mt-1">💳 Cartão: {transaction.creditCard}</span>}
+                </div>
+            )}
             <FormField
               control={form.control}
               name="description"

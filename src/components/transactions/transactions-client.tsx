@@ -32,6 +32,7 @@ import { AddEmployeePaymentSheet } from '../dashboard/add-employee-payment-sheet
 
 export function TransactionsClient() {
   const [fiadoSearchTerm, setFiadoSearchTerm] = useState('');
+  const [upcomingSearchTerm, setUpcomingSearchTerm] = useState('');
   const { user, isUserLoading } = useUser();
   // Fetch transactions only for the logged-in user on this page
   const { transactions, loading: transactionsLoading } = useTransactions({ userIds: [user?.uid] });
@@ -96,6 +97,21 @@ export function TransactionsClient() {
           return sum + remainingAmount;
       }, 0);
   }, [filteredPendingFiado]);
+
+  const filteredUpcomingDeliveries = useMemo(() => {
+      return upcomingDeliveries.filter((t) => {
+          if (!upcomingSearchTerm.trim()) return true;
+          const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name || t.description.match(/Cliente: (.*?)(?: -|$)/)?.[1] || '';
+          const lowerSearch = upcomingSearchTerm.toLowerCase();
+          return customerName.toLowerCase().includes(lowerSearch) || 
+                 t.description.toLowerCase().includes(lowerSearch) ||
+                 (t.orderNumber && t.orderNumber.toString().includes(lowerSearch));
+      });
+  }, [upcomingDeliveries, upcomingSearchTerm, customers]);
+
+  const filteredTotalUpcomingValue = useMemo(() => {
+      return filteredUpcomingDeliveries.reduce((sum, t) => sum + t.amount, 0);
+  }, [filteredUpcomingDeliveries]);
 
   const handleShareWhatsApp = () => {
       if (filteredPendingFiado.length === 0) return;
@@ -289,15 +305,38 @@ export function TransactionsClient() {
         {upcomingDeliveries.length > 0 && (
           <Card>
               <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
-                      <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                      Pedidos Agendados / A Produzir
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">Pedidos que foram agendados para uma data futura.</p>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                          <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                              <Calendar className="w-5 h-5 mr-2 text-blue-600" />
+                              Pedidos Agendados / A Produzir
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                              {upcomingSearchTerm.trim() ? 'Total filtrado: ' : 'Total a produzir: '}
+                              <span className="font-bold">{formatCurrency(filteredTotalUpcomingValue)}</span>
+                          </p>
+                      </div>
+                      <div className="flex w-full sm:w-auto items-center gap-2">
+                          <div className="relative w-full sm:w-64">
+                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                  type="text"
+                                  placeholder="Buscar pedido..."
+                                  className="pl-8 bg-white"
+                                  value={upcomingSearchTerm}
+                                  onChange={(e) => setUpcomingSearchTerm(e.target.value)}
+                              />
+                          </div>
+                      </div>
+                  </div>
               </CardHeader>
               <CardContent>
                   <ul className="space-y-3">
-                  {upcomingDeliveries.map((t) => {
+                  {filteredUpcomingDeliveries.length === 0 ? (
+                      <div className="text-center p-6 text-muted-foreground">
+                          <p>Nenhum pedido encontrado para este filtro.</p>
+                      </div>
+                  ) : filteredUpcomingDeliveries.map((t) => {
                       const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name || t.description.match(/Cliente: (.*?)(?: -|$)/)?.[1];
                       const deliveryDate = t.scheduledAt ? format(t.scheduledAt.toDate(), "dd/MM/yyyy 'às' HH:mm") : '';
                       const isStorefront = t.fromStorefront || t.category === 'Venda Online';

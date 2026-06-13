@@ -23,6 +23,11 @@ export interface Transaction {
   dateMs: number;
   receiptUrl?: string;
   fromStorefront?: boolean;
+  isInstallment?: boolean;
+  installmentIndex?: number;
+  totalInstallments?: number;
+  purchaseGroupId?: string;
+  creditCard?: string;
 }
 
 export interface Product {

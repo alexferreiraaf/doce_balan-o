@@ -195,10 +195,21 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                             <CalendarIcon className="w-3 h-3 mr-1 inline-block" />
                             {t.scheduledAt ? `Para: ${format(t.scheduledAt.toDate(), "dd/MM/yyyy")}` : formatDate(t.timestamp || t.dateMs)}
                         </Badge>
-                        {t.type === 'income' && paymentInfo && (
+                        {paymentInfo && (
                             <Badge variant={t.paymentMethod === 'fiado' ? 'destructive' : 'outline'} className="text-xs">
                                 <paymentInfo.icon className="w-3 h-3 mr-1" />
                                 {paymentInfo.text}
+                            </Badge>
+                        )}
+                        {t.type === 'expense' && t.isInstallment && t.totalInstallments && (
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                Parcela {t.installmentIndex}/{t.totalInstallments}
+                            </Badge>
+                        )}
+                        {t.type === 'expense' && t.creditCard && (
+                            <Badge variant="outline" className="text-xs border-primary/50">
+                                <CreditCard className="w-3 h-3 mr-1" />
+                                {t.creditCard}
                             </Badge>
                         )}
                          {customerName && (

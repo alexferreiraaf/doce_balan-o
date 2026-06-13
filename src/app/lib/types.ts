@@ -44,6 +44,11 @@ export interface Transaction {
   orderNumber?: number;
   isDelivered?: boolean;
   customerInfo?: Partial<Customer>;
+  isInstallment?: boolean;
+  installmentIndex?: number;
+  totalInstallments?: number;
+  purchaseGroupId?: string;
+  creditCard?: string;
 }
 
 export interface ProductSize {
