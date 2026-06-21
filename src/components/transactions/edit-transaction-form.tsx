@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2 } from 'lucide-react';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,14 +29,18 @@ import { useUser, useFirestore } from '@/firebase';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { useProducts } from '@/app/lib/hooks/use-products';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import type { Product, Transaction, CartItem } from '@/app/lib/types';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { AddProductDialog } from '../products/add-product-dialog';
 import { AddCustomerDialog } from '../dashboard/add-customer-dialog';
 import { Textarea } from '../ui/textarea';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const cartItemSchema = z.object({
   id: z.string(),
@@ -60,6 +64,7 @@ const formSchema = z.object({
   customerId: z.string().optional(),
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
+  transactionDate: z.date({ required_error: 'Por favor, selecione uma data.' }),
 }).refine(data => {
     if (data.type === 'income' && data.hasDownPayment !== 'yes') {
         return !!data.paymentMethod;
@@ -128,6 +133,7 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
       customerId: transaction.customerId || '',
       hasDownPayment: (transaction.downPayment || 0) > 0 ? 'yes' : 'no',
       downPayment: transaction.downPayment || 0,
+      transactionDate: transaction.dateMs ? new Date(transaction.dateMs) : (transaction.timestamp?.toDate ? transaction.timestamp.toDate() : new Date()),
     },
   });
 
@@ -216,6 +222,7 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
         status = 'pending';
       }
 
+      const customDate = data.transactionDate;
       const transactionData: any = {
         type: data.type,
         description: transactionDescription,
@@ -229,7 +236,8 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
         paymentMethod: paymentMethod,
         status: status,
         customerId: data.customerId || null,
-        // timestamp is not updated, it keeps the original creation date
+        dateMs: customDate.getTime(),
+        timestamp: Timestamp.fromDate(customDate),
       };
       
       if (data.type === 'income') {
@@ -563,6 +571,41 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
             )}
           </div>
         )}
+
+        <FormField
+          control={form.control}
+          name="transactionDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Data do Lançamento</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full pl-3 text-left font-normal h-10",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : "Escolha uma data"}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

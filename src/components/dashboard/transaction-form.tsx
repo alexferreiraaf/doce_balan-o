@@ -110,6 +110,9 @@ const formSchema = z.object({
   scheduledDate: z.date().optional(),
   scheduledTime: z.string().optional(),
 
+  // Custom Transaction Date
+  transactionDate: z.date({ required_error: 'Por favor, selecione uma data.' }).optional(),
+
 }).refine(data => {
     if (data.type === 'income' && data.hasDownPayment !== 'yes' && !data.fromStorefront) {
         return !!data.paymentMethod;
@@ -261,6 +264,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       isInstallment: false,
       totalInstallments: undefined,
       creditCard: '',
+      transactionDate: new Date(),
     },
   });
 
@@ -524,7 +528,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 paymentMethod: paymentMethod,
                 status: status,
                 customerId: customerId || undefined,
-                dateMs: Date.now(),
+                dateMs: data.transactionDate ? data.transactionDate.getTime() : Date.now(),
                 deliveryType: data.deliveryType,
                 customerInfo: data.fromStorefront && customerForReceipt ? customerForReceipt : undefined,
             };
@@ -577,11 +581,11 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     const totalInstallments = data.totalInstallments!;
                     const installmentAmount = data.amount / totalInstallments;
                     const purchaseGroupId = doc(transactionCollection).id;
-                    const now = new Date();
+                    const baseDate = data.transactionDate || new Date();
 
                     for (let i = 1; i <= totalInstallments; i++) {
-                        const installmentDate = new Date(now);
-                        installmentDate.setMonth(now.getMonth() + (i - 1));
+                        const installmentDate = new Date(baseDate);
+                        installmentDate.setMonth(baseDate.getMonth() + (i - 1));
                         
                         const finalTransactionData: any = { 
                             ...transactionData,
@@ -610,7 +614,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     // Prepare final data
                     const finalTransactionData: any = { 
                         ...transactionData, 
-                        timestamp: serverTimestamp(),
+                        timestamp: data.transactionDate ? Timestamp.fromDate(data.transactionDate) : serverTimestamp(),
                         orderNumber: finalOrderNumber 
                     };
                     Object.keys(finalTransactionData).forEach(key => {
@@ -1500,39 +1504,76 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
           )}
 
         {!fromStorefront && (
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Categoria</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {(type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isSuggesting && type === 'expense' && <p className="text-xs text-muted-foreground mt-1">Sugerindo categorias...</p>}
-                {suggestions.length > 0 && type === 'expense' && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <span className='text-sm text-muted-foreground'>Sugestões:</span>
-                    {suggestions.map(s => (
-                      <Badge key={s} variant="secondary" className="cursor-pointer" onClick={() => form.setValue('category', s)}>{s}</Badge>
-                    ))}
-                  </div>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <>
+            <FormField
+              control={form.control}
+              name="transactionDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data do Lançamento</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal h-10",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : "Escolha uma data"}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {(type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isSuggesting && type === 'expense' && <p className="text-xs text-muted-foreground mt-1">Sugerindo categorias...</p>}
+                  {suggestions.length > 0 && type === 'expense' && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <span className='text-sm text-muted-foreground'>Sugestões:</span>
+                      {suggestions.map(s => (
+                        <Badge key={s} variant="secondary" className="cursor-pointer" onClick={() => form.setValue('category', s)}>{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
         )}
           
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 space-y-2 space-y-reverse sm:space-y-0">
