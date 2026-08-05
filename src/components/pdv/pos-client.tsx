@@ -7,7 +7,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import type { Product, ProductCategory, Transaction, Customer, ProductSize } from '@/app/lib/types';
-import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus, ChevronRight, Share2 } from 'lucide-react';
+import { MinusCircle, PlusCircle, Search, ShoppingCart, Package, ImageOff, Plus, ChevronRight, Share2, Percent } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Input } from '../ui/input';
@@ -34,6 +34,7 @@ interface ProductFiltersProps {
   onSelectCategory: (categoryId: string) => void;
   searchTerm: string;
   onSearchTermChange: (term: string) => void;
+  hasPromotions: boolean;
 }
 
 function ProductFilters({
@@ -42,6 +43,7 @@ function ProductFilters({
   onSelectCategory,
   searchTerm,
   onSearchTermChange,
+  hasPromotions,
 }: ProductFiltersProps) {
   return (
     <Card className="p-3 sticky top-0 z-10 bg-background/95 backdrop-blur-sm flex-shrink-0">
@@ -64,6 +66,21 @@ function ProductFilters({
               >
                 Todos
               </Button>
+              {hasPromotions && (
+                <Button
+                  variant={selectedCategory === 'promotions' ? 'default' : 'outline'}
+                  className={cn(
+                    "rounded-full h-11 whitespace-nowrap flex items-center gap-1.5 font-bold transition-colors",
+                    selectedCategory === 'promotions' 
+                      ? "bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-sm" 
+                      : "bg-card text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950/30"
+                  )}
+                  onClick={() => onSelectCategory('promotions')}
+                >
+                  <Percent className="h-4 w-4 fill-current" />
+                  Promoção
+                </Button>
+              )}
               {categories.map((category) => (
                 <Button
                   key={category.id}
@@ -133,6 +150,7 @@ function ProductGrid({ products, onProductClick, onShareClick }: { products: Pro
               const isAvailable = product.isAvailable ?? true;
               const hasSizes = product.sizes && product.sizes.length > 0;
               const lowestPrice = hasSizes ? Math.min(...product.sizes!.map(s => s.price)) : product.price;
+              const hasPromo = product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0;
 
               return (
               <Card
@@ -167,9 +185,16 @@ function ProductGrid({ products, onProductClick, onShareClick }: { products: Pro
                 </div>
                 <div className="p-3 flex flex-col justify-between flex-grow">
                   <h3 className="font-semibold text-card-foreground leading-tight">{product.name}</h3>
-                  <p className="text-primary font-bold mt-2">
-                    {hasSizes ? `A partir de ${formatCurrency(lowestPrice)}` : formatCurrency(product.price)}
-                  </p>
+                  {hasPromo && !hasSizes ? (
+                    <div className="mt-2 flex flex-col">
+                      <span className="text-xs text-muted-foreground line-through">{formatCurrency(product.price)}</span>
+                      <span className="text-red-600 dark:text-red-500 font-bold">{formatCurrency(product.promotionalPrice!)}</span>
+                    </div>
+                  ) : (
+                    <p className="text-primary font-bold mt-2">
+                      {hasSizes ? `A partir de ${formatCurrency(lowestPrice)}` : formatCurrency(product.price)}
+                    </p>
+                  )}
                 </div>
                 <div className="absolute top-2 left-2 z-20">
                   <Button
@@ -181,8 +206,15 @@ function ProductGrid({ products, onProductClick, onShareClick }: { products: Pro
                     <Share2 className="h-4 w-4" />
                   </Button>
                 </div>
+                {hasPromo && (
+                  <div className="absolute top-2 right-2 z-20">
+                    <Badge className="bg-red-600 hover:bg-red-600 text-white border-none text-[10px] flex items-center gap-0.5 shadow-sm">
+                      <Percent className="w-2.5 h-2.5" /> Promo
+                    </Badge>
+                  </div>
+                )}
                 {hasSizes && (
-                  <div className="absolute top-2 right-2">
+                  <div className={cn("absolute right-2 z-20", hasPromo ? "top-9" : "top-2")}>
                     <Badge variant="secondary" className="bg-white/90 text-primary border-primary/20 text-[10px]">{product.sizes!.length} tam.</Badge>
                   </div>
                 )}
@@ -266,10 +298,15 @@ export function POSClient() {
   // State for size selection
   const [selectedProductForSizes, setSelectedProductForSizes] = useState<Product | null>(null);
 
+  const hasPromotions = useMemo(() => {
+    return products.some(p => p.isPromotion);
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     return products
       .filter((product) => {
         if (selectedCategory === 'all') return true;
+        if (selectedCategory === 'promotions') return product.isPromotion;
         return product.categoryId === selectedCategory;
       })
       .filter((product) =>
@@ -293,12 +330,17 @@ export function POSClient() {
       return;
     }
 
+    const hasPromo = !size && product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0;
+    const isPromoSize = size?.name === "Promoção";
+    const effectivePrice = size ? size.price : (hasPromo ? product.promotionalPrice! : product.price);
+
     const finalProduct = {
       ...product,
-      name: size ? `${product.name} (${size.name})` : product.name,
-      price: size ? size.price : product.price,
+      name: size ? `${product.name} (${size.name})` : (hasPromo ? `${product.name} (Promoção)` : product.name),
+      price: effectivePrice,
       cost: size ? size.cost : product.cost,
-      id: size ? `${product.id}-${size.name}` : product.id,
+      id: size ? `${product.id}-${size.name}` : (hasPromo ? `${product.id}-promo` : product.id),
+      promotionalPrice: (hasPromo || isPromoSize) ? effectivePrice : undefined,
     };
 
     setCart((prevCart) => {
@@ -463,6 +505,7 @@ export function POSClient() {
                             onSelectCategory={setSelectedCategory}
                             searchTerm={searchTerm}
                             onSearchTermChange={setSearchTerm}
+                            hasPromotions={hasPromotions}
                         />
                         <ScrollArea className="flex-grow">
                             <ProductGrid products={filteredProducts} onProductClick={(p) => addToCart(p)} onShareClick={handleShareProduct} />
@@ -484,6 +527,7 @@ export function POSClient() {
                     onSelectCategory={setSelectedCategory}
                     searchTerm={searchTerm}
                     onSearchTermChange={setSearchTerm}
+                    hasPromotions={hasPromotions}
                 />
             </div>
             <ScrollArea className="flex-grow px-4 pb-4">
@@ -507,6 +551,25 @@ export function POSClient() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-4">
+            {selectedProductForSizes?.isPromotion && selectedProductForSizes.promotionalPrice != null && selectedProductForSizes.promotionalPrice >= 0 && (
+              <Button
+                variant="outline"
+                className="justify-between h-14 text-base font-semibold group border-red-500 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/30 dark:hover:bg-red-950/50 dark:text-red-400"
+                onClick={() => addToCart(selectedProductForSizes, { name: "Promoção", price: selectedProductForSizes.promotionalPrice!, cost: selectedProductForSizes.cost })}
+              >
+                <span className="flex items-center gap-2">
+                  <Badge className="bg-red-600 hover:bg-red-600 text-white text-xs px-2 py-0.5 shadow-sm flex items-center gap-1 font-bold">
+                    <Percent className="w-3 h-3 fill-current" />
+                    Promoção
+                  </Badge>
+                  <span>Preço Promocional</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-red-600 dark:text-red-400">{formatCurrency(selectedProductForSizes.promotionalPrice)}</span>
+                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Button>
+            )}
             {selectedProductForSizes?.sizes?.map((size) => (
               <Button
                 key={size.name}

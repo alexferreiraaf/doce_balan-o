@@ -28,13 +28,23 @@ export function CustomersClient() {
     return <Loading />;
   }
 
+  const filteredCustomers = customers.filter(c => {
+    const term = searchTerm.toLowerCase();
+    return c.name.toLowerCase().includes(term) || (c.whatsapp && c.whatsapp.includes(term));
+  });
+
   return (
     <div className="space-y-8">
        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center">
             <Users className="w-8 h-8 mr-3" />
             Meus Clientes
-        </h1>
+          </h1>
+          <span className="inline-flex items-center justify-center rounded-full bg-primary/15 border border-primary/20 px-3.5 py-1 text-sm font-semibold text-primary shadow-sm">
+            Total: {customers.length} {customers.length === 1 ? 'cadastrado' : 'cadastrados'}
+          </span>
+        </div>
         <AddCustomerDialog />
       </div>
 
@@ -59,22 +69,14 @@ export function CustomersClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.filter(c => {
-                const term = searchTerm.toLowerCase();
-                return c.name.toLowerCase().includes(term) || (c.whatsapp && c.whatsapp.includes(term));
-              }).length === 0 ? (
+              {filteredCustomers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={2} className="h-24 text-center">
                     {searchTerm ? 'Nenhum cliente encontrado para essa pesquisa.' : 'Nenhum cliente cadastrado.'}
                   </TableCell>
                 </TableRow>
               ) : (
-                customers
-                  .filter(c => {
-                    const term = searchTerm.toLowerCase();
-                    return c.name.toLowerCase().includes(term) || (c.whatsapp && c.whatsapp.includes(term));
-                  })
-                  .map((customer) => (
+                filteredCustomers.map((customer) => (
                   <TableRow key={customer.id} className="group">
                     <TableCell className="font-medium">
                       <Link href={`/customers/${customer.id}`} className="flex items-center gap-2 hover:underline">

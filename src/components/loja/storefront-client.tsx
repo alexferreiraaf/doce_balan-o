@@ -2,7 +2,7 @@
 
 import { useProducts } from '@/app/lib/hooks/use-products';
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
-import type { AppSettings, DayOfWeek, Product, ProductSize } from '@/app/lib/types';
+import type { AppSettings, DayOfWeek, Product, ProductSize, ProductCategory } from '@/app/lib/types';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '../ui/card';
@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { useUser, useAuth } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Badge } from '../ui/badge';
 import { OrderProgressBar } from './order-progress-bar';
 import { useOrderTracking } from '@/app/lib/hooks/use-order-tracking';
 import type { Transaction } from '@/app/lib/types';
@@ -45,10 +46,20 @@ const weekDayMap: Record<number, DayOfWeek> = {
 };
 
 
-export function StorefrontClient() {
-  const { products, loading: productsLoading } = useProducts();
-  const { categories, loading: categoriesLoading } = useProductCategories();
-  const { settings, loading: settingsLoading } = useSettings();
+interface StorefrontClientProps {
+  initialProducts?: Product[];
+  initialCategories?: ProductCategory[];
+  initialSettings?: AppSettings;
+}
+
+export function StorefrontClient({
+  initialProducts,
+  initialCategories,
+  initialSettings,
+}: StorefrontClientProps = {}) {
+  const { products: fetchedProducts, loading: productsLoading } = useProducts();
+  const { categories: fetchedCategories, loading: categoriesLoading } = useProductCategories();
+  const { settings: fetchedSettings, loading: settingsLoading } = useSettings();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -70,7 +81,18 @@ export function StorefrontClient() {
   const searchParams = useSearchParams();
   const hasHandledDeepLink = useRef(false);
 
-  const loading = productsLoading || categoriesLoading || settingsLoading;
+  const hasInitialProducts = initialProducts && initialProducts.length > 0;
+  const hasInitialCategories = initialCategories && initialCategories.length > 0;
+  const hasInitialSettings = initialSettings && Object.keys(initialSettings).length > 0;
+
+  const products = (productsLoading && hasInitialProducts) ? initialProducts : fetchedProducts;
+  const categories = (categoriesLoading && hasInitialCategories) ? initialCategories : fetchedCategories;
+  const settings = (settingsLoading && hasInitialSettings) ? initialSettings : fetchedSettings;
+
+  const isProductsLoading = productsLoading && !hasInitialProducts;
+  const isCategoriesLoading = categoriesLoading && !hasInitialCategories;
+  const isSettingsLoading = settingsLoading && !hasInitialSettings;
+  const loading = isProductsLoading || isCategoriesLoading || isSettingsLoading;
 
   const [storeStatus, setStoreStatus] = useState<{ isOpen: boolean; message: string; isStatusLoading: boolean }>({
     isOpen: false,
@@ -79,7 +101,7 @@ export function StorefrontClient() {
   });
 
   useEffect(() => {
-    if (!isClient || settingsLoading) {
+    if (!isClient || isSettingsLoading) {
       setStoreStatus(prev => ({...prev, isStatusLoading: true}));
       return;
     }
@@ -116,11 +138,11 @@ export function StorefrontClient() {
     };
 
     setStoreStatus({ ...getStatus(), isStatusLoading: false });
-  }, [settings, settingsLoading, isClient]);
+  }, [settings, isSettingsLoading, isClient]);
 
   useEffect(() => {
     const productIdFromQuery = searchParams.get('p');
-    if (!productsLoading && !storeStatus.isStatusLoading && productIdFromQuery && !hasHandledDeepLink.current && products.length > 0) {
+    if (!isProductsLoading && !storeStatus.isStatusLoading && productIdFromQuery && !hasHandledDeepLink.current && products.length > 0) {
       const product = products.find(p => p.id === productIdFromQuery);
       if (product) {
         handleAddToCart(product);
@@ -128,7 +150,7 @@ export function StorefrontClient() {
       // Always mark as handled if it's no longer loading, even if not found, to avoid infinite loops
       hasHandledDeepLink.current = true;
     }
-  }, [productsLoading, storeStatus.isStatusLoading, products, searchParams]);
+  }, [isProductsLoading, storeStatus.isStatusLoading, products, searchParams]);
 
   useEffect(() => {
     setIsClient(true);
@@ -229,11 +251,16 @@ export function StorefrontClient() {
       return;
     }
 
+    const hasPromo = !size && product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0;
+    const isPromoSize = size?.name === "Promoção";
+    const effectivePrice = size ? size.price : (hasPromo ? product.promotionalPrice! : product.price);
+
     const finalProduct = {
       ...product,
-      name: size ? `${product.name} (${size.name})` : product.name,
-      price: size ? size.price : product.price,
-      id: size ? `${product.id}-${size.name}` : product.id,
+      name: size ? `${product.name} (${size.name})` : (hasPromo ? `${product.name} (Promoção)` : product.name),
+      price: effectivePrice,
+      id: size ? `${product.id}-${size.name}` : (hasPromo ? `${product.id}-promo` : product.id),
+      promotionalPrice: (hasPromo || isPromoSize) ? effectivePrice : undefined,
     };
 
     setCart(currentCart => {
@@ -379,10 +406,32 @@ export function StorefrontClient() {
                 <p className="text-muted-foreground mt-1">Escolha seus doces favoritos e faça seu pedido!</p>
             </div>
         </div>
-        <div className="flex items-center gap-2">
-           <Button variant="default" className="bg-primary hover:bg-primary/90" onClick={() => setShowPromotions(!showPromotions)} aria-expanded={showPromotions}>
+        <div className="flex items-center gap-3">
+            <Button 
+              variant="default" 
+              className={`relative bg-primary hover:bg-primary/90 transition-all duration-300 ${
+                promotionalProducts.length > 0 
+                  ? (showPromotions 
+                      ? 'ring-2 ring-primary/60 font-bold shadow-md' 
+                      : 'animate-pulse ring-4 ring-primary/50 shadow-lg shadow-primary/50 font-bold scale-105') 
+                  : ''
+              }`} 
+              onClick={() => setShowPromotions(!showPromotions)} 
+              aria-expanded={showPromotions}
+            >
+              {promotionalProducts.length > 0 && !showPromotions && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                </span>
+              )}
               <Percent className="w-4 h-4 mr-2" />
               Promoções
+              {promotionalProducts.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs font-black bg-amber-400 text-purple-950 rounded-full shadow-sm">
+                  {promotionalProducts.length}
+                </span>
+              )}
             </Button>
             <ThemeToggle />
         </div>
@@ -487,20 +536,40 @@ export function StorefrontClient() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-4">
-            {selectedProductForSizes?.sizes?.map((size) => (
+            {selectedProductForSizes?.isPromotion && selectedProductForSizes.promotionalPrice != null && selectedProductForSizes.promotionalPrice >= 0 ? (
               <Button
-                key={size.name}
                 variant="outline"
-                className="justify-between h-14 text-base font-semibold group"
-                onClick={() => handleAddToCart(selectedProductForSizes!, size)}
+                className="justify-between h-14 text-base font-semibold group border-red-500 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/30 dark:hover:bg-red-950/50 dark:text-red-400"
+                onClick={() => handleAddToCart(selectedProductForSizes!, { name: "Promoção", price: selectedProductForSizes.promotionalPrice! })}
               >
-                <span>{size.name}</span>
+                <span className="flex items-center gap-2">
+                  <Badge className="bg-red-600 hover:bg-red-600 text-white text-xs px-2 py-0.5 shadow-sm flex items-center gap-1 font-bold">
+                    <Percent className="w-3 h-3 fill-current" />
+                    Promoção
+                  </Badge>
+                  <span>Preço Promocional</span>
+                </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-primary font-bold">{formatCurrency(size.price)}</span>
+                  <span className="font-bold text-red-600 dark:text-red-400">{formatCurrency(selectedProductForSizes.promotionalPrice)}</span>
                   <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Button>
-            ))}
+            ) : (
+              selectedProductForSizes?.sizes?.map((size) => (
+                <Button
+                  key={size.name}
+                  variant="outline"
+                  className="justify-between h-14 text-base font-semibold group"
+                  onClick={() => handleAddToCart(selectedProductForSizes!, size)}
+                >
+                  <span>{size.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary font-bold">{formatCurrency(size.price)}</span>
+                    <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Button>
+              ))
+            )}
           </div>
         </DialogContent>
       </Dialog>
