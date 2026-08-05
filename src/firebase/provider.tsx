@@ -90,14 +90,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         if (firebaseUser && firestore) {
            setUserAuthState(prev => ({ ...prev, isUserLoading: true }));
            try {
+             if (firebaseUser.isAnonymous) {
+                setUserAuthState({ user: firebaseUser, userRole: 'user', isUserLoading: false, userError: null });
+                return;
+             }
              const userDoc = await getDoc(doc(firestore, 'artifacts/docuras-da-fran-default/users', firebaseUser.uid));
              const role = userDoc.exists() ? userDoc.data().role : null;
-             // Consider storefront anonymous users
-             if (!userDoc.exists() && firebaseUser.isAnonymous) {
-                setUserAuthState({ user: firebaseUser, userRole: 'user', isUserLoading: false, userError: null });
-             } else {
-                setUserAuthState({ user: firebaseUser, userRole: role, isUserLoading: false, userError: null });
-             }
+             setUserAuthState({ user: firebaseUser, userRole: role, isUserLoading: false, userError: null });
            } catch (error) {
              setUserAuthState({ user: firebaseUser, userRole: null, isUserLoading: false, userError: error as Error });
            }

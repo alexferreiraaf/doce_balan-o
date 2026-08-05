@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { OrderProgressBar } from './order-progress-bar';
 import { useOrderTracking } from '@/app/lib/hooks/use-order-tracking';
 import type { Transaction } from '@/app/lib/types';
+import Loading from '@/app/loja/loading';
 
 
 interface CartItem extends Product {
@@ -298,7 +299,7 @@ export function StorefrontClient() {
   }
 
   if (loading) {
-    return null;
+    return <Loading />;
   }
 
   const ProductCard = ({ product }: { product: Product }) => {

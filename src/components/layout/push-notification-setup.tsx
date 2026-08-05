@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useUser, useFirestore } from '@/firebase';
 import { getFirebaseMessaging } from '@/firebase/messaging';
 import { getToken } from 'firebase/messaging';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 import { APP_ID } from '@/app/lib/constants';
 
 export function PushNotificationSetup() {
@@ -33,9 +33,9 @@ export function PushNotificationSetup() {
 
             if (currentToken) {
               const userRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}`);
-              await updateDoc(userRef, {
+              await setDoc(userRef, {
                 fcmTokens: arrayUnion(currentToken)
-              });
+              }, { merge: true });
               console.log('✅ Push notifications configured for this device.');
             }
           }

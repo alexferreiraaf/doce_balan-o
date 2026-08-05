@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -60,9 +60,9 @@ export function AdminUserList() {
 
   const handleRoleChange = async (userId: string, newRole: 'admin' | 'user') => {
     try {
-      await updateDoc(doc(firestore, 'artifacts/docuras-da-fran-default/users', userId), {
+      await setDoc(doc(firestore, 'artifacts/docuras-da-fran-default/users', userId), {
         role: newRole
-      });
+      }, { merge: true });
       toast({
         title: 'Permissão atualizada',
         description: 'O nível de acesso foi alterado com sucesso.',
