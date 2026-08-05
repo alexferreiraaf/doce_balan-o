@@ -543,30 +543,29 @@ export function POSClient() {
 
       {/* Modal para Seleção de Tamanho */}
       <Dialog open={!!selectedProductForSizes} onOpenChange={(open) => !open && setSelectedProductForSizes(null)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-[92vw] sm:max-w-md overflow-hidden">
           <DialogHeader>
             <DialogTitle>Escolha o Tamanho</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="break-words">
               Selecione o tamanho desejado para <strong>{selectedProductForSizes?.name}</strong>.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-2 py-4">
+          <div className="grid gap-3 py-4 w-full">
             {selectedProductForSizes?.isPromotion && selectedProductForSizes.promotionalPrice != null && selectedProductForSizes.promotionalPrice >= 0 && (
               <Button
                 variant="outline"
-                className="justify-between h-14 text-base font-semibold group border-red-500 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/30 dark:hover:bg-red-950/50 dark:text-red-400"
+                className="w-full max-w-full justify-between h-auto py-3 px-3.5 text-base font-semibold group border-red-500 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/30 dark:hover:bg-red-950/50 dark:text-red-400 gap-2"
                 onClick={() => addToCart(selectedProductForSizes, { name: "Promoção", price: selectedProductForSizes.promotionalPrice!, cost: selectedProductForSizes.cost })}
               >
-                <span className="flex items-center gap-2">
-                  <Badge className="bg-red-600 hover:bg-red-600 text-white text-xs px-2 py-0.5 shadow-sm flex items-center gap-1 font-bold">
-                    <Percent className="w-3 h-3 fill-current" />
-                    Promoção
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Badge className="bg-red-600 hover:bg-red-600 text-white text-xs sm:text-sm px-2.5 py-1 shadow-sm flex items-center gap-1.5 font-bold shrink-0">
+                    <Percent className="w-3.5 h-3.5 fill-current shrink-0" />
+                    Preço Promocional
                   </Badge>
-                  <span>Preço Promocional</span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-red-600 dark:text-red-400">{formatCurrency(selectedProductForSizes.promotionalPrice)}</span>
-                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" />
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="font-extrabold text-lg text-red-600 dark:text-red-400">{formatCurrency(selectedProductForSizes.promotionalPrice)}</span>
+                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform shrink-0" />
                 </div>
               </Button>
             )}
@@ -574,13 +573,13 @@ export function POSClient() {
               <Button
                 key={size.name}
                 variant="outline"
-                className="justify-between h-14 text-base font-semibold group"
+                className="w-full max-w-full justify-between h-auto py-3.5 px-4 text-base font-semibold group gap-2"
                 onClick={() => addToCart(selectedProductForSizes, size)}
               >
-                <span>{size.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary">{formatCurrency(size.price)}</span>
-                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform" />
+                <span className="truncate text-left min-w-0">{size.name}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-primary font-bold">{formatCurrency(size.price)}</span>
+                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:translate-x-1 transition-transform shrink-0" />
                 </div>
               </Button>
             ))}
