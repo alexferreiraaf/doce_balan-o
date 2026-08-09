@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 
@@ -13,10 +13,24 @@ function getFirebaseServices(firebaseApp: FirebaseApp): {
   firestore: Firestore;
   storage: FirebaseStorage;
 } {
+  let firestore: Firestore;
+  if (typeof window !== 'undefined') {
+    try {
+      firestore = initializeFirestore(firebaseApp, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      });
+    } catch (e) {
+      // Falha se getFirestore/initializeFirestore já foi chamado (ex: hot reload)
+      firestore = getFirestore(firebaseApp);
+    }
+  } else {
+    firestore = getFirestore(firebaseApp);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
+    firestore,
     storage: getStorage(firebaseApp),
   };
 }
