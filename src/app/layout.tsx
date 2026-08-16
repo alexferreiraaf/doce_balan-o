@@ -30,6 +30,7 @@ export default function RootLayout({
       <head>
         <title>Doçuras da Fran</title>
         <meta name="description" content="Confira nossas delícias e faça seu pedido online!" />
+        <meta name="google-site-verification" content="xVUNoO1xE8NLSR9qOxS44val4c-JlwxQyf8TUw8cW9w" />
         <meta name="manifest" content="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
