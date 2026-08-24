@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 
@@ -16,8 +16,12 @@ function getFirebaseServices(firebaseApp: FirebaseApp): {
   let firestore: Firestore;
   if (typeof window !== 'undefined') {
     try {
+      const cache = process.env.NODE_ENV === 'development' 
+        ? memoryLocalCache() 
+        : persistentLocalCache({ tabManager: persistentMultipleTabManager() });
+        
       firestore = initializeFirestore(firebaseApp, {
-        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        localCache: cache
       });
     } catch (e) {
       // Falha se getFirestore/initializeFirestore já foi chamado (ex: hot reload)

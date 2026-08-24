@@ -116,6 +116,8 @@ export interface AppSettings {
   pixKey?: string;
   address?: string;
   phone?: string;
+  coverImageUrl?: string;
+  logoUrl?: string;
   openingHours?: Record<DayOfWeek, OpeningHours>;
 }
 

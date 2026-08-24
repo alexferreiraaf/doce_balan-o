@@ -7,7 +7,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '../ui/card';
 import { Button } from '../ui/button';
-import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent, ChevronDown, ChevronRight } from 'lucide-react';
+import { Package, ShoppingCart, Tag, Trash2, X, Plus, Minus, Flame, Clock, Percent, ChevronDown, ChevronRight, MapPin, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
 import { WhiskIcon } from '../icons/whisk-icon';
@@ -25,6 +25,8 @@ import { useUser, useAuth } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Badge } from '../ui/badge';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../ui/carousel';
+import Autoplay from 'embla-carousel-autoplay';
 import { OrderProgressBar } from './order-progress-bar';
 import { useOrderTracking } from '@/app/lib/hooks/use-order-tracking';
 import type { Transaction } from '@/app/lib/types';
@@ -67,6 +69,10 @@ export function StorefrontClient({
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [showPromotions, setShowPromotions] = useState(false);
   
+  const autoplayPlugin = useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: false })
+  );
+
   // State for size selection
   const [selectedProductForSizes, setSelectedProductForSizes] = useState<Product | null>(null);
 
@@ -199,7 +205,7 @@ export function StorefrontClient({
     const availableProducts = products.filter(p => p.isAvailable ?? true);
 
     const promotions = availableProducts.filter(p => p.isPromotion);
-    const featured = availableProducts.filter(p => p.isFeatured).slice(0, 4);
+    const featured = availableProducts.filter(p => p.isFeatured).slice(0, 12);
 
     const salesCounts = availableProducts.map(p => p.salesCount || 0).sort((a, b) => b - a);
     const threshold = salesCounts.length > 3 ? salesCounts[2] : 0;
@@ -325,6 +331,27 @@ export function StorefrontClient({
     localStorage.removeItem('lastOrderUserId');
   }
 
+  const handleWhatsappClick = () => {
+    if (!storeStatus.isOpen) {
+        toast({
+            variant: "destructive",
+            title: "Loja Fechada",
+            description: "No momento não estamos disponíveis no WhatsApp."
+        });
+        return;
+    }
+    const cleanPhone = settings?.phone?.replace(/\D/g, '') || '';
+    if (cleanPhone) {
+      window.open(`https://wa.me/55${cleanPhone}`, '_blank');
+    } else {
+      toast({
+          variant: "destructive",
+          title: "Número indisponível",
+          description: "O WhatsApp da loja não foi configurado."
+      });
+    }
+  }
+
   if (loading) {
     return <Loading />;
   }
@@ -398,54 +425,89 @@ export function StorefrontClient({
         />
       )}
 
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-            <WhiskIcon className="w-16 h-16 text-primary" />
+      <div className="w-full bg-[#111] dark:bg-black rounded-xl sm:rounded-2xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6 border border-white/5">
+        {settings?.coverImageUrl && (
+          <>
+            <Image src={settings.coverImageUrl} alt="Capa" fill style={{ objectFit: 'cover' }} className="opacity-40 object-center" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#111] via-[#111]/80 to-transparent pointer-events-none z-0" />
+          </>
+        )}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none z-0" />
+        <div className="flex flex-col-reverse sm:flex-row gap-6 sm:gap-8 justify-between w-full relative z-10">
+          <div className="flex flex-col justify-center gap-4">
             <div>
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary">Cardápio Doçuras da Fran</h1>
-                <p className="text-muted-foreground mt-1">Escolha seus doces favoritos e faça seu pedido!</p>
+               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">{settings?.storeName || 'Doçuras da Fran'}</h1>
+               <p className="text-sm text-zinc-400 flex items-center gap-1.5 mb-1"><MapPin className="w-4 h-4 text-primary shrink-0"/> {settings?.address || 'Andradas, MG'}</p>
+               <p className="text-sm text-zinc-400 flex items-center gap-1.5 mb-3"><Package className="w-4 h-4 text-primary shrink-0"/> Retirada ou Entrega</p>
+               {settings?.phone && (
+                 <Button 
+                   variant="outline" 
+                   size="sm" 
+                   className="bg-emerald-600 hover:bg-emerald-700 text-white border-none w-fit font-bold shadow-md opacity-90 hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed h-8"
+                   onClick={handleWhatsappClick}
+                   disabled={!storeStatus.isOpen && !storeStatus.isStatusLoading}
+                 >
+                   <MessageCircle className="w-4 h-4 mr-2" />
+                   Falar no WhatsApp
+                 </Button>
+               )}
             </div>
-        </div>
-        <div className="flex items-center gap-3">
-            <Button 
-              variant="default" 
-              className={`relative bg-primary hover:bg-primary/90 transition-all duration-300 ${
-                promotionalProducts.length > 0 
-                  ? (showPromotions 
-                      ? 'ring-2 ring-primary/60 font-bold shadow-md' 
-                      : 'animate-pulse ring-4 ring-primary/50 shadow-lg shadow-primary/50 font-bold scale-105') 
-                  : ''
-              }`} 
-              onClick={() => setShowPromotions(!showPromotions)} 
-              aria-expanded={showPromotions}
-            >
-              {promotionalProducts.length > 0 && !showPromotions && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                </span>
-              )}
-              <Percent className="w-4 h-4 mr-2" />
-              Promoções
-              {promotionalProducts.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs font-black bg-amber-400 text-purple-950 rounded-full shadow-sm">
-                  {promotionalProducts.length}
-                </span>
-              )}
-            </Button>
-            <ThemeToggle />
-        </div>
-      </header>
+            
+            <div className="flex items-center gap-4 text-sm font-medium">
+               {!storeStatus.isStatusLoading && (
+                 storeStatus.isOpen ? (
+                   <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold border-none px-3 py-1 shadow-md shadow-emerald-900/20">
+                     Aberto
+                   </Badge>
+                 ) : (
+                   <Badge className="bg-red-500 hover:bg-red-600 text-white font-bold border-none px-3 py-1 shadow-md shadow-red-900/20 flex items-center gap-1">
+                     <X className="w-3 h-3"/> Fechado
+                   </Badge>
+                 )
+               )}
+               
+               <div className="flex flex-col text-zinc-400 text-xs gap-0.5 font-semibold">
+                  {!storeStatus.isOpen && !storeStatus.isStatusLoading && (
+                    <span className="text-red-300">{storeStatus.message}</span>
+                  )}
+               </div>
+            </div>
+          </div>
 
-      {!storeStatus.isStatusLoading && !storeStatus.isOpen && (
-        <Alert variant="destructive">
-          <Clock className="h-4 w-4" />
-          <AlertTitle>Loja Fechada</AlertTitle>
-          <AlertDescription>
-            {storeStatus.message}
-          </AlertDescription>
-        </Alert>
-      )}
+          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-4">
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shadow-lg border border-white/10 shrink-0 bg-white">
+               <Image src={settings?.logoUrl || "/logo.png"} alt="Doçuras da Fran" layout="fill" objectFit="contain" className="p-1" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="secondary" 
+                size="sm"
+                className={`relative bg-primary/20 text-primary-foreground hover:bg-primary/30 border border-primary/30 transition-all duration-300 ${
+                  promotionalProducts.length > 0 
+                    ? (showPromotions 
+                        ? 'font-bold shadow-md' 
+                        : 'animate-pulse font-bold scale-105') 
+                    : ''
+                }`} 
+                onClick={() => setShowPromotions(!showPromotions)} 
+                aria-expanded={showPromotions}
+              >
+                {promotionalProducts.length > 0 && !showPromotions && (
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                )}
+                <Percent className="w-4 h-4 mr-2" />
+                Promoções
+              </Button>
+              <div className="bg-white/10 backdrop-blur-sm rounded-md overflow-hidden border border-white/5">
+                <ThemeToggle />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <Collapsible open={showPromotions} className="w-full">
         <CollapsibleContent className="animate-in fade-in-0 zoom-in-95">
@@ -478,11 +540,28 @@ export function StorefrontClient({
             {featuredProducts.length > 0 && (
                 <div className="space-y-4">
                     <h2 className="text-2xl font-bold tracking-tight">✨ Destaques da Casa</h2>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <Carousel
+                      plugins={[autoplayPlugin.current]}
+                      opts={{
+                        align: "start",
+                        loop: true,
+                      }}
+                      className="w-full relative"
+                      onMouseEnter={autoplayPlugin.current.stop}
+                      onMouseLeave={autoplayPlugin.current.reset}
+                    >
+                      <CarouselContent className="-ml-4 sm:-ml-6 py-2">
                         {featuredProducts.map((product) => (
-                           <ProductCard key={product.id} product={product} />
+                          <CarouselItem key={product.id} className="pl-4 sm:pl-6 basis-[85%] sm:basis-1/2 lg:basis-1/3">
+                             <ProductCard product={product} />
+                          </CarouselItem>
                         ))}
-                    </div>
+                      </CarouselContent>
+                      <div className="hidden sm:block">
+                        <CarouselPrevious className="-left-4 sm:-left-12" />
+                        <CarouselNext className="-right-4 sm:-right-12" />
+                      </div>
+                    </Carousel>
                 </div>
             )}
           
