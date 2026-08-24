@@ -94,9 +94,27 @@ async function getStorefrontData() {
 export default async function StorefrontPage() {
   const data = await getStorefrontData();
 
-  const cleanProducts = JSON.parse(JSON.stringify(data.products || []));
-  const cleanCategories = JSON.parse(JSON.stringify(data.categories || []));
-  const cleanSettings = JSON.parse(JSON.stringify(data.settings || {}));
+  // Função auxiliar para evitar que Base64 gigantescos travem a Vercel
+  const sanitizeLargeStrings = (obj: any): any => {
+    if (typeof obj === 'string') {
+      return obj.length > 500000 ? "" : obj;
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(sanitizeLargeStrings);
+    }
+    if (obj !== null && typeof obj === 'object') {
+      const newObj: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        newObj[key] = sanitizeLargeStrings(value);
+      }
+      return newObj;
+    }
+    return obj;
+  };
+
+  const cleanProducts = sanitizeLargeStrings(JSON.parse(JSON.stringify(data.products || [])));
+  const cleanCategories = sanitizeLargeStrings(JSON.parse(JSON.stringify(data.categories || [])));
+  const cleanSettings = sanitizeLargeStrings(JSON.parse(JSON.stringify(data.settings || {})));
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
