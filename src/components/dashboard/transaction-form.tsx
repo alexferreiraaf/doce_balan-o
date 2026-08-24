@@ -80,7 +80,8 @@ const formSchema = z.object({
   discount: z.coerce.number().optional(),
   additionalDescription: z.string().optional(),
   additionalValue: z.coerce.number().optional(),
-  paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
+  paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado', 'permuta']).optional(),
+  changeFor: z.coerce.number().optional(),
   
   // Storefront / Customer fields
   deliveryType: z.enum(['delivery', 'pickup']).optional(),
@@ -531,6 +532,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 dateMs: data.transactionDate ? data.transactionDate.getTime() : Date.now(),
                 deliveryType: data.deliveryType,
                 customerInfo: data.fromStorefront && customerForReceipt ? customerForReceipt : undefined,
+                changeFor: data.paymentMethod === 'dinheiro' ? data.changeFor : undefined,
             };
             
             if (scheduledAtTimestamp) {
@@ -1184,29 +1186,29 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
               )}
               
                 {(isPOSSale || fromStorefront) && isClient && (
-                <div className="space-y-4 pt-2">
-                    <Separator />
-                    <FormLabel>Agendamento</FormLabel>
-                     <p className="text-sm text-muted-foreground">
-                        Selecione a data e hora para a retirada ou entrega do seu pedido. Atendemos sextas e sábados das 12:00 às 18:00.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="scheduledDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Data <span className="text-destructive">*</span></FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                >
+                <div className="space-y-4 pt-4">
+                    <div className="p-4 sm:p-5 rounded-xl border-2 border-primary/20 bg-primary/5 shadow-sm">
+                        <FormLabel className="text-base font-semibold text-primary">Agendamento Obrigatório</FormLabel>
+                        <p className="text-sm text-muted-foreground mt-1 mb-4">
+                            Selecione a data e hora para a retirada ou entrega do seu pedido. Atendemos sextas e sábados das 12:00 às 18:00.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="scheduledDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel className="font-semibold">Data <span className="text-destructive">*</span></FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant={"outline"}
+                                                        className={cn(
+                                                            "pl-3 text-left font-normal bg-background hover:bg-background/90 shadow-sm border-primary/30",
+                                                            !field.value && "text-muted-foreground"
+                                                        )}
+                                                    >
                                                     {field.value ? (
                                                         format(field.value, "PPP", { locale: ptBR })
                                                     ) : (
@@ -1243,10 +1245,10 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                 name="scheduledTime"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Horário <span className="text-destructive">*</span></FormLabel>
+                                        <FormLabel className="font-semibold">Horário <span className="text-destructive">*</span></FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-background shadow-sm border-primary/30">
                                                     <SelectValue placeholder="Selecione o horário" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -1261,6 +1263,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                 )}
                             />
                         )}
+                        </div>
                     </div>
                 </div>
               )}
@@ -1472,6 +1475,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                       <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="dinheiro" id="dinheiro" /></FormControl><FormLabel htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel></FormItem>
                                       <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="cartao" id="cartao" /></FormControl><FormLabel htmlFor="cartao" className="font-normal cursor-pointer">Cartão</FormLabel></FormItem>
                                       <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="fiado" id="fiado" /></FormControl><FormLabel htmlFor="fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel></FormItem>
+                                      <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="permuta" id="permuta" /></FormControl><FormLabel htmlFor="permuta" className="font-normal cursor-pointer">Permuta</FormLabel></FormItem>
                                   </RadioGroup>
                               </FormControl>
                               <FormMessage />
@@ -1481,6 +1485,21 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   )}
                 </>
               )}
+                {fromStorefront && paymentMethodValue === 'dinheiro' && (
+                    <FormField
+                        control={form.control}
+                        name="changeFor"
+                        render={({ field }) => (
+                            <FormItem className="pt-2">
+                                <FormLabel>Precisa de troco para quanto?</FormLabel>
+                                <FormControl>
+                                    <CurrencyInput placeholder="Ex: R$ 50,00 (deixe em branco se não precisar)" {...field} onValueChange={(value) => field.onChange(value)} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
                 {fromStorefront && paymentMethodValue === 'pix' && (
                     <div className="space-y-2 pt-2">
                         <FormLabel>Pagamento via PIX</FormLabel>

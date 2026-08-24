@@ -60,7 +60,7 @@ const formSchema = z.object({
   deliveryFee: z.coerce.number().optional(),
   additionalDescription: z.string().optional(),
   additionalValue: z.coerce.number().optional(),
-  paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado']).optional(),
+  paymentMethod: z.enum(['pix', 'dinheiro', 'cartao', 'fiado', 'permuta']).optional(),
   customerId: z.string().optional(),
   hasDownPayment: z.enum(['yes', 'no']).optional(),
   downPayment: z.coerce.number().optional(),
@@ -540,27 +540,33 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
                       >
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
-                            <RadioGroupItem value="pix" id="pix-edit" />
+                            <RadioGroupItem value="pix" id="edit-pix" />
                           </FormControl>
-                          <FormLabel htmlFor="pix-edit" className="font-normal cursor-pointer">PIX</FormLabel>
+                          <FormLabel htmlFor="edit-pix" className="font-normal cursor-pointer">PIX</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
-                            <RadioGroupItem value="dinheiro" id="dinheiro-edit" />
+                            <RadioGroupItem value="dinheiro" id="edit-dinheiro" />
                           </FormControl>
-                          <FormLabel htmlFor="dinheiro-edit" className="font-normal cursor-pointer">Dinheiro</FormLabel>
+                          <FormLabel htmlFor="edit-dinheiro" className="font-normal cursor-pointer">Dinheiro</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
-                            <RadioGroupItem value="cartao" id="cartao-edit" />
+                            <RadioGroupItem value="cartao" id="edit-cartao" />
                           </FormControl>
-                          <FormLabel htmlFor="cartao-edit" className="font-normal cursor-pointer">Cartão</FormLabel>
+                          <FormLabel htmlFor="edit-cartao" className="font-normal cursor-pointer">Cartão</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
-                            <RadioGroupItem value="fiado" id="fiado-edit" />
+                            <RadioGroupItem value="fiado" id="edit-fiado" />
                           </FormControl>
-                          <FormLabel htmlFor="fiado-edit" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
+                          <FormLabel htmlFor="edit-fiado" className="font-normal cursor-pointer">Venda a Prazo (Fiado)</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <RadioGroupItem value="permuta" id="edit-permuta" />
+                          </FormControl>
+                          <FormLabel htmlFor="edit-permuta" className="font-normal cursor-pointer">Permuta</FormLabel>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>

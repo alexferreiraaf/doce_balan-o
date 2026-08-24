@@ -28,17 +28,20 @@ const paymentMethodDetails: Record<PaymentMethod, { text: string; icon: React.El
     dinheiro: { text: 'Dinheiro', icon: Coins },
     cartao: { text: 'Cartão', icon: CreditCard },
     fiado: { text: 'Fiado', icon: Receipt },
+    permuta: { text: 'Permuta', icon: Coins },
 };
 
 export function TransactionList({ transactions, title }: TransactionListProps) {
   const { customers } = useCustomers();
   const { user } = useUser();
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'permuta'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
 
   const filteredTransactions = transactions.filter(t => {
-    if (filter !== 'all' && t.type !== filter) return false;
+    if (filter === 'income' && (t.type !== 'income' || t.paymentMethod === 'permuta')) return false;
+    if (filter === 'expense' && t.type !== 'expense') return false;
+    if (filter === 'permuta' && t.paymentMethod !== 'permuta') return false;
     
     let tDate: Date;
     const dateVal = t.timestamp || t.dateMs;
@@ -66,8 +69,9 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
     return true;
   });
 
-  const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+  const totalIncome = filteredTransactions.filter(t => t.type === 'income' && t.paymentMethod !== 'permuta').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const totalPermuta = filteredTransactions.filter(t => t.paymentMethod === 'permuta').reduce((acc, t) => acc + t.amount, 0);
 
   if (transactions.length === 0) {
     return (
@@ -146,16 +150,17 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                 )}
               </PopoverContent>
             </Popover>
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full sm:w-auto">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full lg:w-auto">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="all">Todos</TabsTrigger>
                 <TabsTrigger value="income">Entradas</TabsTrigger>
                 <TabsTrigger value="expense">Saídas</TabsTrigger>
+                <TabsTrigger value="permuta">Permutas</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </div>
-        <div className="flex gap-4 p-4 bg-muted/50 rounded-lg">
+        <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
             {(filter === 'all' || filter === 'income') && (
               <div>
                  <p className="text-sm text-muted-foreground">Total de Entradas</p>
@@ -166,6 +171,12 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
               <div>
                  <p className="text-sm text-muted-foreground">Total de Saídas</p>
                  <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpense)}</p>
+              </div>
+            )}
+            {(filter === 'all' || filter === 'permuta') && totalPermuta > 0 && (
+              <div>
+                 <p className="text-sm text-muted-foreground">Total de Permutas</p>
+                 <p className="text-lg font-bold text-amber-600">{formatCurrency(totalPermuta)}</p>
               </div>
             )}
         </div>

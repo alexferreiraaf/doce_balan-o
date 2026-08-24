@@ -16,9 +16,11 @@ interface CategorySummary {
 
 export function SummaryReport({ transactions }: SummaryReportProps) {
   const summary = useMemo(() => {
-    // Corrected logic to identify paid and pending transactions consistently
     const paidIncome = transactions.filter(
-      t => t.type === 'income' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
+      t => t.type === 'income' && t.paymentMethod !== 'permuta' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
+    );
+    const permutaIncome = transactions.filter(
+      t => t.type === 'income' && t.paymentMethod === 'permuta' && (t.status === 'paid' || !t.status)
     );
     const expenses = transactions.filter(t => t.type === 'expense');
     const pending = transactions.filter(
@@ -26,6 +28,7 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
     );
 
     const totalIncome = paidIncome.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalPermuta = permutaIncome.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     
     let totalCmv = 0;
@@ -67,6 +70,8 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
 
     return {
       totalIncome,
+      totalPermuta,
+      totalExpense,
       totalCmv,
       grossProfit,
       balance,
@@ -107,10 +112,14 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="p-4 rounded-lg bg-blue-50 text-center">
                 <h3 className="text-sm font-medium text-blue-800">Faturamento</h3>
                 <p className="text-3xl font-bold text-blue-700">{formatCurrency(summary.totalIncome)}</p>
+            </div>
+            <div className="p-4 rounded-lg bg-amber-50 text-center">
+                <h3 className="text-sm font-medium text-amber-800">Permutas</h3>
+                <p className="text-3xl font-bold text-amber-700">{formatCurrency(summary.totalPermuta)}</p>
             </div>
             <div className="p-4 rounded-lg bg-emerald-50 text-center">
                 <h3 className="text-sm font-medium text-emerald-800">Lucro Bruto</h3>

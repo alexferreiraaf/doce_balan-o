@@ -290,6 +290,7 @@ export function TransactionsClient() {
                                   <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'permuta')}>Permuta</DropdownMenuItem>
                               </DropdownMenuContent>
                           </DropdownMenu>
                           <EditTransactionSheet transaction={t} />

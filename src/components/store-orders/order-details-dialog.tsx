@@ -26,6 +26,7 @@ const paymentMethodDetails: Record<string, { text: string; icon: React.ElementTy
     pix: { text: 'PIX', icon: Landmark },
     dinheiro: { text: 'Dinheiro', icon: Coins },
     cartao: { text: 'Cartão', icon: CreditCard },
+    permuta: { text: 'Permuta', icon: Coins },
 };
 
 export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialogProps) {
@@ -191,9 +192,16 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
                         <h3 className="font-semibold flex items-center gap-2">Pagamento</h3>
                         <div className="pl-6 text-sm">
                              {paymentInfo ? (
-                                <div className="flex items-center gap-2">
-                                    <paymentInfo.icon className="w-4 h-4 text-muted-foreground" />
-                                    <p>{paymentInfo.text}</p>
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <paymentInfo.icon className="w-4 h-4 text-muted-foreground" />
+                                        <p>{paymentInfo.text}</p>
+                                    </div>
+                                    {transaction.paymentMethod === 'dinheiro' && transaction.changeFor && (
+                                        <p className="text-muted-foreground text-xs pl-6">
+                                            Troco para {formatCurrency(transaction.changeFor)}
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <p className="text-muted-foreground">Forma de pagamento não especificada.</p>

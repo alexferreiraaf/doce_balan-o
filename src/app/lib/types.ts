@@ -2,7 +2,7 @@
 import type { Timestamp } from 'firebase/firestore';
 
 export type TransactionType = 'income' | 'expense';
-export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'fiado';
+export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'fiado' | 'permuta';
 export type TransactionStatus = 'pending' | 'preparing' | 'ready' | 'paid' | 'cancelled';
 
 export interface SelectedOptional extends Optional {
@@ -49,6 +49,7 @@ export interface Transaction {
   totalInstallments?: number;
   purchaseGroupId?: string;
   creditCard?: string;
+  changeFor?: number;
 }
 
 export interface ProductSize {

@@ -342,7 +342,8 @@ export function StorefrontClient({
     }
     const cleanPhone = settings?.phone?.replace(/\D/g, '') || '';
     if (cleanPhone) {
-      window.open(`https://wa.me/55${cleanPhone}`, '_blank');
+      const message = encodeURIComponent('Olá, gostaria de fazer um pedido!');
+      window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
     } else {
       toast({
           variant: "destructive",
@@ -428,8 +429,8 @@ export function StorefrontClient({
       <div className="w-full bg-[#111] dark:bg-black rounded-xl sm:rounded-2xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6 border border-white/5">
         {settings?.coverImageUrl && (
           <>
-            <Image src={settings.coverImageUrl} alt="Capa" fill style={{ objectFit: 'cover' }} className="opacity-40 object-center" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#111] via-[#111]/80 to-transparent pointer-events-none z-0" />
+            <Image src={settings.coverImageUrl} alt="Capa" fill style={{ objectFit: 'cover' }} className="opacity-90 object-center" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#111]/95 via-[#111]/40 to-transparent pointer-events-none z-0" />
           </>
         )}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none z-0" />
