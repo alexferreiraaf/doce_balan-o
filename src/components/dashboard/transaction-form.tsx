@@ -1196,7 +1196,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                             name="scheduledDate"
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
-                                    <FormLabel>Data</FormLabel>
+                                    <FormLabel>Data <span className="text-destructive">*</span></FormLabel>
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <FormControl>
@@ -1243,7 +1243,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                 name="scheduledTime"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Horário</FormLabel>
+                                        <FormLabel>Horário <span className="text-destructive">*</span></FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
