@@ -107,13 +107,20 @@ export function ProductsClient() {
     return a.localeCompare(b);
   });
 
+  const totalVariations = products.reduce((acc, p) => acc + (p.sizes && p.sizes.length > 0 ? p.sizes.length : 1), 0);
+
   return (
     <div className="space-y-8">
        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center">
-            <Package className="w-8 h-8 mr-3" />
-            Meus Produtos
-        </h1>
+        <div className="flex flex-col">
+            <h1 className="text-3xl font-bold tracking-tight text-primary flex items-center">
+                <Package className="w-8 h-8 mr-3" />
+                Meus Produtos
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+                Total cadastrado (incluindo variações): <span className="font-semibold">{totalVariations}</span>
+            </p>
+        </div>
         <div className="flex items-center gap-2">
             <Button 
                 variant="outline" 
