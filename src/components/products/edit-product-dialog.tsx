@@ -132,6 +132,8 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         isAvailable: product.isAvailable ?? true,
         hasSizes: !!(product.sizes && product.sizes.length > 0),
         sizes: product.sizes || [],
+        hasOptionals: product.hasOptionals || false,
+        allowedOptionals: product.allowedOptionals || [],
     });
     setImagePreview(product.imageUrl || null);
     const fileInput = document.getElementById(`file-upload-${product.id}`) as HTMLInputElement;
