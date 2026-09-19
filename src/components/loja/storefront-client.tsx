@@ -430,7 +430,7 @@ export function StorefrontClient({
         {settings?.coverImageUrl && (
           <>
             <Image src={settings.coverImageUrl} alt="Capa" fill style={{ objectFit: 'cover' }} className="opacity-90 object-center" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#111]/95 via-[#111]/40 to-transparent pointer-events-none z-0" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-[#111]/80 to-[#111]/20 sm:bg-gradient-to-r sm:from-[#111]/95 sm:via-[#111]/40 sm:to-transparent pointer-events-none z-0" />
           </>
         )}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none z-0" />

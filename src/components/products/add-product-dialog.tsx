@@ -37,8 +37,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
 import { Switch } from '../ui/switch';
+import { useOptionals } from '@/app/lib/hooks/use-optionals';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
 import { Separator } from '../ui/separator';
+import { Checkbox } from '../ui/checkbox';
 
 const sizeSchema = z.object({
   name: z.string().min(1, 'Nome do tamanho é obrigatório.'),
@@ -59,6 +61,8 @@ const formSchema = z.object({
   imageFile: z.any().optional(),
   hasSizes: z.boolean().default(false),
   sizes: z.array(sizeSchema).optional(),
+  hasOptionals: z.boolean().default(false),
+  allowedOptionals: z.array(z.string()).default([]),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -81,6 +85,7 @@ export function AddProductDialog() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const { categories, loading: categoriesLoading } = useProductCategories();
+  const { optionals, loading: optionalsLoading } = useOptionals();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<ProductFormValues>({
@@ -97,6 +102,8 @@ export function AddProductDialog() {
       promotionalPrice: 0,
       hasSizes: false,
       sizes: [],
+      hasOptionals: false,
+      allowedOptionals: [],
     },
   });
 
@@ -165,6 +172,8 @@ export function AddProductDialog() {
         promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
         salesCount: 0,
         sizes: data.hasSizes ? data.sizes : [],
+        hasOptionals: data.hasOptionals,
+        allowedOptionals: data.hasOptionals ? data.allowedOptionals : [],
       };
 
       const productCollection = collection(firestore, collectionPath);
@@ -442,8 +451,80 @@ export function AddProductDialog() {
                 </FormItem>
               )}
             />
+            
+            <Separator className="my-4" />
+            <FormField
+              control={form.control}
+              name="hasOptionals"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Habilitar Opcionais para este Produto</FormLabel>
+                    <FormDescription>
+                      Permite que os clientes escolham acompanhamentos extras para este produto.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            {form.watch('hasOptionals') && (
+               <FormField
+               control={form.control}
+               name="allowedOptionals"
+               render={() => (
+                 <FormItem className="space-y-3">
+                    <FormLabel>Quais opcionais este produto aceita?</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {optionalsLoading ? (
+                         <p className="text-sm text-muted-foreground">Carregando opcionais...</p>
+                      ) : optionals.map((opt) => (
+                         <FormField
+                           key={opt.id}
+                           control={form.control}
+                           name="allowedOptionals"
+                           render={({ field }) => {
+                             return (
+                               <FormItem
+                                 key={opt.id}
+                                 className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4"
+                               >
+                                 <FormControl>
+                                   <Checkbox
+                                     checked={(field.value || []).includes(opt.id)}
+                                     onCheckedChange={(checked) => {
+                                       return checked
+                                         ? field.onChange([...(field.value || []), opt.id])
+                                         : field.onChange(
+                                             (field.value || []).filter(
+                                               (value: string) => value !== opt.id
+                                             )
+                                           )
+                                     }}
+                                   />
+                                 </FormControl>
+                                 <div className="space-y-1 leading-none">
+                                   <FormLabel className="text-sm font-medium cursor-pointer">
+                                     {opt.name}
+                                   </FormLabel>
+                                 </div>
+                               </FormItem>
+                             )
+                           }}
+                         />
+                      ))}
+                    </div>
+                 </FormItem>
+               )}
+             />
+            )}
 
-            {isPromotion && (
+            {form.watch('isPromotion') && (
                 <FormField
                     control={form.control}
                     name="promotionalPrice"

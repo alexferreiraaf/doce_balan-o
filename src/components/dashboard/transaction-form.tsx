@@ -41,6 +41,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { Textarea } from '../ui/textarea';
 import { useOptionals } from '@/app/lib/hooks/use-optionals';
+import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Checkbox } from '../ui/checkbox';
 import { ScrollArea } from '../ui/scroll-area';
@@ -220,6 +221,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
   const { products, loading: productsLoading } = useProducts();
   const { customers, loading: customersLoading } = useCustomers(fromStorefront);
   const { optionals, loading: optionalsLoading } = useOptionals();
+  const { categories } = useProductCategories();
   const { settings, loading: settingsLoading } = useSettings();
   const [selectedOptionals, setSelectedOptionals] = useState<SelectedOptional[]>([]);
   
@@ -733,6 +735,13 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
     form.setValue('cartItems', currentCartItems, { shouldValidate: true });
   }
+
+  const cartItemsFromForm = form.watch('cartItems') || [];
+  const itemsComOpcionais = cartItemsFromForm.map((item, originalIndex) => {
+      return { item, originalIndex, isEligible: !!item.hasOptionals && (item.allowedOptionals || []).length > 0 };
+  }).filter(x => x.isEligible);
+
+  const shouldShowOptionals = (!isPOSSale && !fromStorefront) || itemsComOpcionais.length > 0;
 
   return (
     <>
@@ -1268,6 +1277,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                 </div>
               )}
               
+              {shouldShowOptionals && (
               <Collapsible className="space-y-2" defaultOpen>
                 <CollapsibleTrigger className="flex justify-between items-center w-full pt-2">
                   <FormLabel>Opcionais</FormLabel>
@@ -1282,7 +1292,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                       ) : (
                           <div className="space-y-6">
                               {isPOSSale || fromStorefront ? (
-                                (form.watch('cartItems') || []).map((item, itemIdx) => (
+                                itemsComOpcionais.map(({ item, originalIndex: itemIdx }) => (
                                   <div key={`${item.id}-${itemIdx}`} className="space-y-3">
                                     <div className="flex items-center gap-2">
                                       <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
@@ -1291,7 +1301,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                       <div className="h-px flex-1 bg-border" />
                                     </div>
                                     <div className="space-y-2 pl-2">
-                                      {optionals.map(opt => {
+                                      {optionals.filter(opt => (item.allowedOptionals || []).includes(opt.id)).map(opt => {
                                           const selected = (item.selectedOptionals || []).find(s => s.id === opt.id);
                                           return (
                                               <div key={opt.id} className="flex items-center justify-between">
@@ -1301,11 +1311,11 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                                   </div>
                                                   <div className="flex items-center gap-2">
                                                       <Button type="button" variant="outline" size="icon" className="h-6 w-6" onClick={() => handleItemOptionalQuantityChange(itemIdx, opt, -1)}>
-                                                          <Minus className="h-3 h-3" />
+                                                          <Minus className="h-3 w-3" />
                                                       </Button>
                                                       <span className="font-bold text-sm w-4 text-center">{selected?.quantity || 0}</span>
                                                       <Button type="button" variant="outline" size="icon" className="h-6 w-6" onClick={() => handleItemOptionalQuantityChange(itemIdx, opt, 1)}>
-                                                          <Plus className="h-3 h-3" />
+                                                          <Plus className="h-3 w-3" />
                                                       </Button>
                                                   </div>
                                               </div>
@@ -1343,6 +1353,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                   </Card>
                 </CollapsibleContent>
               </Collapsible>
+              )}
               
               {!fromStorefront && (
                 <FormField

@@ -15,6 +15,9 @@ export interface CartItem {
   price: number;
   quantity: number;
   cost?: number;
+  categoryId?: string;
+  hasOptionals?: boolean;
+  allowedOptionals?: string[];
   selectedOptionals?: SelectedOptional[];
 }
 
@@ -71,6 +74,8 @@ export interface Product {
   isAvailable?: boolean;
   salesCount?: number;
   sizes?: ProductSize[];
+  hasOptionals?: boolean;
+  allowedOptionals?: string[];
 }
 
 export interface Customer {
