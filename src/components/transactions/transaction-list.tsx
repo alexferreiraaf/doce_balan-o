@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
-import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User, CalendarIcon, X } from 'lucide-react';
+import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User, CalendarIcon, X, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -236,6 +236,16 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                         {t.type === 'expense' && '- '}
                         {formatCurrency(t.amount)}
                     </span>
+                    {t.type === 'income' && (
+                        <Button 
+                           variant="ghost" 
+                           size="icon" 
+                           title="Imprimir Cupom" 
+                           onClick={() => window.open(`/print/${t.id}`, '_blank', 'width=400,height=600')}
+                        >
+                            <Printer className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                    )}
                     <EditTransactionSheet transaction={t} />
                     <DeleteTransactionButton transactionId={t.id} transactionUserId={t.userId} />
                 </div>

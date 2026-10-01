@@ -29,7 +29,19 @@ export function PushNotificationSetup() {
                 return;
             }
 
-            const currentToken = await getToken(messaging, { vapidKey });
+            let registration;
+            try {
+              if ('serviceWorker' in navigator) {
+                registration = await navigator.serviceWorker.register('/sw.js');
+              }
+            } catch (swError) {
+              console.warn('Could not register SW for messaging:', swError);
+            }
+
+            const currentToken = await getToken(messaging, { 
+                vapidKey,
+                serviceWorkerRegistration: registration
+            });
 
             if (currentToken) {
               const userRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}`);

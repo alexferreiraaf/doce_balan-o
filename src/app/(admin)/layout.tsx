@@ -46,8 +46,10 @@ export default function AdminLayout({
     <div className={cn("min-h-screen flex flex-col bg-background", isPOSPage && "h-screen overflow-hidden")}>
       <PushNotificationSetup />
       <NewOrderListener />
-      <Navbar />
-      <main className="flex-grow pb-24 sm:pb-0 flex-1">
+      <div className="print:hidden">
+        <Navbar />
+      </div>
+      <main className="flex-grow pb-24 sm:pb-0 flex-1 print:pb-0">
         {children}
       </main>
     </div>

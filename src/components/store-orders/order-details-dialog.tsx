@@ -71,11 +71,23 @@ export function OrderDetailsDialog({ transaction, customer }: OrderDetailsDialog
                 <DialogHeader>
                     <div className="flex items-center justify-between">
                         <DialogTitle>{isEditing ? 'Editar Pedido' : 'Detalhes do Pedido'}</DialogTitle>
-                        {!isEditing && (
-                            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="flex items-center gap-2 h-8 px-2 text-primary font-bold">
-                                Editar
-                            </Button>
-                        )}
+                        <div className="flex gap-2">
+                            {!isEditing && (
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => window.open(`/print/${transaction.id}?type=loja`, '_blank', 'width=400,height=600')} 
+                                    className="flex items-center gap-1 h-8 px-2"
+                                >
+                                    Imprimir
+                                </Button>
+                            )}
+                            {!isEditing && (
+                                <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="flex items-center gap-2 h-8 px-2 text-primary font-bold">
+                                    Editar
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <DialogDescription>
                         {isEditing ? 'Ajuste as informações do pedido abaixo.' : 'Informações completas do pedido e do cliente.'}

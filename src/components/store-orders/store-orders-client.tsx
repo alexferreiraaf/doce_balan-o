@@ -17,7 +17,9 @@ import {
   ChevronRight,
   Undo2,
   XCircle,
-  MessageCircle
+  MessageCircle,
+  Printer,
+  Package
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
@@ -175,7 +177,27 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
               {t.orderNumber && <span className="text-[10px] font-black text-primary">#{t.orderNumber}</span>}
               <span className="font-bold text-sm line-clamp-2">{t.description}</span>
             </div>
-            <EditTransactionSheet transaction={t} />
+            <div className="flex items-center shrink-0">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground mr-1"
+                    title="Imprimir Cupom do Cliente" 
+                    onClick={() => window.open(`/print/${t.id}`, '_blank', 'width=400,height=600')}
+                >
+                    <Printer className="w-4 h-4" />
+                </Button>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground mr-1"
+                    title="Imprimir Via da Loja (Produção)" 
+                    onClick={() => window.open(`/print/${t.id}?type=loja`, '_blank', 'width=400,height=600')}
+                >
+                    <Package className="w-4 h-4" />
+                </Button>
+                <EditTransactionSheet transaction={t} />
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">

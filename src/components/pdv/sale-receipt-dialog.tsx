@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import type { Transaction, Customer } from '@/app/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Share2, FileDown } from 'lucide-react';
+import { Share2, FileDown, Printer } from 'lucide-react';
 import { ReceiptTemplate } from './receipt-template';
 
 
@@ -134,6 +134,10 @@ export const SaleReceiptDialog = forwardRef<SaleReceiptDialogRef, SaleReceiptDia
         <DialogFooter className='gap-2 sm:gap-0'>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
+          </Button>
+          <Button variant="secondary" onClick={() => window.open(`/print/${transaction?.id}`, '_blank', 'width=400,height=600')}>
+              <Printer className="mr-2 h-4 w-4" />
+              Imprimir
           </Button>
           {canShare ? (
             <Button onClick={handleShare}>
