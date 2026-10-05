@@ -189,14 +189,19 @@ interface TransactionFormProps {
     fromStorefront?: boolean;
 }
 
-const getAvailableDates = () => {
+const getAvailableDates = (isStorefront: boolean) => {
     const dates = [];
     const today = new Date();
     // Check for the next 60 days
     for (let i = 0; i < 60; i++) {
         const date = addDays(today, i);
-        const dayOfWeek = getDay(date); // 0 (Sun) to 6 (Sat)
-        if (dayOfWeek === 5 || dayOfWeek === 6) { // Friday or Saturday
+        if (isStorefront) {
+            const dayOfWeek = getDay(date); // 0 (Sun) to 6 (Sat)
+            if (dayOfWeek === 5 || dayOfWeek === 6) { // Friday or Saturday
+                dates.push(date);
+            }
+        } else {
+            // For admin (PDV), allow all days
             dates.push(date);
         }
     }
@@ -231,10 +236,10 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-        setAvailableDates(getAvailableDates());
+        setAvailableDates(getAvailableDates(fromStorefront));
     }
     setIsClient(true);
-  }, []);
+  }, [fromStorefront]);
 
 
   const form = useForm<TransactionFormValues>({
@@ -1199,7 +1204,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                     <div className="p-4 sm:p-5 rounded-xl border-2 border-primary/20 bg-primary/5 shadow-sm">
                         <FormLabel className="text-base font-semibold text-primary">Agendamento Obrigatório</FormLabel>
                         <p className="text-sm text-muted-foreground mt-1 mb-4">
-                            Selecione a data e hora para a retirada ou entrega do seu pedido. Atendemos sextas e sábados das 12:00 às 18:00.
+                            Selecione a data e hora para a retirada ou entrega do seu pedido.
+                            {fromStorefront && " Atendemos sextas e sábados das 12:00 às 18:00."}
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
