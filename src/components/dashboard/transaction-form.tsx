@@ -208,9 +208,14 @@ const getAvailableDates = (isStorefront: boolean) => {
     return dates;
 };
 
-const availableTimeSlots = [
-    '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
-];
+const getAvailableTimeSlots = (isStorefront: boolean) => {
+    if (isStorefront) {
+        return ['12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+    }
+    return [
+        '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+    ];
+};
 
 export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal, fromStorefront = false }: TransactionFormProps) {
   const { user, isUserLoading: isAuthLoading } = useUser();
@@ -1268,7 +1273,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {availableTimeSlots.map(slot => (
+                                                {getAvailableTimeSlots(fromStorefront).map(slot => (
                                                     <SelectItem key={slot} value={slot}>{slot}</SelectItem>
                                                 ))}
                                             </SelectContent>
