@@ -364,9 +364,18 @@ export function POSClient() {
     
     const hasSizes = product.sizes && product.sizes.length > 0;
     const lowestPrice = hasSizes ? Math.min(...product.sizes!.map(s => s.price)) : product.price;
-    const priceStr = formatCurrency(lowestPrice);
+    const hasPromo = product.isPromotion && product.promotionalPrice != null && product.promotionalPrice >= 0;
+    const displayPrice = hasPromo ? product.promotionalPrice! : lowestPrice;
+    
+    const priceStr = formatCurrency(displayPrice);
     const productUrl = `${window.location.origin}/loja?p=${product.id}`;
-    const text = `Confira nosso delicioso *${product.name}* por apenas *${priceStr}*! 😋✨\n\nPeça aqui: ${productUrl}`;
+    
+    let text = '';
+    if (hasPromo) {
+        text = `🚨 *PROMOÇÃO!* 🚨\n\nConfira nosso delicioso *${product.name}* em oferta especial por apenas *${priceStr}*! 😋✨\n\nPeça aqui: ${productUrl}`;
+    } else {
+        text = `Confira nosso delicioso *${product.name}* por apenas *${priceStr}*! 😋✨\n\nPeça aqui: ${productUrl}`;
+    }
 
     // Try native sharing
     if (navigator.share) {
