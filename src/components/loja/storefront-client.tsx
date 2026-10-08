@@ -225,6 +225,12 @@ export function StorefrontClient({
     return regularProducts.filter(p => p.categoryId === selectedCategoryId);
   }, [regularProducts, selectedCategoryId]);
 
+  const visibleCategories = useMemo(() => {
+    return categories.filter(category => {
+      return regularProducts.some(product => product.categoryId === category.id);
+    });
+  }, [categories, regularProducts]);
+
   const cartTotal = useMemo(() => {
     return cart.reduce((total, item) => total + (item.promotionalPrice ?? item.price) * item.quantity, 0);
   }, [cart]);
@@ -575,7 +581,7 @@ export function StorefrontClient({
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas as categorias</SelectItem>
-                            {categories.map(category => (
+                            {visibleCategories.map(category => (
                                 <SelectItem key={category.id} value={category.id}>
                                     {category.name}
                                 </SelectItem>
