@@ -140,13 +140,48 @@ const formSchema = z.object({
     message: 'O WhatsApp é obrigatório.',
     path: ['customerWhatsapp'],
 }).refine(data => {
-    if (data.fromStorefront && data.deliveryType === 'delivery' && !data.customerCep) {
+    if (data.fromStorefront && data.deliveryType === 'delivery' && !data.customerStreet?.trim()) {
         return false;
     }
     return true;
 }, {
-    message: 'O CEP é obrigatório para entrega.',
-    path: ['customerCep'],
+    message: 'A rua é obrigatória para entrega.',
+    path: ['customerStreet'],
+}).refine(data => {
+    if (data.fromStorefront && data.deliveryType === 'delivery' && !data.customerNumber?.trim()) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'O número é obrigatório para entrega.',
+    path: ['customerNumber'],
+}).refine(data => {
+    if (data.fromStorefront && data.deliveryType === 'delivery' && !data.customerNeighborhood?.trim()) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'O bairro é obrigatório para entrega.',
+    path: ['customerNeighborhood'],
+}).refine(data => {
+    if (data.fromStorefront && data.deliveryType === 'delivery' && !data.customerCity?.trim()) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'A cidade é obrigatória para entrega.',
+    path: ['customerCity'],
+}).refine(data => {
+    if (data.fromStorefront && data.deliveryType === 'delivery' && data.customerCity?.trim()) {
+        const city = data.customerCity.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (city !== 'ourinhos') {
+            return false;
+        }
+    }
+    return true;
+}, {
+    message: 'Desculpe, ainda não entregamos para fora de Ourinhos.',
+    path: ['customerCity'],
 }).refine(data => {
     if (data.fromStorefront && !data.paymentMethod) {
         return false;
@@ -376,7 +411,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
       const city = customerCity?.trim().toLowerCase();
       const state = customerState?.trim().toLowerCase();
       
-      if (city === 'ourinhos' && state === 'sp') {
+      const normalizedCity = city?.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (normalizedCity === 'ourinhos') {
         form.setValue('deliveryFee', 10);
       } else {
         form.setValue('deliveryFee', 0);
@@ -1023,8 +1059,8 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                       const existing = customers.find(c => c.whatsapp && c.whatsapp.replace(/\D/g, '') === cleanPhone);
                                       if (existing) {
                                           if (!form.getValues('customerName')) form.setValue('customerName', existing.name);
-                                          if (!form.getValues('customerCep') && existing.cep) {
-                                              form.setValue('customerCep', existing.cep);
+                                          if (!form.getValues('customerStreet') && (existing.street || existing.cep)) {
+                                              if (existing.cep) form.setValue('customerCep', existing.cep);
                                               form.setValue('customerStreet', existing.street || '');
                                               form.setValue('customerNumber', existing.number || '');
                                               form.setValue('customerComplement', existing.complement || '');
@@ -1095,7 +1131,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                 name="customerCep"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>CEP</FormLabel>
+                                    <FormLabel>CEP (Opcional)</FormLabel>
                                     <FormControl>
                                     <CepInput placeholder="Digite o CEP para buscar" {...field} onBlur={(e) => handleCepBlur(e.target.value)} onValueChange={(value) => field.onChange(value)} />
                                     </FormControl>
@@ -1109,7 +1145,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                 name="customerStreet"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Rua</FormLabel>
+                                    <FormLabel>Rua <span className="text-destructive">*</span></FormLabel>
                                     <FormControl>
                                         <Input placeholder="Rua, Avenida, etc." {...field} />
                                     </FormControl>
@@ -1123,7 +1159,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                     name="customerNumber"
                                     render={({ field }) => (
                                         <FormItem>
-                                        <FormLabel>Número</FormLabel>
+                                        <FormLabel>Número <span className="text-destructive">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Ex: 123" {...field} />
                                         </FormControl>
@@ -1150,7 +1186,7 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                 name="customerNeighborhood"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Bairro</FormLabel>
+                                    <FormLabel>Bairro <span className="text-destructive">*</span></FormLabel>
                                     <FormControl>
                                         <Input placeholder="Bairro" {...field} />
                                     </FormControl>
@@ -1162,15 +1198,24 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                                     <FormField
                                     control={form.control}
                                     name="customerCity"
-                                    render={({ field }) => (
-                                        <FormItem className='sm:col-span-2'>
-                                        <FormLabel>Cidade</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Cidade" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
+                                    render={({ field }) => {
+                                        const normalizedCity = field.value?.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                        const isOutsideOurinhos = Boolean(normalizedCity && normalizedCity !== 'ourinhos');
+                                        return (
+                                            <FormItem className='sm:col-span-2'>
+                                            <FormLabel>Cidade <span className="text-destructive">*</span></FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Ex: Ourinhos" {...field} />
+                                            </FormControl>
+                                            {isOutsideOurinhos && (
+                                                <p className="text-sm font-medium text-destructive mt-1">
+                                                    Não entregamos para fora de Ourinhos ainda.
+                                                </p>
+                                            )}
+                                            <FormMessage />
+                                            </FormItem>
+                                        );
+                                    }}
                                     />
                                     <FormField
                                     control={form.control}
