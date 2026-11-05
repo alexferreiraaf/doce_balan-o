@@ -48,6 +48,15 @@ const weekDayMap: Record<number, DayOfWeek> = {
 };
 
 
+const getMinimumQuantity = (productName?: string): number => {
+  if (!productName) return 1;
+  const normalized = productName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (normalized.includes('copo da felicidade') || normalized.includes('brigaberry')) {
+    return 5;
+  }
+  return 1;
+};
+
 interface StorefrontClientProps {
   initialProducts?: Product[];
   initialCategories?: ProductCategory[];
@@ -173,7 +182,12 @@ export function StorefrontClient({
       const savedCart = localStorage.getItem('storeCart');
       if (savedCart) {
         try {
-          setCart(JSON.parse(savedCart));
+          const parsed: CartItem[] = JSON.parse(savedCart);
+          const normalizedCart = parsed.map(item => {
+            const minQty = getMinimumQuantity(item.name);
+            return item.quantity < minQty ? { ...item, quantity: minQty } : item;
+          });
+          setCart(normalizedCart);
         } catch (e) {
           console.error('Failed to parse saved cart', e);
         }
@@ -275,14 +289,16 @@ export function StorefrontClient({
       promotionalPrice: (hasPromo || isPromoSize) ? effectivePrice : undefined,
     };
 
+    const minQty = getMinimumQuantity(product.name);
+
     setCart(currentCart => {
       const existingItem = currentCart.find(item => item.id === finalProduct.id);
       if (existingItem) {
         return currentCart.map(item =>
-          item.id === finalProduct.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === finalProduct.id ? { ...item, quantity: Math.max(minQty, item.quantity + 1) } : item
         );
       }
-      return [...currentCart, { ...finalProduct, quantity: 1 }];
+      return [...currentCart, { ...finalProduct, quantity: minQty }];
     });
 
     setSelectedProductForSizes(null);
@@ -290,6 +306,18 @@ export function StorefrontClient({
   };
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
+    if (quantity > 0) {
+      const targetItem = cart.find(item => item.id === productId);
+      const minQty = getMinimumQuantity(targetItem?.name);
+      if (quantity < minQty) {
+        toast({
+          title: 'Quantidade mínima',
+          description: `Este produto possui pedido mínimo de ${minQty} unidades.`,
+        });
+        return;
+      }
+    }
+
     setCart(currentCart => {
       if (quantity <= 0) {
         return currentCart.filter(item => item.id !== productId);
@@ -301,6 +329,20 @@ export function StorefrontClient({
   };
 
   const handleFinalizeClick = () => {
+    const invalidItem = cart.find(item => item.quantity < getMinimumQuantity(item.name));
+    if (invalidItem) {
+      const minQty = getMinimumQuantity(invalidItem.name);
+      toast({
+        variant: 'destructive',
+        title: 'Quantidade mínima não atingida',
+        description: `O produto "${invalidItem.name}" exige pedido mínimo de ${minQty} unidades.`,
+      });
+      setCart(currentCart => currentCart.map(item => {
+        const min = getMinimumQuantity(item.name);
+        return item.quantity < min ? { ...item, quantity: min } : item;
+      }));
+      return;
+    }
     if (storeStatus.isStatusLoading || !storeStatus.isOpen) {
       toast({
         variant: 'destructive',
@@ -370,6 +412,7 @@ export function StorefrontClient({
     const lowestPrice = hasSizes ? Math.min(...product.sizes!.map(s => s.price)) : product.price;
     const displayPrice = hasPromo ? product.promotionalPrice! : lowestPrice;
     const isAvailable = product.isAvailable ?? true;
+    const minQty = getMinimumQuantity(product.name);
     
     return (
        <Card className={cn("overflow-hidden flex flex-col group h-full", !isAvailable && "opacity-60")}>
@@ -402,7 +445,14 @@ export function StorefrontClient({
                 </div>
             </CardHeader>
             <CardContent className="p-4 flex flex-col flex-grow">
-                <h3 className="font-semibold text-lg flex-grow leading-tight">{product.name}</h3>
+                <div className="flex-grow">
+                    <h3 className="font-semibold text-lg leading-tight">{product.name}</h3>
+                    {minQty > 1 && (
+                        <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">
+                            Pedido mínimo: {minQty} unidades
+                        </p>
+                    )}
+                </div>
                 <div className="flex justify-between items-end mt-4">
                     <div className="flex flex-col items-start">
                         {hasPromo && (
@@ -574,20 +624,26 @@ export function StorefrontClient({
           
             <div className='space-y-6'>
                 <h2 className="text-2xl font-bold tracking-tight">Todos os Produtos</h2>
-                <div className="max-w-xs">
-                    <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filtrar por categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas as categorias</SelectItem>
-                            {visibleCategories.map(category => (
-                                <SelectItem key={category.id} value={category.id}>
-                                    {category.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        variant={selectedCategoryId === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        className="rounded-full font-medium"
+                        onClick={() => setSelectedCategoryId('all')}
+                    >
+                        Todas as categorias
+                    </Button>
+                    {visibleCategories.map(category => (
+                        <Button
+                            key={category.id}
+                            variant={selectedCategoryId === category.id ? 'default' : 'outline'}
+                            size="sm"
+                            className="rounded-full font-medium"
+                            onClick={() => setSelectedCategoryId(category.id)}
+                        >
+                            {category.name}
+                        </Button>
+                    ))}
                 </div>
             
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -680,7 +736,10 @@ export function StorefrontClient({
                       )}
                       <div className="flex-grow">
                         <p className="font-semibold text-sm leading-tight">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatCurrency(item.promotionalPrice ?? item.price)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(item.promotionalPrice ?? item.price)}
+                          {getMinimumQuantity(item.name) > 1 && ` • Mín. ${getMinimumQuantity(item.name)} un.`}
+                        </p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}>
                             <Minus className="h-4 w-4" />
