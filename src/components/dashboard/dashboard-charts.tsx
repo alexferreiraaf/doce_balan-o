@@ -116,6 +116,28 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
       .slice(0, 10);
   }, [transactions]);
 
+  // Processamento de dados para o gráfico de canais de venda (PDV vs Loja Online)
+  const salesChannelData = useMemo(() => {
+    let pdv = 0;
+    let lojaOnline = 0;
+
+    transactions.forEach(t => {
+      if (t.type === 'income' && t.status !== 'cancelled') {
+        const isStorefront = Boolean(t.fromStorefront || t.customerInfo);
+        if (isStorefront) {
+          lojaOnline++;
+        } else {
+          pdv++;
+        }
+      }
+    });
+
+    return [
+      { name: 'PDV', value: pdv },
+      { name: 'Loja Online', value: lojaOnline }
+    ].filter(item => item.value > 0);
+  }, [transactions]);
+
   // Processamento de dados para o gráfico de tipos de pedido
   const orderTypeData = useMemo(() => {
     let delivery = 0;
@@ -290,7 +312,38 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Origem das Vendas</CardTitle>
+            <CardDescription>Quantidade de vendas: PDV vs Loja Online</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={salesChannelData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                  >
+                    {salesChannelData.map((entry, index) => (
+                      <Cell key={`cell-channel-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<SimpleTooltip />} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-bold">Tipos de Pedido</CardTitle>

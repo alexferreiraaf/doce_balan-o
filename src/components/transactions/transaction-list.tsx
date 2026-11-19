@@ -15,6 +15,7 @@ import { DeleteTransactionButton } from '../dashboard/delete-transaction-button'
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { EditTransactionSheet } from './edit-transaction-sheet';
 import { useUser } from '@/firebase';
+import { storefrontUserId } from '@/firebase/config';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 
@@ -191,6 +192,8 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
             {filteredTransactions.map((t) => {
             const paymentInfo = t.paymentMethod ? paymentMethodDetails[t.paymentMethod] : null;
             const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name;
+            const isStorefront = Boolean(t.fromStorefront || t.customerInfo);
+            const displayCategory = t.type === 'income' ? (isStorefront ? 'Loja Online' : 'PDV') : t.category;
             return (
                 <li
                 key={t.id}
@@ -199,9 +202,12 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
                 }`}
                 >
                 <div className="flex-grow flex flex-col gap-1 w-full">
-                    <span className="font-semibold text-card-foreground">{t.description}</span>
+                    <span className="font-semibold text-card-foreground">
+                        {t.orderNumber && <span className="text-primary mr-1">#{t.orderNumber}</span>}
+                        {t.description}
+                    </span>
                     <div className='flex items-center gap-2 flex-wrap'>
-                        <Badge variant="secondary" className="text-xs">{t.category}</Badge>
+                        <Badge variant="secondary" className="text-xs">{displayCategory}</Badge>
                         <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200" title={`Lançado em: ${formatDate(t.timestamp || t.dateMs)}`}>
                             <CalendarIcon className="w-3 h-3 mr-1 inline-block" />
                             {t.scheduledAt ? `Para: ${format(t.scheduledAt.toDate(), "dd/MM/yyyy")}` : formatDate(t.timestamp || t.dateMs)}

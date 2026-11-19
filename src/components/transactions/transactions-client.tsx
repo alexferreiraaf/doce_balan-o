@@ -7,6 +7,7 @@ import { useTransactions } from '@/app/lib/hooks/use-transactions';
 import Loading from '@/app/(admin)/loading-component';
 import { useUser, useFirestore } from '@/firebase';
 import { APP_ID } from '@/app/lib/constants';
+import { storefrontUserId } from '@/firebase/config';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -34,8 +35,8 @@ export function TransactionsClient() {
   const [fiadoSearchTerm, setFiadoSearchTerm] = useState('');
   const [upcomingSearchTerm, setUpcomingSearchTerm] = useState('');
   const { user, isUserLoading } = useUser();
-  // Fetch transactions only for the logged-in user on this page
-  const { transactions, loading: transactionsLoading } = useTransactions({ userIds: [user?.uid] });
+  const userIdsToFetch = useMemo(() => [user?.uid, storefrontUserId].filter(Boolean) as string[], [user?.uid]);
+  const { transactions, loading: transactionsLoading } = useTransactions({ userIds: userIdsToFetch });
   const { customers, loading: customersLoading } = useCustomers();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -60,13 +61,22 @@ export function TransactionsClient() {
         return true;
     });
 
-    // Exclude storefront orders from the manual transactions page logic for general income/expense
-    const manualTransactions = transactions.filter(t => t.category !== 'Venda Online' && !t.fromStorefront);
-    
-    const paid = manualTransactions.filter(t => t.status !== 'pending' && !upcoming.some(u => u.id === t.id));
+    // Fiado: Any transaction where paymentMethod is 'fiado' and not currently an upcoming delivery (or already delivered via Kanban)
+    const fiado = transactions.filter((t) => {
+        if (t.status === 'cancelled') return false;
+        if (t.paymentMethod !== 'fiado') return false;
+        // If it was finalized in Kanban (status === 'paid' or isDelivered === true) with paymentMethod still 'fiado', it is an unpaid fiado debt!
+        if (t.isDelivered || t.status === 'paid') return true;
+        return t.status === 'pending' && !upcoming.some(u => u.id === t.id);
+    });
 
-    // Fiado: Any transaction that is pending and payment method is fiado, and not currently an upcoming delivery
-    const fiado = transactions.filter((t) => t.status === 'pending' && t.paymentMethod === 'fiado' && !upcoming.some(u => u.id === t.id));
+    // Paid / Concluded transactions: include all transactions (manual, PDV, and Storefront) that are not pending/cancelled, not in upcoming, and not in pending fiado
+    const paid = transactions.filter(t => 
+        t.status !== 'pending' && 
+        t.status !== 'cancelled' && 
+        !upcoming.some(u => u.id === t.id) &&
+        !fiado.some(f => f.id === t.id)
+    );
     
     const fiadoValue = fiado.reduce((sum, t) => {
         const remainingAmount = t.amount - (t.downPayment || 0);
@@ -130,13 +140,14 @@ export function TransactionsClient() {
       window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
   };
 
-  const handleMarkAsPaid = (transactionId: string, paymentMethod: PaymentMethod) => {
+  const handleMarkAsPaid = (transactionId: string, paymentMethod: PaymentMethod, transactionUserId?: string) => {
     if (isUserLoading || !user || !firestore) {
         toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado." });
         return;
     }
 
-    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
+    const targetUid = transactionUserId || user.uid;
+    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${targetUid}/transactions/${transactionId}`);
     const updateData: any = { paymentMethod: paymentMethod, isDelivered: true };
     
     if (paymentMethod === 'fiado') {
@@ -157,13 +168,14 @@ export function TransactionsClient() {
       });
   };
 
-  const handleMarkAsDelivered = (transactionId: string) => {
+  const handleMarkAsDelivered = (transactionId: string, transactionUserId?: string) => {
     if (isUserLoading || !user || !firestore) {
         toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado." });
         return;
     }
 
-    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${user.uid}/transactions/${transactionId}`);
+    const targetUid = transactionUserId || user.uid;
+    const transactionRef = doc(firestore, `artifacts/${APP_ID}/users/${targetUid}/transactions/${transactionId}`);
     const updateData: any = { isDelivered: true };
     
     updateDoc(transactionRef, updateData)
@@ -238,6 +250,8 @@ export function TransactionsClient() {
                       const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name;
                       const remainingAmount = t.amount - (t.downPayment || 0);
                       const hasDownPayment = (t.downPayment || 0) > 0;
+                      const isStorefront = Boolean(t.fromStorefront || t.customerInfo);
+                      const originLabel = isStorefront ? 'Loja Online' : 'PDV';
                       return (
                       <li
                         key={t.id}
@@ -272,6 +286,10 @@ export function TransactionsClient() {
                                   <Clock className="w-3 h-3 mr-1" />
                                   Pendente: {formatCurrency(remainingAmount)}
                               </Badge>
+                              <Badge variant="outline" className="text-xs bg-white/80 text-gray-700 border-gray-300">
+                                  <Package className="w-3 h-3 mr-1" />
+                                  {originLabel}
+                              </Badge>
                           </div>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -287,10 +305,10 @@ export function TransactionsClient() {
                                   </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>PIX</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Dinheiro</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Cartão</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'permuta')}>Permuta</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix', t.userId)}>PIX</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro', t.userId)}>Dinheiro</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao', t.userId)}>Cartão</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'permuta', t.userId)}>Permuta</DropdownMenuItem>
                               </DropdownMenuContent>
                           </DropdownMenu>
                           <EditTransactionSheet transaction={t} />
@@ -340,7 +358,8 @@ export function TransactionsClient() {
                   ) : filteredUpcomingDeliveries.map((t) => {
                       const customerName = customers.find(c => c.id === t.customerId)?.name || t.customerInfo?.name || t.description.match(/Cliente: (.*?)(?: -|$)/)?.[1];
                       const deliveryDate = t.scheduledAt ? format(t.scheduledAt.toDate(), "dd/MM/yyyy 'às' HH:mm") : '';
-                      const isStorefront = t.fromStorefront || t.category === 'Venda Online';
+                      const isStorefront = Boolean(t.fromStorefront || t.customerInfo);
+                      const originLabel = isStorefront ? 'Loja Online' : 'PDV';
                       
                       return (
                       <li
@@ -363,12 +382,10 @@ export function TransactionsClient() {
                                   <Calendar className="w-3 h-3 mr-1" />
                                   Para: {deliveryDate}
                               </Badge>
-                              {isStorefront && (
-                                  <Badge variant="outline" className="text-xs">
-                                      <Package className="w-3 h-3 mr-1" />
-                                      Loja Online
-                                  </Badge>
-                              )}
+                              <Badge variant="outline" className="text-xs bg-white/80">
+                                  <Package className="w-3 h-3 mr-1" />
+                                  {originLabel}
+                              </Badge>
                           </div>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -376,7 +393,7 @@ export function TransactionsClient() {
                               <Button
                                   size="sm" 
                                   className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
-                                  onClick={() => handleMarkAsDelivered(t.id)}
+                                  onClick={() => handleMarkAsDelivered(t.id, t.userId)}
                                   disabled={isUserLoading}
                               >
                                   <CheckCircle className="w-4 h-4 mr-2" />
@@ -395,10 +412,10 @@ export function TransactionsClient() {
                                       </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent>
-                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix')}>Pago via PIX</DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro')}>Pago em Dinheiro</DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao')}>Pago no Cartão</DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'fiado')}>Entregue (Vendido Fiado)</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'pix', t.userId)}>Pago via PIX</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'dinheiro', t.userId)}>Pago em Dinheiro</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'cartao', t.userId)}>Pago no Cartão</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleMarkAsPaid(t.id, 'fiado', t.userId)}>Entregue (Vendido Fiado)</DropdownMenuItem>
                                   </DropdownMenuContent>
                               </DropdownMenu>
                           )}

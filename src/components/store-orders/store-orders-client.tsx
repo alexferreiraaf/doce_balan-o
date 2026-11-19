@@ -112,7 +112,7 @@ export function StoreOrdersClient({ userIds }: StoreOrdersClientProps) {
     
     const docPath = `artifacts/${APP_ID}/users/${transaction.userId}/transactions/${transaction.id}`;
     const transactionRef = doc(firestore, docPath);
-    const updateData = { status: newStatus };
+    const updateData: any = { status: newStatus, isDelivered: newStatus === 'paid' };
     
     try {
       await updateDoc(transactionRef, updateData);
