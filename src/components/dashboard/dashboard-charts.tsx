@@ -19,6 +19,7 @@ import { ptBR } from 'date-fns/locale';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Transaction } from '@/app/lib/types';
+import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { formatCurrency, parseToNumber } from '@/lib/utils';
 
 interface DashboardChartsProps {
@@ -31,6 +32,7 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export function DashboardCharts({ transactions, startDate, endDate }: DashboardChartsProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const { customers } = useCustomers();
 
   useEffect(() => {
     setIsMounted(true);
@@ -115,6 +117,36 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
   }, [transactions]);
+
+  // Processamento de dados para o gráfico de clientes que mais gastaram (Top 10 Clientes)
+  const topCustomersData = useMemo(() => {
+    const customerMap: Record<string, { name: string; value: number; orders: number }> = {};
+
+    transactions.forEach(t => {
+      if (t.type === 'income' && t.status !== 'cancelled') {
+        const matchedCustomer = t.customerId
+          ? customers.find(c => c.id === t.customerId)
+          : undefined;
+        const rawName = matchedCustomer?.name || t.customerInfo?.name;
+
+        if (!rawName || !rawName.trim()) return;
+
+        const cleanName = rawName.trim();
+        const key = cleanName.toLowerCase();
+        const amount = parseToNumber(t.amount);
+
+        if (!customerMap[key]) {
+          customerMap[key] = { name: cleanName, value: 0, orders: 0 };
+        }
+        customerMap[key].value += amount;
+        customerMap[key].orders += 1;
+      }
+    });
+
+    return Object.values(customerMap)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [transactions, customers]);
 
   // Processamento de dados para o gráfico de canais de venda (PDV vs Loja Online)
   const salesChannelData = useMemo(() => {
@@ -208,6 +240,20 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
     return null;
   };
 
+  const CustomerTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-background border rounded-lg p-3 shadow-md text-xs space-y-1">
+          <p className="font-bold text-sm">{data.name}</p>
+          <p className="text-emerald-600 font-semibold">Total gasto: {formatCurrency(data.value)}</p>
+          <p className="text-muted-foreground">{data.orders} {data.orders === 1 ? 'pedido' : 'pedidos'}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (!isMounted) return null;
 
   return (
@@ -281,36 +327,75 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
         </Card>
       </div>
 
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold">Top 10 Produtos mais vendidos</CardTitle>
-          <CardDescription>Quantidade de vendas por produto no período</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={topProductsData}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.3} />
-                <XAxis type="number" hide />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  fontSize={10} 
-                  width={150}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip content={<SimpleTooltip />} />
-                <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Quantidade" barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Top 10 Produtos mais vendidos</CardTitle>
+            <CardDescription>Quantidade de vendas por produto no período</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={topProductsData}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.3} />
+                  <XAxis type="number" hide />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    fontSize={10} 
+                    width={150}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<SimpleTooltip />} />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Quantidade" barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Top 10 Clientes que mais gastaram</CardTitle>
+            <CardDescription>Valor total gasto por cliente no período</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topCustomersData.length === 0 ? (
+              <div className="h-[400px] flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                Nenhuma venda vinculada a cliente neste período.
+              </div>
+            ) : (
+              <div className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={topCustomersData}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.3} />
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      fontSize={10} 
+                      width={150}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip content={<CustomerTooltip />} />
+                    <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} name="Total Gasto" barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="shadow-md">
