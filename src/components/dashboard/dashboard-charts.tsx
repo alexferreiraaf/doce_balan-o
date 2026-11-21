@@ -18,6 +18,7 @@ import { format, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Button } from '../ui/button';
 import { Transaction } from '@/app/lib/types';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { formatCurrency, parseToNumber } from '@/lib/utils';
@@ -32,6 +33,7 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export function DashboardCharts({ transactions, startDate, endDate }: DashboardChartsProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [topCustomersLimit, setTopCustomersLimit] = useState<number>(10);
   const { customers } = useCustomers();
 
   useEffect(() => {
@@ -145,8 +147,8 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
 
     return Object.values(customerMap)
       .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-  }, [transactions, customers]);
+      .slice(0, topCustomersLimit);
+  }, [transactions, customers, topCustomersLimit]);
 
   // Processamento de dados para o gráfico de canais de venda (PDV vs Loja Online)
   const salesChannelData = useMemo(() => {
@@ -360,9 +362,25 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
         </Card>
 
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold">Top 10 Clientes que mais gastaram</CardTitle>
-            <CardDescription>Valor total gasto por cliente no período</CardDescription>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle className="text-lg font-bold">Top {topCustomersLimit} Clientes que mais gastaram</CardTitle>
+              <CardDescription>Valor total gasto por cliente no período</CardDescription>
+            </div>
+            <div className="flex items-center gap-1 self-start sm:self-auto">
+              {[5, 10, 15, 20].map((limit) => (
+                <Button
+                  key={limit}
+                  type="button"
+                  variant={topCustomersLimit === limit ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 px-2.5 text-xs"
+                  onClick={() => setTopCustomersLimit(limit)}
+                >
+                  Top {limit}
+                </Button>
+              ))}
+            </div>
           </CardHeader>
           <CardContent>
             {topCustomersData.length === 0 ? (
@@ -370,7 +388,10 @@ export function DashboardCharts({ transactions, startDate, endDate }: DashboardC
                 Nenhuma venda vinculada a cliente neste período.
               </div>
             ) : (
-              <div className="h-[400px] w-full">
+              <div
+                className="w-full"
+                style={{ height: `${Math.max(400, topCustomersData.length * 36)}px` }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={topCustomersData}

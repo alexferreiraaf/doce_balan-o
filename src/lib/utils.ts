@@ -66,3 +66,63 @@ export function formatDate(date: any) {
 
   return new Intl.DateTimeFormat('pt-BR').format(d);
 }
+
+/**
+ * Converte um arquivo de imagem para Base64 (Data URL), redimensionando e
+ * comprimindo automaticamente para caber com folga no limite de 1 MB do Firestore.
+ */
+export function imageFileToBase64(
+  file: File,
+  maxWidth = 800,
+  maxHeight = 800,
+  quality = 0.8
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onerror = (error) => reject(error);
+    reader.onload = () => {
+      const rawBase64 = reader.result as string;
+      if (typeof window === 'undefined') {
+        resolve(rawBase64);
+        return;
+      }
+
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(rawBase64);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Tenta WebP primeiro (mantém transparência e gera arquivos leves)
+          let compressed = canvas.toDataURL('image/webp', quality);
+          if (!compressed.startsWith('data:image/webp')) {
+            compressed = canvas.toDataURL('image/jpeg', quality);
+          }
+
+          // Retorna o menor entre o comprimido e o original (caso a imagem original já seja muito pequena)
+          resolve(compressed.length < rawBase64.length ? compressed : rawBase64);
+        } catch {
+          resolve(rawBase64);
+        }
+      };
+      img.onerror = () => resolve(rawBase64);
+      img.src = rawBase64;
+    };
+  });
+}

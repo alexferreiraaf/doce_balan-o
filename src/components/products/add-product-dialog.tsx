@@ -38,7 +38,7 @@ import { useProductCategories } from '@/app/lib/hooks/use-product-categories';
 import { AddProductCategoryDialog } from '../products/add-product-category-dialog';
 import { Switch } from '../ui/switch';
 import { useOptionals } from '@/app/lib/hooks/use-optionals';
-import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { imageFileToBase64 } from '@/lib/utils';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
 
@@ -67,20 +67,9 @@ const formSchema = z.object({
 
 type ProductFormValues = z.infer<typeof formSchema>;
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
-
-
-
 export function AddProductDialog() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
-  const storage = getStorage();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -153,10 +142,7 @@ export function AddProductDialog() {
     try {
       if (data.imageFile) {
         const file = data.imageFile as File;
-        const base64 = await fileToBase64(file);
-        const imageStorageRef = storageRef(storage, `products/${user.uid}/${Date.now()}_${file.name}`);
-        await uploadString(imageStorageRef, base64, 'data_url');
-        imageUrl = await getDownloadURL(imageStorageRef);
+        imageUrl = await imageFileToBase64(file);
       }
 
       const collectionPath = `artifacts/${APP_ID}/products`;

@@ -28,17 +28,9 @@ import Loading from '@/app/(admin)/loading-component';
 import { Textarea } from '../ui/textarea';
 import type { DayOfWeek } from '@/app/lib/types';
 import { Switch } from '../ui/switch';
-import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { imageFileToBase64 } from '@/lib/utils';
 import { useUser } from '@/firebase';
 import Image from 'next/image';
-
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
 
 const openingHoursSchema = z.object({
   enabled: z.boolean(),
@@ -79,7 +71,6 @@ const weekDays: { key: DayOfWeek, label: string }[] = [
 
 export function SettingsClient() {
   const { user } = useUser();
-  const storage = getStorage();
   const { settings, loading, updateSettings, isUpdating } = useSettings();
   const { toast } = useToast();
   
@@ -154,20 +145,14 @@ export function SettingsClient() {
       try {
         if (data.coverImageFile) {
             const file = data.coverImageFile as File;
-            const base64 = await fileToBase64(file);
-            const imageStorageRef = storageRef(storage, `settings/${user.uid}/cover_${Date.now()}_${file.name}`);
-            await uploadString(imageStorageRef, base64, 'data_url');
-            finalCoverUrl = await getDownloadURL(imageStorageRef);
+            finalCoverUrl = await imageFileToBase64(file, 1200, 600, 0.8);
         }
         if (data.logoFile) {
             const file = data.logoFile as File;
-            const base64 = await fileToBase64(file);
-            const imageStorageRef = storageRef(storage, `settings/${user.uid}/logo_${Date.now()}_${file.name}`);
-            await uploadString(imageStorageRef, base64, 'data_url');
-            finalLogoUrl = await getDownloadURL(imageStorageRef);
+            finalLogoUrl = await imageFileToBase64(file, 500, 500, 0.85);
         }
       } catch (err) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Erro ao fazer upload da imagem.' });
+        toast({ variant: 'destructive', title: 'Erro', description: 'Erro ao processar a imagem.' });
         setIsUploading(false);
         return;
       }

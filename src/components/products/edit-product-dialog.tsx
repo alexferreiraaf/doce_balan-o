@@ -39,7 +39,7 @@ import { AddProductCategoryDialog } from './add-product-category-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { useOptionals } from '@/app/lib/hooks/use-optionals';
-import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { imageFileToBase64 } from '@/lib/utils';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
 
@@ -73,18 +73,9 @@ interface EditProductDialogProps {
     product: Product;
 }
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
-
 export function EditProductDialog({ product }: EditProductDialogProps) {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
-  const storage = getStorage();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -184,26 +175,7 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
     try {
       if (data.imageFile) {
         const file = data.imageFile as File;
-        const base64 = await fileToBase64(file);
-        const imageStorageRef = storageRef(storage, `products/${user.uid}/${Date.now()}_${file.name}`);
-        await uploadString(imageStorageRef, base64, 'data_url');
-        imageUrl = await getDownloadURL(imageStorageRef);
-
-        if (product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
-          try {
-            const oldImageRef = storageRef(storage, product.imageUrl);
-            await deleteObject(oldImageRef);
-          } catch (deleteError) {
-            console.warn("Could not delete old image", deleteError);
-          }
-        }
-      } else if (imageUrl === '' && product.imageUrl && product.imageUrl.includes('firebasestorage.googleapis.com')) {
-          try {
-            const oldImageRef = storageRef(storage, product.imageUrl);
-            await deleteObject(oldImageRef);
-          } catch (deleteError) {
-            console.warn("Could not delete old image", deleteError);
-          }
+        imageUrl = await imageFileToBase64(file);
       }
       
       const docPath = `artifacts/${APP_ID}/products/${product.id}`;
