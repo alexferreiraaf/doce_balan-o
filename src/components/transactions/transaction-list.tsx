@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
-import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User, CalendarIcon, X, Printer } from 'lucide-react';
+import { ClipboardIcon, CreditCard, Landmark, Coins, Receipt, User, CalendarIcon, X, Printer, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -38,6 +38,7 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'permuta'>('all');
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [showTotals, setShowTotals] = useState(false);
 
   const filteredTransactions = transactions.filter(t => {
     if (filter === 'income' && (t.type !== 'income' || t.paymentMethod === 'permuta')) return false;
@@ -161,23 +162,34 @@ export function TransactionList({ transactions, title }: TransactionListProps) {
             </Tabs>
           </div>
         </div>
-        <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-primary flex items-center gap-1.5 order-last ml-auto"
+            onClick={() => setShowTotals((prev) => !prev)}
+            title={showTotals ? 'Ocultar valores' : 'Mostrar valores'}
+          >
+            {showTotals ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span className="text-xs font-medium">{showTotals ? 'Ocultar' : 'Mostrar'}</span>
+          </Button>
             {(filter === 'all' || filter === 'income') && (
               <div>
                  <p className="text-sm text-muted-foreground">Total de Entradas</p>
-                 <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                 <p className="text-lg font-bold text-green-600">{showTotals ? formatCurrency(totalIncome) : 'R$ •••••'}</p>
               </div>
             )}
             {(filter === 'all' || filter === 'expense') && (
               <div>
                  <p className="text-sm text-muted-foreground">Total de Saídas</p>
-                 <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpense)}</p>
+                 <p className="text-lg font-bold text-red-600">{showTotals ? formatCurrency(totalExpense) : 'R$ •••••'}</p>
               </div>
             )}
             {(filter === 'all' || filter === 'permuta') && totalPermuta > 0 && (
               <div>
                  <p className="text-sm text-muted-foreground">Total de Permutas</p>
-                 <p className="text-lg font-bold text-amber-600">{formatCurrency(totalPermuta)}</p>
+                 <p className="text-lg font-bold text-amber-600">{showTotals ? formatCurrency(totalPermuta) : 'R$ •••••'}</p>
               </div>
             )}
         </div>

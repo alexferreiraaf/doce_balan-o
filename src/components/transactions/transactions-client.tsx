@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, Calendar, Package, Search, Share2 } from 'lucide-react';
+import { Clock, CheckCircle, User, Edit, Banknote, Landmark, CircleArrowDown, Calendar, Package, Search, Share2, Eye, EyeOff } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 
 import { useTransactions } from '@/app/lib/hooks/use-transactions';
@@ -34,6 +34,8 @@ import { AddEmployeePaymentSheet } from '../dashboard/add-employee-payment-sheet
 export function TransactionsClient() {
   const [fiadoSearchTerm, setFiadoSearchTerm] = useState('');
   const [upcomingSearchTerm, setUpcomingSearchTerm] = useState('');
+  const [showFiadoTotal, setShowFiadoTotal] = useState(false);
+  const [showUpcomingTotal, setShowUpcomingTotal] = useState(false);
   const { user, isUserLoading } = useUser();
   const userIdsToFetch = useMemo(() => [user?.uid, storefrontUserId].filter(Boolean) as string[], [user?.uid]);
   const { transactions, loading: transactionsLoading } = useTransactions({ userIds: userIdsToFetch });
@@ -216,7 +218,17 @@ export function TransactionsClient() {
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">
                               {fiadoSearchTerm.trim() ? 'Total filtrado: ' : 'Total pendente: '}
-                              <span className="font-bold">{formatCurrency(filteredTotalFiadoValue)}</span>
+                              <span className="font-bold">{showFiadoTotal ? formatCurrency(filteredTotalFiadoValue) : 'R$ •••••'}</span>
+                              <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 ml-1.5 rounded-full text-muted-foreground hover:text-foreground inline-flex items-center justify-center align-middle"
+                                  onClick={() => setShowFiadoTotal((prev) => !prev)}
+                                  title={showFiadoTotal ? 'Ocultar valor' : 'Mostrar valor'}
+                              >
+                                  {showFiadoTotal ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              </Button>
                           </p>
                       </div>
                       <div className="flex w-full sm:w-auto items-center gap-2">
@@ -332,7 +344,17 @@ export function TransactionsClient() {
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">
                               {upcomingSearchTerm.trim() ? 'Total filtrado: ' : 'Total a produzir: '}
-                              <span className="font-bold">{formatCurrency(filteredTotalUpcomingValue)}</span>
+                              <span className="font-bold">{showUpcomingTotal ? formatCurrency(filteredTotalUpcomingValue) : 'R$ •••••'}</span>
+                              <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 ml-1.5 rounded-full text-muted-foreground hover:text-foreground inline-flex items-center justify-center align-middle"
+                                  onClick={() => setShowUpcomingTotal((prev) => !prev)}
+                                  title={showUpcomingTotal ? 'Ocultar valor' : 'Mostrar valor'}
+                              >
+                                  {showUpcomingTotal ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              </Button>
                           </p>
                       </div>
                       <div className="flex w-full sm:w-auto items-center gap-2">

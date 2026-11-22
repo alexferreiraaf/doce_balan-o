@@ -1,7 +1,7 @@
 
 'use client';
 import { useMemo, useState, useEffect } from 'react';
-import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { addMonths, subMonths, format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,6 +35,7 @@ export function DashboardClient() {
 
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [showValues, setShowValues] = useState(false);
 
   useEffect(() => {
     const today = new Date();
@@ -163,15 +164,24 @@ export function DashboardClient() {
               <div className="flex items-center gap-1 ml-2 border-l pl-2 h-6 border-muted-foreground/20">
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-primary"
+                  onClick={() => setShowValues((prev) => !prev)}
+                  title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
+                >
+                  {showValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <StatCard title="Faturamento" value={totals.income} colorClass="border-blue-500 text-blue-600" icon={TrendingUp} />
-                <StatCard title="Custo dos Prod." value={totals.cost} colorClass="border-orange-500 text-orange-600" icon={TrendingDown} />
-                <StatCard title="Lucro Bruto" value={totals.grossProfit} colorClass="border-emerald-500 text-emerald-600" icon={Wallet} />
-                <StatCard title="Despesas" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} />
-                <StatCard title="Lucro Líquido" value={totals.balance} colorClass={totals.balance >= 0 ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'} icon={Wallet} />
+                <StatCard title="Faturamento" value={totals.income} colorClass="border-blue-500 text-blue-600" icon={TrendingUp} isVisible={showValues} onToggleVisibility={() => setShowValues((prev) => !prev)} />
+                <StatCard title="Custo dos Prod." value={totals.cost} colorClass="border-orange-500 text-orange-600" icon={TrendingDown} isVisible={showValues} onToggleVisibility={() => setShowValues((prev) => !prev)} />
+                <StatCard title="Lucro Bruto" value={totals.grossProfit} colorClass="border-emerald-500 text-emerald-600" icon={Wallet} isVisible={showValues} onToggleVisibility={() => setShowValues((prev) => !prev)} />
+                <StatCard title="Despesas" value={totals.expense} colorClass="border-red-400 text-red-600" icon={TrendingDown} isVisible={showValues} onToggleVisibility={() => setShowValues((prev) => !prev)} />
+                <StatCard title="Lucro Líquido" value={totals.balance} colorClass={totals.balance >= 0 ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'} icon={Wallet} isVisible={showValues} onToggleVisibility={() => setShowValues((prev) => !prev)} />
             </div>
 
             <DashboardCharts 

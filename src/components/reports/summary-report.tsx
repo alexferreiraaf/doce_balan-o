@@ -1,9 +1,10 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Transaction } from '@/app/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
 import { formatCurrency } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Clock, Banknote } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Eye, EyeOff } from 'lucide-react';
 
 interface SummaryReportProps {
   transactions: Transaction[];
@@ -15,6 +16,9 @@ interface CategorySummary {
 }
 
 export function SummaryReport({ transactions }: SummaryReportProps) {
+  const [showValues, setShowValues] = useState(false);
+  const renderValue = (val: number) => (showValues ? formatCurrency(val) : 'R$ •••••');
+
   const summary = useMemo(() => {
     const paidIncome = transactions.filter(
       t => t.type === 'income' && t.paymentMethod !== 'permuta' && (t.status === 'paid' || (!t.status && t.paymentMethod !== 'fiado'))
@@ -93,7 +97,7 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
                 {items.map((item, index) => (
                     <li key={index} className="flex justify-between text-sm text-muted-foreground">
                     <span>{item.name}</span>
-                    <span className="font-medium">{formatCurrency(item.total)}</span>
+                    <span className="font-medium">{renderValue(item.total)}</span>
                     </li>
                 ))}
                 </ul>
@@ -106,32 +110,45 @@ export function SummaryReport({ transactions }: SummaryReportProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Resumo Geral do Período</CardTitle>
-        <CardDescription>Uma visão geral da saúde financeira do seu negócio com base em todos os seus lançamentos.</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 gap-4">
+        <div className="space-y-1.5">
+          <CardTitle>Resumo Geral do Período</CardTitle>
+          <CardDescription>Uma visão geral da saúde financeira do seu negócio com base em todos os seus lançamentos.</CardDescription>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2 text-muted-foreground hover:text-primary flex items-center gap-1.5 shrink-0"
+          onClick={() => setShowValues((prev) => !prev)}
+          title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
+        >
+          {showValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          <span className="text-xs font-medium">{showValues ? 'Ocultar' : 'Mostrar'}</span>
+        </Button>
       </CardHeader>
       <CardContent className="space-y-6">
         
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="p-4 rounded-lg bg-blue-50 text-center">
                 <h3 className="text-sm font-medium text-blue-800">Faturamento</h3>
-                <p className="text-3xl font-bold text-blue-700">{formatCurrency(summary.totalIncome)}</p>
+                <p className="text-3xl font-bold text-blue-700">{renderValue(summary.totalIncome)}</p>
             </div>
             <div className="p-4 rounded-lg bg-amber-50 text-center">
                 <h3 className="text-sm font-medium text-amber-800">Permutas</h3>
-                <p className="text-3xl font-bold text-amber-700">{formatCurrency(summary.totalPermuta)}</p>
+                <p className="text-3xl font-bold text-amber-700">{renderValue(summary.totalPermuta)}</p>
             </div>
             <div className="p-4 rounded-lg bg-emerald-50 text-center">
                 <h3 className="text-sm font-medium text-emerald-800">Lucro Bruto</h3>
-                <p className="text-3xl font-bold text-emerald-700">{formatCurrency(summary.grossProfit)}</p>
+                <p className="text-3xl font-bold text-emerald-700">{renderValue(summary.grossProfit)}</p>
             </div>
             <div className={`p-4 rounded-lg text-center ${summary.balance >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
                 <h3 className="text-sm font-medium text-muted-foreground">Lucro Líquido</h3>
-                <p className={`text-3xl font-bold ${summary.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(summary.balance)}</p>
+                <p className={`text-3xl font-bold ${summary.balance >= 0 ? 'text-green-700' : 'text-red-700'}`}>{renderValue(summary.balance)}</p>
             </div>
             <div className="p-4 rounded-lg bg-amber-100 text-center">
                 <h3 className="text-sm font-medium text-amber-800 flex items-center justify-center gap-2"><Clock className="w-4 h-4"/>A Prazo</h3>
-                <p className="text-3xl font-bold text-amber-700">{formatCurrency(summary.totalPending)}</p>
+                <p className="text-3xl font-bold text-amber-700">{renderValue(summary.totalPending)}</p>
             </div>
         </div>
 
