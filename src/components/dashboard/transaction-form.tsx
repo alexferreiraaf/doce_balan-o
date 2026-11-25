@@ -52,6 +52,7 @@ import { Card } from '../ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Calendar } from '../ui/calendar';
 import { AddCustomerDialog } from './add-customer-dialog';
+import { CustomerSelect } from '../customers/customer-select';
 
 
 const selectedOptionalSchema = z.object({
@@ -1088,20 +1089,15 @@ export function TransactionForm({ setSheetOpen, onSaleFinalized, cart, cartTotal
                             <FormLabel>Cliente</FormLabel>
                             <AddCustomerDialog />
                         </div>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                            <SelectTrigger disabled={customersLoading}>
-                                <SelectValue placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"} />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {customers.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                {c.name}
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
+                        <FormControl>
+                            <CustomerSelect
+                                customers={customers}
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                disabled={customersLoading}
+                                placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"}
+                            />
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}

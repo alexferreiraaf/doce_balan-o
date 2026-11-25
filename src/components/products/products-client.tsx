@@ -6,8 +6,9 @@ import { generateProductsPDF } from '@/lib/pdf-generator';
 import Loading from '@/app/(admin)/loading-component';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { AddProductDialog } from './add-product-dialog';
-import { Package, Tag, ImageOff, Star, Percent, FileDown, Loader2 } from 'lucide-react';
+import { Package, Tag, ImageOff, Star, Percent, FileDown, Loader2, Search, X } from 'lucide-react';
 
 import { formatCurrency } from '@/lib/utils';
 import {
@@ -44,15 +45,28 @@ export function ProductsClient() {
   const { toast } = useToast();
   const { settings } = useSettings();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-
-
+  const [searchTerm, setSearchTerm] = useState('');
 
   const loading = productsLoading || categoriesLoading;
 
-  const groupedProducts = useMemo(() => {
-    const group: GroupedProducts = { 'Sem Categoria': [] };
+  const filteredProducts = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return products;
 
-    products.forEach(product => {
+    return products.filter(product => {
+      const category = categories.find(c => c.id === product.categoryId);
+      const categoryName = (category ? category.name : 'Sem Categoria').toLowerCase();
+      const nameMatch = product.name.toLowerCase().includes(query);
+      const descMatch = product.description?.toLowerCase().includes(query) ?? false;
+      const categoryMatch = categoryName.includes(query);
+      return nameMatch || descMatch || categoryMatch;
+    });
+  }, [products, categories, searchTerm]);
+
+  const groupedProducts = useMemo(() => {
+    const group: GroupedProducts = {};
+
+    filteredProducts.forEach(product => {
       const category = categories.find(c => c.id === product.categoryId);
       const categoryName = category ? category.name : 'Sem Categoria';
       if (!group[categoryName]) {
@@ -61,13 +75,8 @@ export function ProductsClient() {
       group[categoryName].push(product);
     });
 
-    // Remove 'Sem Categoria' if it's empty and there are other categories
-    if (Object.keys(group).length > 1 && group['Sem Categoria'].length === 0) {
-        delete group['Sem Categoria'];
-    }
-
     return group;
-  }, [products, categories]);
+  }, [filteredProducts, categories]);
 
   const handleAvailabilityChange = async (product: Product, isAvailable: boolean) => {
     if (!user || !firestore) {
@@ -154,6 +163,29 @@ export function ProductsClient() {
 
       </div>
       
+      <div className="relative w-full sm:max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Pesquisar produto ou categoria..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-9 pr-9 bg-card"
+        />
+        {searchTerm && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setSearchTerm('')}
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+            title="Limpar pesquisa"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
       {products.length === 0 ? (
          <Card>
             <CardContent className="p-10 text-center text-muted-foreground">
@@ -161,8 +193,14 @@ export function ProductsClient() {
                 <p className="text-sm">Clique em "Novo Produto" para começar.</p>
             </CardContent>
          </Card>
+      ) : filteredProducts.length === 0 ? (
+         <Card>
+            <CardContent className="p-10 text-center text-muted-foreground">
+                <p>Nenhum produto encontrado para &quot;{searchTerm}&quot;.</p>
+            </CardContent>
+         </Card>
       ) : (
-        <Accordion type="multiple" defaultValue={categoryOrder} className="w-full space-y-4">
+        <Accordion key={searchTerm.trim() ? `search-${categoryOrder.join('|')}` : 'all'} type="multiple" defaultValue={categoryOrder} className="w-full space-y-4">
             {categoryOrder.map(categoryName => (
                 <AccordionItem value={categoryName} key={categoryName} className="border-b-0">
                     <Card>

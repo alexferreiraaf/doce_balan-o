@@ -35,6 +35,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useCustomers } from '@/app/lib/hooks/use-customers';
 import { AddProductDialog } from '../products/add-product-dialog';
 import { AddCustomerDialog } from '../dashboard/add-customer-dialog';
+import { CustomerSelect } from '../customers/customer-select';
 import { Textarea } from '../ui/textarea';
 import { Plus, Trash2, CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -389,20 +390,15 @@ export function EditTransactionForm({ transaction, setSheetOpen }: EditTransacti
                         <FormLabel>Cliente (Opcional)</FormLabel>
                         <AddCustomerDialog />
                     </div>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                        <SelectTrigger disabled={customersLoading}>
-                            <SelectValue placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"} />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {customers.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
+                    <FormControl>
+                        <CustomerSelect
+                            customers={customers}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={customersLoading}
+                            placeholder={customersLoading ? "Carregando clientes..." : "Selecione um cliente"}
+                        />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}

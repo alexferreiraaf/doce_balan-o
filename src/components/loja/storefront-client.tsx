@@ -624,26 +624,39 @@ export function StorefrontClient({
           
             <div className='space-y-6'>
                 <h2 className="text-2xl font-bold tracking-tight">Todos os Produtos</h2>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                     <Button
                         variant={selectedCategoryId === 'all' ? 'default' : 'outline'}
                         size="sm"
-                        className="rounded-full font-medium"
+                        className={cn(
+                            "rounded-full font-semibold px-4 transition-all duration-150 select-none",
+                            selectedCategoryId === 'all'
+                                ? "bg-gradient-to-b from-primary via-primary to-primary/90 text-primary-foreground border border-primary/80 shadow-[0_4px_0_0_rgba(80,10,45,0.45),0_6px_12px_rgba(157,23,77,0.3)] hover:brightness-105 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(80,10,45,0.45)]"
+                                : "bg-gradient-to-b from-white to-pink-50/90 dark:from-zinc-800 dark:to-zinc-900 text-foreground border border-pink-200/90 dark:border-zinc-700 shadow-[0_4px_0_0_rgba(180,110,140,0.35),0_5px_10px_rgba(0,0,0,0.06)] hover:bg-white hover:text-primary hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_rgba(180,110,140,0.4),0_7px_14px_rgba(0,0,0,0.1)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(180,110,140,0.35)]"
+                        )}
                         onClick={() => setSelectedCategoryId('all')}
                     >
                         Todas as categorias
                     </Button>
-                    {visibleCategories.map(category => (
-                        <Button
-                            key={category.id}
-                            variant={selectedCategoryId === category.id ? 'default' : 'outline'}
-                            size="sm"
-                            className="rounded-full font-medium"
-                            onClick={() => setSelectedCategoryId(category.id)}
-                        >
-                            {category.name}
-                        </Button>
-                    ))}
+                    {visibleCategories.map(category => {
+                        const isSelected = selectedCategoryId === category.id;
+                        return (
+                            <Button
+                                key={category.id}
+                                variant={isSelected ? 'default' : 'outline'}
+                                size="sm"
+                                className={cn(
+                                    "rounded-full font-semibold px-4 transition-all duration-150 select-none",
+                                    isSelected
+                                        ? "bg-gradient-to-b from-primary via-primary to-primary/90 text-primary-foreground border border-primary/80 shadow-[0_4px_0_0_rgba(80,10,45,0.45),0_6px_12px_rgba(157,23,77,0.3)] hover:brightness-105 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(80,10,45,0.45)]"
+                                        : "bg-gradient-to-b from-white to-pink-50/90 dark:from-zinc-800 dark:to-zinc-900 text-foreground border border-pink-200/90 dark:border-zinc-700 shadow-[0_4px_0_0_rgba(180,110,140,0.35),0_5px_10px_rgba(0,0,0,0.06)] hover:bg-white hover:text-primary hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_rgba(180,110,140,0.4),0_7px_14px_rgba(0,0,0,0.1)] active:translate-y-0.5 active:shadow-[0_1px_0_0_rgba(180,110,140,0.35)]"
+                                )}
+                                onClick={() => setSelectedCategoryId(category.id)}
+                            >
+                                {category.name}
+                            </Button>
+                        );
+                    })}
                 </div>
             
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
