@@ -46,7 +46,10 @@ import { Checkbox } from '../ui/checkbox';
 const sizeSchema = z.object({
   name: z.string().min(1, 'Nome do tamanho é obrigatório.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
-  cost: z.coerce.number().min(0, 'O custo deve ser zero ou maior.').optional(),
+  cost: z.preprocess(
+    (val) => (val === undefined || val === null || val === '' ? 0 : val),
+    z.coerce.number().min(0, 'O custo deve ser zero ou maior.')
+  ).default(0),
 });
 
 const formSchema = z.object({
@@ -96,7 +99,11 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       isPromotion: product.isPromotion || false,
       isAvailable: product.isAvailable ?? true,
       hasSizes: product.sizes && product.sizes.length > 0 ? true : false,
-      sizes: product.sizes || [],
+      sizes: (product.sizes || []).map((s) => ({
+        name: s.name || '',
+        price: Number(s.price) || 0,
+        cost: Number(s.cost) || 0,
+      })),
       hasOptionals: product.hasOptionals || false,
       allowedOptionals: product.allowedOptionals || [],
     },
@@ -122,7 +129,11 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
         isPromotion: product.isPromotion || false,
         isAvailable: product.isAvailable ?? true,
         hasSizes: !!(product.sizes && product.sizes.length > 0),
-        sizes: product.sizes || [],
+        sizes: (product.sizes || []).map((s) => ({
+          name: s.name || '',
+          price: Number(s.price) || 0,
+          cost: Number(s.cost) || 0,
+        })),
         hasOptionals: product.hasOptionals || false,
         allowedOptionals: product.allowedOptionals || [],
     });
@@ -181,37 +192,44 @@ export function EditProductDialog({ product }: EditProductDialogProps) {
       const docPath = `artifacts/${APP_ID}/products/${product.id}`;
       const productRef = doc(firestore, docPath);
 
+      const sanitizedSizes = data.hasSizes && Array.isArray(data.sizes)
+        ? data.sizes.map((s) => ({
+            name: String(s.name || '').trim(),
+            price: Number(s.price) || 0,
+            cost: Number(s.cost) || 0,
+          }))
+        : [];
+
       const productData = {
         name: data.name,
-        price: data.hasSizes && data.sizes && data.sizes.length > 0 ? data.sizes[0].price : data.price,
-        cost: data.hasSizes && data.sizes && data.sizes.length > 0 ? (data.sizes[0].cost || 0) : (data.cost || 0),
+        price: sanitizedSizes.length > 0 ? sanitizedSizes[0].price : (Number(data.price) || 0),
+        cost: sanitizedSizes.length > 0 ? sanitizedSizes[0].cost : (Number(data.cost) || 0),
         categoryId: data.categoryId || '',
         imageUrl: imageUrl || '',
-        isFeatured: data.isFeatured,
-        isPromotion: data.isPromotion,
-        isAvailable: data.isAvailable,
-        promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
-        sizes: data.hasSizes ? data.sizes : [],
-        hasOptionals: data.hasOptionals,
-        allowedOptionals: data.hasOptionals ? data.allowedOptionals : [],
+        isFeatured: Boolean(data.isFeatured),
+        isPromotion: Boolean(data.isPromotion),
+        isAvailable: data.isAvailable ?? true,
+        promotionalPrice: data.isPromotion ? (Number(data.promotionalPrice) || 0) : null,
+        sizes: sanitizedSizes,
+        hasOptionals: Boolean(data.hasOptionals),
+        allowedOptionals: data.hasOptionals && Array.isArray(data.allowedOptionals)
+          ? data.allowedOptionals.filter((id): id is string => typeof id === 'string' && id.length > 0)
+          : [],
       };
 
+      setOpen(false);
       await updateDoc(productRef, productData);
       toast({ title: 'Sucesso!', description: 'Produto atualizado.' });
-      setOpen(false);
     } catch (error: any) {
       console.error('Error updating product: ', error);
       if (error.code?.includes('storage/')) {
         toast({ variant: 'destructive', title: 'Erro no Upload', description: 'Não foi possível processar a imagem.'});
       } else {
-        errorEmitter.emit(
-          'permission-error',
-          new FirestorePermissionError({
-            path: `artifacts/${APP_ID}/products/${product.id}`,
-            operation: 'update',
-            requestResourceData: data,
-          })
-        );
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao atualizar produto',
+          description: error?.message || 'Não foi possível salvar as alterações do produto.',
+        });
       }
     } finally {
       setLoading(false);

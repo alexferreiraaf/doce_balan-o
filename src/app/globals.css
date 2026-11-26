@@ -66,3 +66,48 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes btn-snowfall {
+  0% {
+    transform: translateY(-12px) translateX(0px) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.95;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(38px) translateX(6px) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes page-snowfall {
+  0% {
+    transform: translateY(-5vh) translateX(0px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(50vh) translateX(18px) rotate(180deg);
+  }
+  90% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(105vh) translateX(-12px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-btn-snow {
+  animation: btn-snowfall linear infinite;
+}
+
+.animate-page-snow {
+  animation: page-snowfall linear infinite;
+}

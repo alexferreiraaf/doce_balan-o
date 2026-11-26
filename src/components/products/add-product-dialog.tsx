@@ -45,7 +45,10 @@ import { Checkbox } from '../ui/checkbox';
 const sizeSchema = z.object({
   name: z.string().min(1, 'Nome do tamanho é obrigatório.'),
   price: z.coerce.number().positive('O preço deve ser maior que zero.'),
-  cost: z.coerce.number().min(0, 'O custo deve ser zero ou maior.').optional(),
+  cost: z.preprocess(
+    (val) => (val === undefined || val === null || val === '' ? 0 : val),
+    z.coerce.number().min(0, 'O custo deve ser zero ou maior.')
+  ).default(0),
 });
 
 const formSchema = z.object({
@@ -146,20 +149,30 @@ export function AddProductDialog() {
       }
 
       const collectionPath = `artifacts/${APP_ID}/products`;
+      const sanitizedSizes = data.hasSizes && Array.isArray(data.sizes)
+        ? data.sizes.map((s) => ({
+            name: String(s.name || '').trim(),
+            price: Number(s.price) || 0,
+            cost: Number(s.cost) || 0,
+          }))
+        : [];
+
       const productData = {
         name: data.name,
-        price: data.hasSizes && data.sizes && data.sizes.length > 0 ? data.sizes[0].price : data.price,
-        cost: data.hasSizes && data.sizes && data.sizes.length > 0 ? (data.sizes[0].cost || 0) : (data.cost || 0),
+        price: sanitizedSizes.length > 0 ? sanitizedSizes[0].price : (Number(data.price) || 0),
+        cost: sanitizedSizes.length > 0 ? sanitizedSizes[0].cost : (Number(data.cost) || 0),
         categoryId: data.categoryId || '',
         imageUrl: imageUrl || '',
-        isFeatured: data.isFeatured,
-        isPromotion: data.isPromotion,
-        isAvailable: data.isAvailable,
-        promotionalPrice: data.isPromotion ? data.promotionalPrice : null,
+        isFeatured: Boolean(data.isFeatured),
+        isPromotion: Boolean(data.isPromotion),
+        isAvailable: data.isAvailable ?? true,
+        promotionalPrice: data.isPromotion ? (Number(data.promotionalPrice) || 0) : null,
         salesCount: 0,
-        sizes: data.hasSizes ? data.sizes : [],
-        hasOptionals: data.hasOptionals,
-        allowedOptionals: data.hasOptionals ? data.allowedOptionals : [],
+        sizes: sanitizedSizes,
+        hasOptionals: Boolean(data.hasOptionals),
+        allowedOptionals: data.hasOptionals && Array.isArray(data.allowedOptionals)
+          ? data.allowedOptionals.filter((id): id is string => typeof id === 'string' && id.length > 0)
+          : [],
       };
 
       const productCollection = collection(firestore, collectionPath);

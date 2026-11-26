@@ -245,6 +245,12 @@ export function StorefrontClient({
     });
   }, [categories, regularProducts]);
 
+  const isChristmasThemeActive = useMemo(() => {
+    if (selectedCategoryId === 'all') return false;
+    const selectedCat = categories.find(c => c.id === selectedCategoryId);
+    return Boolean(selectedCat && selectedCat.name.trim().toLowerCase().includes('natal'));
+  }, [categories, selectedCategoryId]);
+
   const cartTotal = useMemo(() => {
     return cart.reduce((total, item) => total + (item.promotionalPrice ?? item.price) * item.quantity, 0);
   }, [cart]);
@@ -413,9 +419,15 @@ export function StorefrontClient({
     const displayPrice = hasPromo ? product.promotionalPrice! : lowestPrice;
     const isAvailable = product.isAvailable ?? true;
     const minQty = getMinimumQuantity(product.name);
+    const productCat = categories.find(c => c.id === product.categoryId);
+    const isChristmasProduct = isChristmasThemeActive || Boolean(productCat && productCat.name.trim().toLowerCase().includes('natal'));
     
     return (
-       <Card className={cn("overflow-hidden flex flex-col group h-full", !isAvailable && "opacity-60")}>
+       <Card className={cn(
+         "overflow-hidden flex flex-col group h-full transition-all duration-300",
+         !isAvailable && "opacity-60",
+         isChristmasThemeActive && "border-2 border-amber-400/80 bg-gradient-to-b from-white via-red-50/60 to-amber-50/40 dark:from-zinc-900 dark:via-red-950/40 dark:to-emerald-950/30 shadow-[0_10px_28px_rgba(185,28,28,0.22)] hover:shadow-[0_14px_34px_rgba(220,38,38,0.32)] hover:-translate-y-1"
+       )}>
             <CardHeader className="p-0">
                 <div className="aspect-square bg-muted flex items-center justify-center relative">
                     {!isAvailable && (
@@ -424,6 +436,12 @@ export function StorefrontClient({
                         </div>
                     )}
                     <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                        {isChristmasProduct && (
+                            <div className="bg-gradient-to-r from-red-700 via-red-600 to-green-700 text-white border border-amber-300 text-xs font-bold py-1 px-2.5 rounded-full flex items-center gap-1 shadow-md">
+                                <span>🎄</span>
+                                Especial de Natal
+                            </div>
+                        )}
                         {isBestSeller && (
                             <div className="bg-black/70 text-white text-xs font-bold py-1 px-2 rounded-full flex items-center gap-1">
                                 <Flame className="w-3 h-3 text-orange-400"/>
@@ -446,7 +464,9 @@ export function StorefrontClient({
             </CardHeader>
             <CardContent className="p-4 flex flex-col flex-grow">
                 <div className="flex-grow">
-                    <h3 className="font-semibold text-lg leading-tight">{product.name}</h3>
+                    <h3 className={cn("font-semibold text-lg leading-tight", isChristmasThemeActive && "text-red-950 dark:text-amber-100")}>
+                      {product.name}
+                    </h3>
                     {minQty > 1 && (
                         <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">
                             Pedido mínimo: {minQty} unidades
@@ -458,14 +478,22 @@ export function StorefrontClient({
                         {hasPromo && (
                             <p className="text-sm text-muted-foreground line-through">{formatCurrency(product.price)}</p>
                         )}
-                        <p className="text-xl font-bold text-primary">
+                        <p className={cn("text-xl font-bold text-primary", isChristmasThemeActive && "text-red-700 dark:text-amber-400")}>
                           {hasSizes && !hasPromo ? `A partir de ` : ''}
                           {formatCurrency(displayPrice)}
                         </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => handleAddToCart(product)} disabled={!isAvailable}>
+                    <Button
+                      variant={isChristmasThemeActive ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleAddToCart(product)}
+                      disabled={!isAvailable}
+                      className={cn(
+                        isChristmasThemeActive && "rounded-full font-bold bg-gradient-to-b from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white border border-amber-300 shadow-[0_3px_0_0_#14532d,0_4px_10px_rgba(220,38,38,0.3)] active:translate-y-0.5"
+                      )}
+                    >
                         <ShoppingCart className="w-4 h-4 mr-2" />
-                        Pedir
+                        {isChristmasThemeActive ? 'Pedir 🎁' : 'Pedir'}
                     </Button>
                 </div>
             </CardContent>
@@ -473,8 +501,57 @@ export function StorefrontClient({
     )
   }
 
+  const pageSnowflakes = [
+    { left: '3%', delay: '0s', duration: '9s', size: 'text-base', char: '❄' },
+    { left: '9%', delay: '2.5s', duration: '11s', size: 'text-xs', char: '•' },
+    { left: '15%', delay: '1.2s', duration: '8.5s', size: 'text-sm', char: '❅' },
+    { left: '22%', delay: '4.1s', duration: '10s', size: 'text-lg', char: '❄' },
+    { left: '28%', delay: '0.7s', duration: '12s', size: 'text-xs', char: '•' },
+    { left: '35%', delay: '3.3s', duration: '9.5s', size: 'text-base', char: '❆' },
+    { left: '42%', delay: '1.8s', duration: '10.5s', size: 'text-sm', char: '❄' },
+    { left: '49%', delay: '5.0s', duration: '8.8s', size: 'text-xs', char: '•' },
+    { left: '56%', delay: '0.4s', duration: '11.2s', size: 'text-lg', char: '❄' },
+    { left: '63%', delay: '2.9s', duration: '9.2s', size: 'text-sm', char: '❅' },
+    { left: '70%', delay: '1.5s', duration: '10.8s', size: 'text-xs', char: '•' },
+    { left: '77%', delay: '3.8s', duration: '8.6s', size: 'text-base', char: '❄' },
+    { left: '84%', delay: '0.9s', duration: '11.5s', size: 'text-sm', char: '❆' },
+    { left: '91%', delay: '4.5s', duration: '9.8s', size: 'text-lg', char: '❄' },
+    { left: '96%', delay: '2.1s', duration: '10.2s', size: 'text-xs', char: '•' },
+  ];
+
   return (
-    <div className="space-y-12 pb-24">
+    <div className="space-y-12 pb-24 relative z-10">
+      {/* Tema de Natal: Fundo Festivo, Luzes Pisca-Pisca e Neve Caindo na Página */}
+      {isChristmasThemeActive && (
+        <>
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 -z-10 pointer-events-none transition-opacity duration-500 bg-gradient-to-b from-[#450a0a] via-[#7f1d1d] to-[#052e16]"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(251,191,36,0.18),transparent_45%),radial-gradient(circle_at_80%_30%,rgba(220,38,38,0.28),transparent_50%),radial-gradient(circle_at_50%_85%,rgba(21,128,61,0.32),transparent_55%)]" />
+          </div>
+
+          <div aria-hidden="true" className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+            {pageSnowflakes.map((flake, idx) => (
+              <span
+                key={idx}
+                className={cn(
+                  "absolute top-0 text-white/85 drop-shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-page-snow",
+                  flake.size
+                )}
+                style={{
+                  left: flake.left,
+                  animationDelay: flake.delay,
+                  animationDuration: flake.duration,
+                }}
+              >
+                {flake.char}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
       {isClient && activeOrder && (
         <OrderProgressBar 
             transaction={activeOrder} 
@@ -594,7 +671,7 @@ export function StorefrontClient({
         </div>
       ) : (
         <div className="space-y-12">
-            {featuredProducts.length > 0 && (
+            {featuredProducts.length > 0 && !isChristmasThemeActive && (
                 <div className="space-y-4">
                     <h2 className="text-2xl font-bold tracking-tight">✨ Destaques da Casa</h2>
                     <Carousel
@@ -623,7 +700,35 @@ export function StorefrontClient({
             )}
           
             <div className='space-y-6'>
-                <h2 className="text-2xl font-bold tracking-tight">Todos os Produtos</h2>
+                {isChristmasThemeActive ? (
+                    <div className="relative overflow-hidden rounded-2xl border-2 border-amber-300/90 bg-gradient-to-r from-red-900 via-red-700 to-green-900 p-6 sm:p-8 text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] animate-in fade-in-0 zoom-in-95 duration-300">
+                        <div className="absolute -top-10 -right-10 w-44 h-44 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
+                        <div className="absolute -bottom-10 -left-10 w-44 h-44 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
+                        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="space-y-2">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/60 text-amber-200 text-xs font-bold uppercase tracking-wider">
+                                    <span>🎅</span> Edição Especial de Fim de Ano <span>❄️</span>
+                                </div>
+                                <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] flex items-center gap-2 flex-wrap">
+                                    <span>🎄</span> Cardápio Mágico de Natal <span>🎁</span>
+                                </h2>
+                                <p className="text-sm sm:text-base text-amber-100/95 max-w-2xl">
+                                    Celebre o Natal com nossas sobremesas artesanais preparadas especialmente para adoçar a sua ceia e presentear quem você ama!
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedCategoryId('all')}
+                                className="rounded-full font-bold bg-white/15 hover:bg-white/25 text-white border-amber-300/80 shrink-0 self-start sm:self-center backdrop-blur-sm"
+                            >
+                                ← Ver todo o cardápio
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <h2 className="text-2xl font-bold tracking-tight">Todos os Produtos</h2>
+                )}
                 <div className="flex flex-wrap gap-2.5">
                     <Button
                         variant={selectedCategoryId === 'all' ? 'default' : 'outline'}
@@ -640,6 +745,59 @@ export function StorefrontClient({
                     </Button>
                     {visibleCategories.map(category => {
                         const isSelected = selectedCategoryId === category.id;
+                        const isChristmas = category.name.trim().toLowerCase().includes('natal');
+
+                        if (isChristmas) {
+                            const buttonSnowflakes = [
+                                { left: '8%', delay: '0s', duration: '2.2s', size: 'text-[9px]', char: '❄' },
+                                { left: '20%', delay: '0.9s', duration: '1.8s', size: 'text-[7px]', char: '•' },
+                                { left: '34%', delay: '0.4s', duration: '2.5s', size: 'text-[8px]', char: '❄' },
+                                { left: '48%', delay: '1.3s', duration: '2.0s', size: 'text-[7px]', char: '•' },
+                                { left: '62%', delay: '0.2s', duration: '2.3s', size: 'text-[9px]', char: '❄' },
+                                { left: '76%', delay: '1.1s', duration: '1.9s', size: 'text-[7px]', char: '•' },
+                                { left: '89%', delay: '0.6s', duration: '2.4s', size: 'text-[8px]', char: '❄' },
+                            ];
+
+                            return (
+                                <Button
+                                    key={category.id}
+                                    variant={isSelected ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={cn(
+                                        "rounded-full font-bold px-4 transition-all duration-150 select-none relative overflow-hidden group",
+                                        isSelected
+                                            ? "bg-gradient-to-b from-red-600 via-red-700 to-green-800 text-white border-2 border-amber-300 ring-2 ring-amber-400/50 shadow-[0_4px_0_0_#14532d,0_6px_14px_rgba(220,38,38,0.45)] hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_1px_0_0_#14532d]"
+                                            : "bg-gradient-to-b from-red-500 via-red-600 to-red-700 text-white border-2 border-amber-300/90 shadow-[0_4px_0_0_#15803d,0_5px_12px_rgba(220,38,38,0.3)] hover:from-red-500 hover:to-red-600 hover:text-amber-100 hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_#15803d,0_7px_16px_rgba(220,38,38,0.4)] active:translate-y-0.5 active:shadow-[0_1px_0_0_#15803d]"
+                                    )}
+                                    onClick={() => setSelectedCategoryId(category.id)}
+                                >
+                                    {/* Camada de neve caindo dentro do botão */}
+                                    <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+                                        {buttonSnowflakes.map((flake, idx) => (
+                                            <span
+                                                key={idx}
+                                                className={cn(
+                                                    "absolute top-0 text-white/90 drop-shadow-[0_0_2px_rgba(255,255,255,0.8)] animate-btn-snow",
+                                                    flake.size
+                                                )}
+                                                style={{
+                                                    left: flake.left,
+                                                    animationDelay: flake.delay,
+                                                    animationDuration: flake.duration,
+                                                }}
+                                            >
+                                                {flake.char}
+                                            </span>
+                                        ))}
+                                    </span>
+
+                                    <span className="relative z-10 mr-1.5 text-sm leading-none">🎄</span>
+                                    <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">{category.name}</span>
+                                    <span className="relative z-10 ml-1.5 text-xs leading-none">✨</span>
+                                </Button>
+                            );
+                        }
+
                         return (
                             <Button
                                 key={category.id}
